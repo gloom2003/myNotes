@@ -3,7 +3,7 @@
 ## 1 关键字的使用
 
 
-### limit和offset的用法
+### limit和offset的用法 跳过几条数据？取几条数据?
 
 1.当limit后面跟两个参数的时候，第一个数表示要跳过的数量，后一位表示要取的数量,例如：
 
@@ -58,6 +58,27 @@ SELECT s.`s_id`,AVG(s.`s_score`) avg_score
 FROM score s
 WHERE s.`s_id` != '02'
 GROUP BY s.`s_id` HAVING AVG(s.`s_score` > 60)
+~~~
+
+### Order by desc,asc 设置排序方式
+
+~~~sql
+# 16、检索"01"课程分数小于60，按分数降序排列的学生信息
+
+SELECT st.*,sc.`s_score`
+FROM score sc INNER JOIN student st
+ON sc.`s_id` = st.`s_id`
+WHERE sc.`c_id` = '01' AND sc.`s_score` < 60
+ORDER BY sc.`s_score` DESC
+~~~
+
+​	
+
+### case when语句的使用
+
+case when ... then ... else ... end 即: if(...) {...} else {...}
+
+~~~sql
 ~~~
 
 
@@ -406,7 +427,7 @@ GROUP BY st.s_id,st.s_name
 
 ### 3.3 inner join 与 in的效率问题
 
-p16
+p16  inner join写法在数据量大时,效率比in高
 
 ~~~sql
 # 11、查询至少有一门课与学号为"01“的学生所学课程相同的学生的学号和姓名（重点）
@@ -478,9 +499,80 @@ FROM student a INNER JOIN (
 
 ~~~
 
+### 3.4 case when语句的使用
+
+p21: case when与聚合函数、group by的使用
+
+~~~sql
+# 17、按平均成绩从高到低显示所有学生的所有课程的成绩以及平均成绩（重点）
 
 
+# 子1：按平均成绩从高到低显示所有学生的平均成绩
+SELECT st.`s_id`,AVG(sc.`s_score`) avg_score
+FROM student st LEFT JOIN score sc 
+ON st.`s_id` = sc.`s_id`
+GROUP BY st.`s_id`
+ORDER BY avg_score DESC
+	
+# 解法1：自连接
+SELECT sc.`s_id`,sc.`c_id`,sc.`s_score`,a.avg_score
+FROM (
+	SELECT st.`s_id`,AVG(sc.`s_score`) avg_score
+	FROM student st LEFT JOIN score sc 
+	ON st.`s_id` = sc.`s_id`
+	GROUP BY st.`s_id`
+	ORDER BY avg_score DESC
+) a LEFT JOIN score sc ON a.s_id = sc.`s_id`
 
+# 解法2：case when ... then ... else ... end
+
+SELECT sc.`s_id` "学号",
+# 新增一个字段"语文"，if(sc.`c_id` = '01'){字段值 = sc.`s_score`}else{字段值 = null} 由于group by的关系，case when需要写在聚合函数如：Max()中，一条数据的最大值还是自己
+MAX(CASE WHEN sc.`c_id` = '01' THEN sc.`s_score` ELSE NULL END) "语文",
+MAX(CASE WHEN sc.`c_id` = '02' THEN sc.`s_score` ELSE NULL END) "数学",
+MAX(CASE WHEN sc.`c_id` = '03' THEN sc.`s_score` ELSE NULL END) "英语",
+MAX(CASE WHEN sc.`c_id` = '04' THEN sc.`s_score` ELSE NULL END) "化学",
+AVG(sc.`s_score`) "平均成绩"
+# 没有选课的学生，8号查询不出来，学号也会为null
+FROM student st LEFT JOIN score sc ON st.`s_id` = sc.`s_id`
+GROUP BY sc.`s_id`
+ORDER BY AVG(sc.`s_score`) DESC
+~~~
+
+p22: case when与聚合函数、group by的使用
+
+~~~sql
+ # 18.查询各科成绩最高分、最低分和平均分：以如下形式显示：
+ # 课程ID,课程ame,最高分，最低分，平均分，及格率，中等率，优良率，优秀率
+# 及格为>=60，中等为：70-80，优良为：80-90，优秀为：>=90
+
+# 解法1：
+SELECT c.`c_name` 课程名称,sc.`c_id` 课程编号,MAX(sc.`s_score`) 最高分,
+MIN(sc.`s_score`) 最低分,AVG(sc.`s_score`) 平均分,
+#sum(case when ...then 1 else 0 end)进行计数，遍历每一行，如果满足条件就加1，不满足则加0，最后返回结果
+SUM(CASE WHEN sc.`s_score`>=60 THEN 1 ELSE 0 END)/COUNT(sc.s_id) 及格率,
+SUM(CASE WHEN sc.`s_score` >=70 AND sc.`s_score`<80 THEN 1 ELSE 0 END)/COUNT(sc.s_id) 中等率,
+SUM(CASE WHEN sc.`s_score` >= 80 AND sc.`s_score`<90 THEN 1 ELSE 0 END)/COUNT(sc.s_id) 优良率,
+SUM(CASE WHEN sc.`s_score` >= 90 THEN 1 ELSE 0 END)/COUNT(sc.s_id) 优秀率
+FROM score sc INNER JOIN course c ON sc.`c_id` = c.`c_id`
+GROUP BY sc.`c_id`,c.`c_name`
+# 解法2：
+
+SELECT c.c_id "课程ID",c.c_name "课程名称",MAX(s.s_score) "最高分",
+MIN(s.s_score) "最低分",AVG(s.s_score) "平均分",
+SUM(CASE WHEN s.s_score >=60 THEN 1 ELSE 0 END)/COUNT(s_id) "合格率",
+# count(null) = 0,count(999) = 1 遍历每一行，如果满足条件则返回999，不满足则返回null，最后返回结果
+COUNT(CASE WHEN s.s_score >=70 AND s.s_score < 80 THEN 999 ELSE NULL END)/COUNT(s_id) "中等率",
+SUM(CASE WHEN s.s_score >=80 AND s.s_score < 90 THEN 1 ELSE 0 END)/COUNT(s_id) "优良率",
+COUNT(CASE WHEN s.s_score >=90 THEN 999 ELSE NULL END)/COUNT(s_id) "优秀率"
+FROM score s#sum(case when ...then 1 else 0 end)进行计数，遍历每一行，如果满足条件就加1，不满足则加0，最后返回结果
+INNER JOIN 
+course c
+ON s.c_id = c.c_id
+GROUP BY c.c_id,c_name
+~~~
+
+p23:
 
 
 

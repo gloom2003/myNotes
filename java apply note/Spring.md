@@ -2,7 +2,7 @@
 
 ## java文件编译知识
 
-编译后的文件存放在target目录中，target/class为类加载路径(classpath)，与com文件夹并列，**Recourses目录下面的资源文件编译后会存放到target/class目录下面(即类加载路径classpath下面)**。
+编译后的文件存放在target目录中，target/class为类加载路径(classpath)，与com文件夹并列，**Recourses目录下面的资源文件编译后会存放到target/class目录下面(即类加载路径classpath下面)**。在**单元测试中的类加载路径**为target/test-classes而不是target/classes
 
 其他的文件一一对应，target/class目录相当于src/main/java目录,
 
@@ -883,17 +883,17 @@ public class ApplicationConfig {
 
 # Spring-03
 
-## Aop的使用
-
-​	**SpringAOP:  批量对Spring容器中bean的方法做增强，并且这种增强不会与原来方法中的代码耦合。**
-
-### AOP核心概念
+## AOP核心概念
 
  - Aspect（切面）：是切入点和通知（引介）的结合，即切面类
 
 - Advice（通知/ 增强）：所谓通知是**指具体增强的代码**
 
 - Pointcut（切入点）：所谓切入点是**指被增强的方法**
+
+## Aop的使用
+
+​	**SpringAOP:  批量对Spring容器中bean的方法做增强，并且这种增强不会与原来方法中的代码耦合。**
 
 #### 准备工作
 
@@ -960,8 +960,8 @@ public class ApplicationConfig {
 
 - 访问修饰符可以省略，大部分情况下省略
 - 返回值类型、包名、类名、方法名可以使用星号*  代表任意
-- 包名与类名之间一个点 . 代表当前包下的类，两个点 .. 表示当前包及其子包下的类
-- 参数列表可以使用两个点 .. 表示任意个数，任意类型的参数列表
+- 包名与类名之间一个点 . 代表当前包下的类，**两个点 .. 表示当前包及其子包下的类**
+- 参数列表可以使用**两个点 .. 表示任意参数**，任意类型的参数列表
 
 
 
@@ -1234,13 +1234,9 @@ public class PrintLogAspect {
     }
 ~~~~
 
+## 4 xml配置AOP
 
-
-
-
-### 1.8 xml配置AOP
-
-#### ①定义切面类
+### ①定义切面类
 
 ~~~~java
 public class MyAspect {
@@ -1288,7 +1284,7 @@ public class MyAspect {
 
 
 
-#### ②目标类和切面类注入容器
+### ②目标类和切面类注入容器
 
 在切面类和目标类上加是对应的注解。注入如果是使用注解的方式注入容器要记得开启组件扫描。
 
@@ -1308,7 +1304,7 @@ public class UserService {
 }
 ~~~~
 
-#### ③配置AOP
+### ③配置AOP
 
 ~~~~xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -1339,23 +1335,23 @@ public class UserService {
 
 
 
-### 1.9 多切面顺序问题
+## 5 多切面顺序问题 @Order
 
-​	在实际项目中我们可能会存在配置了多个切面的情况。这种情况下我们很可能需要控制切面的顺序。
+​	在实际项目中我们可能会存在配置了多个切面并且对同一个方法进行了增强的情况。这种情况下我们很可能需要**控制切面的顺序**。
 
-​	我们在默认情况下Spring有它自己的排序规则。（按照类名排序）
+​	我们在默认情况下Spring有它自己的排序规则。（按照类名排序 abcd...）
 
 ​	默认排序规则往往不符合我们的要求，我们需要进行特殊控制。
 
 ​	如果是注解方式配置的AOP可以在切面类上加**@Order注解**来控制顺序。**@Order中的属性越小优先级越高。**
 
-​	如果是XML方式配置的AOP,可以通过调整**配置顺序**来控制。
+​	如果是XML方式配置的AOP,可以通过调整**先后配置顺序**来控制。
 
 
 
 例如：
 
-下面这种配置方式就会先使用CryptAspect里面的增强，在使用APrintLogAspect里的增强
+下面这种配置方式就会先使用CryptAspect里面的增强，再使用APrintLogAspect里的增强
 
 ~~~~java
 @Component
@@ -1374,17 +1370,15 @@ public class CryptAspect {
 
 
 
-### 1.10 AOP原理-动态代理
+## 6 AOP原理-动态代理
 
 ​	实际上Spring的AOP其实底层就是使用动态代理来完成的。并且使用了两种动态代理分别是JDK的动态代理和Cglib动态代理。
 
 ​	所以我们接下去来学习下这两种动态代理，理解下它们的不同点。
 
+### 6.1 JDK动态代理 生成对应接口的实现类对象
 
-
-#### 1.10.1 JDK动态代理
-
-​	JDK的动态代理使用的java.lang.reflect.Proxy这个类来进行实现的。要求被代理（被增强）的类需要实现了接口。并且JDK动态代理也只能对接口中的方法进行增强。
+​	JDK的动态代理使用的java.lang.reflect.Proxy这个类来进行实现的。**要求被代理（被增强）的类需要实现了接口**。并且JDK动态代理也**只能对接口中的方法进行增强**。
 
 ~~~~java
 public static void main(String[] args) {
@@ -1395,17 +1389,19 @@ public static void main(String[] args) {
         ClassLoader cl = Demo.class.getClassLoader();
         //被代理类所实现接口的字节码对象数组
         Class<?>[] interfaces = AIControllerImpl.class.getInterfaces();
+    	//Proxy.newProxyInstance()方法返回一个代理对象，是接口的实现类对象，所以这里使用父接口进行接收
         AIController proxy = (AIController) Proxy.newProxyInstance(cl, interfaces, new InvocationHandler() {
-            //使用代理对象的方法时 会调用到invoke
+            //使用代理对象的任何方法 都会调用到invoke方法
                 public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
                 //proxy   是代理对象
                 //method 是当前被调用的方法封装的Method对象
                 //args   是调用方法时传入的参数
-                //调用被代理对象的对应方法
-                //判断 当前调用的是否是getAnswer方法
+               
+                //模拟进行aop增强：判断 当前调用的是否是getAnswer方法
                 if(method.getName().equals("getAnswer")){
                     System.out.println("增强");
                 }
+                //调用被代理对象的对应方法: 相当于调用aiController.method(args)
                 Object ret = method.invoke(aiController, args);
                 return ret;
             }
@@ -1417,30 +1413,43 @@ public static void main(String[] args) {
 
 
 
-#### 1.10.2 Cglib动态代理
+### 6.2 Cglib动态代理
 
-​	使用的是org.springframework.cglib.proxy.Enhancer类进行实现的。
+​	使用的是org.springframework.cglib.proxy.Enhancer类进行实现的。类在spring-context依赖所依赖的aop jar包中，生成的代理类为被代理类的子类。
+
+1.导入依赖
+
+~~~xml
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>5.1.9.RELEASE</version>
+        </dependency>
+~~~
+
+2.代码实现
 
 ~~~~java
 public class CglibDemo {
     public static void main(String[] args) {
         Enhancer enhancer = new Enhancer();
-        //设置父类的字节码对象
+        //设置父类的字节码对象,设置代理类的父类
         enhancer.setSuperclass(AIControllerImpl.class);
+        //设置方法回调
         enhancer.setCallback(new MethodInterceptor() {
-            //使用代理对象执行方法是都会调用到intercept方法
+            //使用代理对象执行任何方法时都会调用到intercept方法
             @Override
             public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
                 //判断当前调用的方法是不是getAnswer方法 如果是进行增强
                 if ("getAnswer".equals(method.getName())){
                     System.out.println("被增强了");
                 }
-                //调用父类中对应的方法
+                //调用父类中对应的方法(没有使用method.invoke()方法)
                 Object ret = methodProxy.invokeSuper(o, objects);
                 return ret;
             }
         });
-        //生成代理对象
+        // 使用create()方法生成代理对象
         AIControllerImpl proxy = (AIControllerImpl) enhancer.create();
 //        System.out.println(proxy.getAnswer("你好吗？"));
         System.out.println(proxy.fortuneTelling("你好吗？"));
@@ -1451,17 +1460,23 @@ public class CglibDemo {
 
 
 
-#### 1.10.3 总结
+### 6.3 总结
 
-​	JDK动态代理要求被代理（被增强）的类必须要实现接口，生成的代理对象相当于是被代理对象的兄弟。
+​	JDK动态代理要求被代理（被增强）的类必须要实现接口，生成的代理对象相当于是被代理对象的**兄弟**。
 
-​	Cglib的动态代理不要求被代理（被增强）的类要实现接口，生成的代理对象相当于被代理对象的子类对象。
+​	Cglib的动态代理不要求被代理（被增强）的类要实现接口，生成的代理对象相当于被代理对象的**子类**对象(父子关系)。
 
 ​	**Spring的AOP默认情况下优先使用的是JDK的动态代理，如果使用不了JDK的动态代理才会使用Cglib的动态代理。**
 
+​	**注意**：**使用AOP对被代理对象进行增强后，容器中就没有被代理对象了。**因为使用注解如@Service把想把被代理对象注入容器时，**注入的其实是增强后的代理对象**。
+
+1. 如果被代理对象实现了接口，那么AOP使用的是**JDK动态代理**，此时使用getBean(被代理对象.class)方法是获取不到被代理对象的，因为容器中注入的是代理对象，而代理对象与被代理对象是同一个接口的实现类，所以**可以使用getBean(被代理对象实现的接口.class)方法成功获取代理对象**。
+
+2. 如果被代理对象没有实现接口（或者配置了**使用Cglib动态代理**），那么此时**使用getBean(被代理对象.class)方法仍然能够获取到被代理对象**，因为容器中注入的是代理对象，而代理对象是被代理对象的子类，两者是父子关系。
 
 
-### 1.11 切换默认动态代理方式
+
+### 6.4 切换默认动态代理方式
 
 ​	有的时候我们需要修改AOP的代理方式。
 
@@ -1490,4 +1505,408 @@ public class CglibDemo {
 
 
 
+ # Spring-04
+
+## 1.Spring整合Junit 使得可以在单元测试中直接获取并测试容器中的对象
+
+### ①导入依赖
+
+~~~~xml
+<!-- junit -->
+<dependency>
+    <groupId>junit</groupId>
+    <artifactId>junit</artifactId>
+    <version>4.12</version>
+</dependency>
+<!-- spring整合junit的依赖 -->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-test</artifactId>
+    <version>5.1.9.RELEASE</version>
+</dependency>
+~~~~
+
+
+
+### ② 编写测试类
+
+在测试类上加上
+
+**@RunWith(SpringJUnit4ClassRunner.class)**注解，指定让测试运行于Spring环境
+
+**@ContextConfiguration注解**，指定Spring容器创建需要的配置文件或者配置类
+
+~~~~java
+@RunWith(SpringJUnit4ClassRunner.class)//让测试运行与Spring测试环境
+@ContextConfiguration(locations = "classpath:配置文件1.xml")//设置Spring配置文件或者配置类
+//@ContextConfiguration(classes = SpringConfig.class)
+public class SpringTest {}
+~~~~
+
+
+
+### ③注入对象进行测试
+
+在测试类中注入要测试的对象，定义测试方法，在其中使用要测试的对象。
+
+~~~~java
+@RunWith(SpringJUnit4ClassRunner.class)//让测试运行与Spring测试环境
+@ContextConfiguration(locations = "classpath:配置文件1.xml")//设置Spring配置文件或者配置类
+//@ContextConfiguration(classes = SpringConfig.class)
+public class SpringTest {
+    
+    // 想测哪个对象，就注入哪个对象
+    @Autowired
+    private UserService userService;
+    
+    //定义测试方法
+    @Test
+    public void testUserService() {
+        userService.findById(10);
+    }
+    
+}
+~~~~
+
+## 2.Spring整合Mybatis 可以直接从容器中获取mapper的实现类对象
+
+​	我们如果想把Mybatis整合到Spring中需要使用一个整合包**mybatis-spring**
+
+​	官方文档：http://mybatis.org/spring/zh/index.html
+
+
+
+### ①导入依赖
+
+~~~~xml
+	<!-- spring-jdbc -->
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-jdbc</artifactId>
+        <version>5.1.9.RELEASE</version>
+    </dependency>
+
+    <!-- mybatis整合到Spring的整合包 -->
+    <dependency>
+        <groupId>org.mybatis</groupId>
+        <artifactId>mybatis-spring</artifactId>
+        <version>2.0.4</version>
+    </dependency>
+
+    <!--mybatis依赖-->
+    <dependency>
+        <groupId>org.mybatis</groupId>
+        <artifactId>mybatis</artifactId>
+        <version>3.5.4</version>
+    </dependency>
+    <!--mysql驱动-->
+    <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+        <version>5.1.47</version>
+    </dependency>
+
+    <!-- druid数据源 -->
+    <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>druid</artifactId>
+        <version>1.1.16</version>
+    </dependency>
+
+~~~~
+
+### ②往容器中注入整合相关对象
+
+~~~~xml
+    <!--读取properties文件-->       <!--或者写：location="classpath*:*.properties"来指定所有的类加载路径，因为在单元测试中的类加载路径为target/test-classes而不是target/classes-->
+    <context:property-placeholder location="classpath:jdbc.properties"></context:property-placeholder>
+    <!--创建连接池注入容器，相当于mybatis配置文件中的environment标签，配置连接数据库的相关信息-->
+    <bean class="com.alibaba.druid.pool.DruidDataSource" id="dataSource">
+        <property name="url" value="${jdbc.url}"></property>
+        <property name="username" value="${jdbc.username}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+        <property name="driverClassName" value="${jdbc.driver}"></property>
+    </bean>   
+<!--spring整合mybatis后控制的创建获取SqlSessionFactory的对象（SqlSessionFactoryBean实现了FactoryBean这个接口，这个接口非常特殊，实现了这个接口的类注入容器后会自动调用getObject()方法，并且把方法的返回值存放到容器中，这里的返回值就是SqlSessionFactory对象,所以下面再配置好mybatis配置文件的路径与数据源，就能够从容器中使用SqlSessionFactory.openSession()方法获取到SqlSession对象，从而能够使用getMapper()方法获取到接口的实现类对象）-->
+    <bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sessionFactory">
+        <!--配置连接池-->
+        <property name="dataSource" ref="dataSource"></property>
+        <!--配置mybatis配置文件的路径-->
+        <property name="configLocation" value="classpath:mybatis-config.xml"></property>
+    </bean>
+
+    <!--mapper扫描配置，扫描到的mapper对象会被注入Spring容器中（根据mapper的xml映射文件的sql动态代理(JDK)生成mapper的实现类存放到容器中）,相当于mybatis配置文件中的mappers、package标签-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer" id="mapperScannerConfigurer">
+        <property name="basePackage" value="com.sangeng.dao"></property>
+    </bean>
+~~~~
+
+mybatis配置文件**mybatis-config.xml**如下:
+
+~~~~xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <!--也可以为空-->
+    <typeAliases>
+        <package name="com.sangeng.domain"></package>
+    </typeAliases>
+</configuration>
+~~~~
+
+
+
+### ③从容器中获取Mapper对象进行使用
+
+省去了：读取mybatis配置文件、创建工厂、获取会话的过程，可以直接从容器中获取mapper的实现类对象
+
+~~~~java
+    @Autowired
+    private UserDao userDao;
+~~~~
+
+## 3.Spring声明式事务
+
+### 3.1 事务回顾
+
+### 	
+
+#### **3.1.1 事务的概念**
+
+​		保证一组数据库的操作，要么同时成功，要么同时失败
+
+
+
+#### 3.1.2 四大特性(三更故事记忆法)
+
+- 隔离性
+多个事务之间要相互隔离，不能互相干扰
+
+- 原子性
+  指事务是一个不可分割的整体，类似一个不可分割的原子
+  
+- 持久性
+指事务一旦被提交，这组操作修改的数据就真的的发生变化了(不会再被回滚了)。即使接下来数据库故障也不应该对其有影响。
+
+- 一致性
+  保障事务前后这组数据的状态是一致的。要么都是成功的，要么都是失败的。
+
+### 3.2 实现声明式事务
+
+​		**声明式事务底层是通过AOP实现**
+
+  ​	如果我们自己去对事务进行控制的话我们就需要在原来核心代码的基础上加上事务控制相关的代码（就会耦合在一起）。而在我们的实际开发中这种事务控制的操作也是非常常见的。所以Spring提供了声明式事务的方式让我们去控制事务。
+
+  ​	只要简单的加个注解(或者是xml配置)就可以实现事务控制，不需要事务控制的时候只需要去掉相应的注解即可(解耦了)。
+
+  #### 3.2.1 注解实现
+
+  ##### ①配置事务管理器和事务注解驱动
+
+  在spring的配置文件applicationContext.xml中添加如下配置：
+
+  ~~~~xml
+      <!--把事务管理器注入Spring容器，需要配置一个连接池-->
+      <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+          <property name="dataSource" ref="dataSource"/>
+      </bean>
+      <!--开启事务注解驱动，配置使用的事务管理器-->
+      <tx:annotation-driven transaction-manager="txManager"/>
+  ~~~~
+
+  ##### ②添加注解
+
+  在需要进行事务控制的方法或者类上添加@Transactional注解就可以实现事务控制。
+
+  ~~~~java
+      @Transactional
+      public void transfer(Integer outId, Integer inId, Double money) {
+          //增加
+          accoutDao.updateMoney(inId,money);
+  //        System.out.println(1/0);
+          //减少
+          accoutDao.updateMoney(outId,-money);
+      }
+  ~~~~
+
+  **注意：如果加在类上，这个类的所有方法都会受事务控制，如果加在方法上，就是那一个方法受事务控制。**
+
+  注意，因为声明式事务底层是通过AOP实现的，所以最好把AOP相关依赖都加上。
+
+  ~~~~xml
+         <dependency>
+              <groupId>org.aspectj</groupId>
+              <artifactId>aspectjweaver</artifactId>
+              <version>1.9.6</version>
+          </dependency>
+  ~~~~
+
+  
+
+  #### 3.2.2 xml方式实现
+
  
+
+  ##### ①配置事务管理器
+
+  ~~~~xml
+      <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+          <property name="dataSource" ref="dataSource"/>
+      </bean>
+  ~~~~
+
+  ##### ②配置事务切面
+
+  ~~~~xml
+   	<!--定义事务管理的通知类-->
+      <tx:advice transaction-manager="txManager" id="txAdvice">
+          <tx:attributes>
+              <!--第二次筛选：使用对方法名称进行-->
+              <tx:method name="trans*"/>
+          </tx:attributes>
+      </tx:advice>
+  
+      <aop:config>
+          <!--第一次筛选:使用切点表达式-->
+          <aop:pointcut id="pt" expression="execution(* com.sangeng.service..*.*(..))"></aop:pointcut>
+          <aop:advisor advice-ref="txAdvice" pointcut-ref="pt"></aop:advisor>
+      </aop:config>
+  ~~~~
+
+  注意，因为**声明式事务底层是通过AOP实现**的，所以最好把AOP相关依赖都加上。
+
+  ~~~~xml
+         <dependency>
+              <groupId>org.aspectj</groupId>
+              <artifactId>aspectjweaver</artifactId>
+              <version>1.9.6</version>
+          </dependency>
+  ~~~~
+
+### 3.3 属性配置
+
+#### 3.3.1 事务传播行为propagation
+
+​	当事务方法嵌套调用时，需要控制是否开启新事务，可以使用事务传播行为来控制。
+
+
+
+测试案例:
+
+~~~~java
+@Service
+public class TestServiceImpl {
+    @Autowired
+    AccountService accountService;
+
+    @Transactional
+    public void test(){
+        accountService.transfer(1,2,10D);
+        accountService.log();
+    }
+}
+~~~~
+
+~~~~java
+public class AccountServiceImpl implements AccountService {
+	//...省略其他不相关代码
+    @Transactional
+    public void log() {
+        System.out.println("打印日志");
+        int i = 1/0;
+    }
+    
+    // 具体效果：当这个方法没有出现异常，事务正常提交后就不会被回滚了，成功了就是肯定成功了
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void transfer(Integer outId, Integer inId, Double money) {
+        //增加
+        accoutDao.updateMoney(inId,money);
+        //减少
+        accoutDao.updateMoney(outId,-money);
+    }
+
+}
+~~~~
+
+测试：
+
+~~~~java
+  	@Autowired
+    AccountService accountService;  
+
+	@Test
+    public void test(){
+        //结果：transfer方法成功向数据库写入了数据，没有被log()方法引起的异常回滚。
+        accountService.test();
+    }
+~~~~
+
+@Transactional注解，propagation属性的其他值：
+
+新建：即：使用一个新的连接对象去开启事务(
+
+原来：c1.setAutoCommit(false),c1.commit(),c1.rollback()
+
+新建后: c2.setAutoCommit(false),c2.commit(),c2.rollback() , c2调用commit()方法后，即使c1调用了rollback()方法，c2的提交也不会被回滚。
+
+)
+
+| 属性值                                                   | 行为                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------ |
+| REQUIRED（必须要有：别人有我就进入别人的，没有就新建）   | 外层方法有事务，内层方法就加入。外层没有，内层就新建   |
+| REQUIRES_NEW（必须要有新事务：不管别人有没有，我都新建） | 外层方法有事务，内层方法新建。外层没有，内层也新建     |
+| SUPPORTS（支持有：别人有我就进入别人的，没有就摆了）     | 外层方法有事务，内层方法就加入。外层没有，内层就也没有 |
+| NOT_SUPPORTED（支持没有:我谁也不加）                     | 外层方法有事务，内层方法没有。外层没有，内层也没有     |
+| MANDATORY（强制要求外层有）                              | 外层方法有事务，内层方法加入。外层没有。内层就报错     |
+| NEVER(绝不允许有)                                        | 外层方法有事务，内层方法就报错。外层没有。内层就也没有 |
+
+**重点：前三个**，**(内层)事务为什么失效？**可能是事务传播行为propagation设置错误，比如设置为SUPPORTS并且此时外层方法没有设置事务时，内层的事务就会失效。
+
+
+
+#### 3.3.2 隔离级别isolation
+
+1. Isolation.DEFAULT 使用数据库默认隔离级别
+
+2. Isolation.READ_UNCOMMITTED 读未提交,存在脏读问题
+
+3. Isolation.READ_COMMITTED 读已提交,解决脏读问题
+
+4. Isolation.REPEATABLE_READ 重复读,解决可能的不可重复读问题
+
+5. Isolation.SERIALIZABLE 序列化,可以避免脏读、不可重复读与幻读。但是这种事务隔离级别效率低下，比较耗数据库性能，一般不使用。
+
+大多数数据库默认的事务隔离级别是Read committed，比如Sql Server , Oracle。
+
+而Mysql的默认隔离级别是Repeatable read。
+
+使用方法：
+
+~~~~java
+   @Transactional(propagation = Propagation.REQUIRES_NEW,isolation = Isolation.READ_COMMITTED)
+    public void transfer(Integer outId, Integer inId, Double money) {
+        //增加
+        accoutDao.updateMoney(inId,money);
+        //减少
+        accoutDao.updateMoney(outId,-money);
+    }
+~~~~
+
+
+
+#### 3.3.3 只读readOnly
+
+​	如果事务中的操作**都是读操作（select）**，没涉及到对数据的写操作可以设置readOnly为true。这样可以提高效率。
+
+~~~~java
+    @Transactional(readOnly = true)
+    public void log() {
+        System.out.println("打印日志");
+        int i = 1/0;
+    }
+~~~~
+
+
+
