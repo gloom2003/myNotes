@@ -157,6 +157,7 @@ Integer num = Integer.valueOf(String str);
 - get(0) 查
 - contains(obj) 找
 - set(0,obj) 替换
+- remove(0) 删
 
 ## 4 对集合进行排序 Collections.sort
 
