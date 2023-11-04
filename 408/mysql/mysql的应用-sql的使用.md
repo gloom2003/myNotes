@@ -81,6 +81,20 @@ case when ... then ... else ... end 即: if(...) {...} else {...}
 ~~~sql
 ~~~
 
+### 窗口函数的使用
+
+窗口函数需要**mysql8.0以上的版本**才能够使用
+
+- row_number()
+- dense_rank()
+- rank()
+
+区别：
+
+![https://image.itbaima.net/images/173/image-20231104127127243.png](https://image.itbaima.net/images/173/image-20231104127127243.png)
+
+
+
 
 
 ## 2 MySQL 常用内置函数的使用
@@ -572,9 +586,21 @@ ON s.c_id = c.c_id
 GROUP BY c.c_id,c_name
 ~~~
 
-p23:
+### 3.5 窗口函数的使用
 
+p23: rank()的基本使用
 
+~~~sql
+# -19、按各科成绩进行排序，并显示排名（重点)
+# 窗口函数需要mysql8.0以上的版本才能够使用，我这里是5.5.4
+SELECT sc.`c_id`,sc.`s_score`,
+rank() over(PARTITION BY sc.c_id ORDER BY sc.s_score DESC) AS '排名'
+FROM score sc INNER JOIN course c
+ON sc.`c_id` = c.`c_id`
+
+~~~
+
+p24:
 
 ## 4 DCL 数据库控制语言
 
