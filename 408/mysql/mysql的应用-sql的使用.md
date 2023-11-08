@@ -93,6 +93,12 @@ case when ... then ... else ... end 即: if(...) {...} else {...}
 
 ![https://image.itbaima.net/images/173/image-20231104127127243.png](https://image.itbaima.net/images/173/image-20231104127127243.png)
 
+语法：
+
+~~~sql
+select rank() over(PARTITION BY ? ORDER BY ? DESC)
+~~~
+
 
 
 
@@ -593,14 +599,17 @@ p23: rank()的基本使用
 ~~~sql
 # -19、按各科成绩进行排序，并显示排名（重点)
 # 窗口函数需要mysql8.0以上的版本才能够使用，我这里是5.5.4
-SELECT sc.`c_id`,sc.`s_score`,
+SELECT st.s_name '姓名',c.c_name '科目',sc.`s_score` '分数',
 rank() over(PARTITION BY sc.c_id ORDER BY sc.s_score DESC) AS '排名'
 FROM score sc INNER JOIN course c
 ON sc.`c_id` = c.`c_id`
+inner join student st on sc.s_id = st.s_id
 
 ~~~
 
-p24:
+p25:
+
+
 
 ## 4 DCL 数据库控制语言
 
@@ -612,7 +621,7 @@ p24:
 
 #### 4.1.1 基本命令
 
-连接本地的mysql服务器：
+连接本地的mysql服务器：		
 
 ~~~shell
 mysql -u 用户名 -p

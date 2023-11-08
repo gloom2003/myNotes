@@ -794,9 +794,46 @@ docker run -d -p 7777:7777 --restart always --name=backend1 服务器ip:5000/kan
 
 
 
+### 4 windows上使用docker部署mysql
+
+在cmd中（前提是下载了docker客户端，配置好环境变量等...）：
+
+1.拉取最新的mysql镜像
+
+~~~sh
+docker pull mysql
+~~~
+
+2.创建并启动一个MySQL容器
+
+```sh
+docker run --name mysql_latest -e MYSQL_ROOT_PASSWORD=123456 -p 3306:3306 -d mysql
+```
 
 
 
+
+- –name :给容器命名
+- -e MYSQL_ROOT_PASSWORD=123456：初始化 root 用户的密码。
+- -p 3306:3306：将容器的 3306 端口映射到主机的 3306 端口。
+- -d 后台运行
+- 最后的参数是用到的镜像名
+
+3.进入MySQL容器(不必须)
+
+```bash
+docker exec -it mysql /bin/bash
+```
+
+4:进入mysql(不必须)
+
+```bash
+mysql -u root -p
+```
+
+输入设置的密码：123456即可登录成功
+
+5.使用nacicat连接 localhost:3306端口即可
 
 ## 4docker工作机制 
 
