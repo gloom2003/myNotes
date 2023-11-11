@@ -72,40 +72,15 @@ WHERE sc.`c_id` = '01' AND sc.`s_score` < 60
 ORDER BY sc.`s_score` DESC
 ~~~
 
-​	
 
-### case when语句的使用
-
-case when ... then ... else ... end 即: if(...) {...} else {...}
 
 ~~~sql
+
 ~~~
-
-### 窗口函数的使用
-
-窗口函数需要**mysql8.0以上的版本**才能够使用
-
-- row_number()
-- dense_rank()
-- rank()
-
-区别：
-
-![https://image.itbaima.net/images/173/image-20231104127127243.png](https://image.itbaima.net/images/173/image-20231104127127243.png)
-
-语法：
-
-~~~sql
-select rank() over(PARTITION BY ? ORDER BY ? DESC)
-~~~
-
-
-
-
 
 ## 2 MySQL 常用内置函数的使用
 
-【数值函数】
+###【数值函数】
 
 - Abs(X) //绝对值abs(-10.9) = 10
 - Format(X，D) //格式化千分位数值format(1234567.456, 2) =1,234,567.46
@@ -119,7 +94,7 @@ select rank() over(PARTITION BY ? ORDER BY ? DESC)
 - Rand() //随机数
 - TRUNCATE(X,D) //截取D位小数
 
-【时间日期函数】
+###【时间日期函数】
 
 - Now(),current_timestamp() //当前日期时间
 - Current_date() //当前日期
@@ -130,7 +105,7 @@ select rank() over(PARTITION BY ? ORDER BY ? DESC)
 - Unix_timestamp() //获得unix时间戳
 - From_unixtime() //从时间戳获得时间
 
-【字符串函数】
+###【字符串函数】
 
 - upper() 使字母全部变为大写
 - lower() 使字母全部变为小写
@@ -154,12 +129,16 @@ select rank() over(PARTITION BY ? ORDER BY ? DESC)
 - STRCMP(string1 ,string2 ) //逐字符比较两字串大小
 - TRIM(string) //去除前后两端的空格
 
-【流程函数】
+###【流程函数】
 
-- CASE WHEN [condition]THEN result[WHEN [condition]THEN result ...][ELSE result]END 多分支
+- case when语句的使用
+
+  case when ... then ... else ... end 即: if(...) {...} else {...}
+
+
 - IF(expr1,expr2,expr3) 双分支。
 
-【聚合函数】
+###【聚合函数】
 
 - Count()
 - Sum()
@@ -168,9 +147,31 @@ select rank() over(PARTITION BY ? ORDER BY ? DESC)
 - Avg()
 - Group_concat()
 
-## 3 精选sql练习题
+### 窗口函数的使用
 
-查询的数据表的位置：本地3307端口的test数据库中
+窗口函数需要**mysql8.0以上的版本**才能够使用
+
+- row_number()
+- dense_rank()
+- rank()
+
+区别：
+
+![https://image.itbaima.net/images/173/image-20231104127127243.png](https://image.itbaima.net/images/173/image-20231104127127243.png)
+
+语法：
+
+~~~sql
+select rank() over(PARTITION BY ? ORDER BY ? DESC)
+~~~
+
+
+
+
+
+## 3 精选sql练习题 DQL 数据查询语言
+
+查询的数据表的位置：本地3307端口的test数据库中 or  docker的mysql容器的test数据库中
 
 ### 3.1 创建表法
 
@@ -607,7 +608,37 @@ inner join student st on sc.s_id = st.s_id
 
 ~~~
 
-p25:
+p26: 合理选择窗口函数（3选1）解决问题:  DENSE_RANK()的使用
+
+~~~sql
+-- 22、查询所有课程的成绩第2名到第3名的学生信息及该课程成绩
+
+-- 子1：查询所有课程的成绩的排名与分数
+select sc.c_id,sc.s_id,sc.s_score,DENSE_RANK() over(PARTITION by sc.c_id ORDER BY sc.s_score desc) '排名'
+from score sc
+
+-- 粗略的结果：
+select a.c_id,a.s_id,a.s_score,a.排名
+from (
+		select sc.c_id,sc.s_id,sc.s_score,DENSE_RANK() over(PARTITION by sc.c_id 		ORDER BY sc.s_score desc) '排名'
+		from score sc
+) a
+where a.排名 in (2,3)
+
+-- 最终结果：
+select c.c_name '课程名称',st.s_name '学生名称',st.s_sex '性别',st.s_birth '出生日期',a.s_score '分数'
+from (
+		select sc.c_id,sc.s_id,sc.s_score,DENSE_RANK() over(PARTITION by sc.c_id 		ORDER BY sc.s_score desc) '排名'
+		from score sc
+) a left join student st on a.s_id = st.s_id
+left join course c on a.c_id = c.c_id
+where a.排名 in (2,3)
+
+
+
+~~~
+
+p27:
 
 
 
@@ -682,4 +713,66 @@ grant select,update(s_name) on test.student to test;
 ```sql
 revoke all|权限1,权限2...(列1,...) on 数据库.表 from 用户
 ```
+
+## 5 数据定义语言：DDL
+
+库的操作：
+
+```sql
+create,alter,drop
+
+create database if not exists book;
+
+alter database book character set gbk;//修改字符集
+
+drop database if exists book;
+```
+
+表的操作：
+
+```sql
+create table table_aname(
+a int,
+b varchar(10),
+c double ,
+d datatime
+)
+```
+
+修改表操作：
+
+```sql
+alter table 表名 change (column) name1 name2 类型；
+
+alter table 表名 modify (column) name1 新类型;  change,modify,add,drop,rename to column
+```
+
+删除表操作：
+
+```sql
+drop table  if exists table_name;
+```
+
+## 6 数据操作语言：DML
+
+```sql
+insert into table(字段1,字段2,字段3)
+values( , , ),( , , ),( , ,);
+
+insert into table_name set '字段1' = ' ','字段2' = ' ',... 
+
+insert into table_name( , , )
+select  , , , union
+select  , , , union;
+
+UPDATE beatuy
+SET boyfriend_id = 2
+WHERE boyfriend_id = NULL;
+
+#删除age为1的数据,如果不添加where语句则删除表的全部数据,再次添加数据时自增的id从上一次的id开始而不是从1开始
+delete from table_name where age = 1;
+truncate table table_name;
+```
+
+
 

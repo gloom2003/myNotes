@@ -27,7 +27,7 @@
 
 
 
-## 2.入门案例以及详解
+## 2.入门案例以及Servlet详解
 
 ### ①导入相关依赖
 
@@ -71,7 +71,7 @@
                 <configuration>
                     <!--端口-->
                     <port>81</port>
-                    <!--项目路径-->
+                    <!--项目路径,例如：localhost:81/中的"/"-->
                     <path>/</path>
                     <!--解决get请求中文乱码-->
                     <uriEncoding>utf-8</uriEncoding>
@@ -91,6 +91,8 @@ tomcat中默认有两个Servlet:
 访问hello.html就会被处理/hello路径的方法(@Conrroller("/hello"))进行处理
 
 下面的配置**使用DispatcherServlet覆盖了tomcat的DefaultServlet，并且配置了default-servlet-handler处理访问静态资源的问题**。值得一提的是，tomcat的DefaultServlet即使不配置default-servlet-handle也可以访问静态资源。
+
+webapp/WEB-INF/web.xml配置：
 
 ~~~~xml
 	<servlet>
@@ -144,7 +146,7 @@ tomcat中默认有两个Servlet:
 
 ### ③配置SpringMVC
 
-在resources目录下创建mvc的配置文件spring-mvc.xml
+**选择XML Configuration File中的Spring File(不同的选择xml的最上面的模版是不同的)**,在resources目录下创建mvc的配置文件spring-mvc.xml
 
 ~~~~xml
    <!--
@@ -209,7 +211,7 @@ public class TestController {
 
 ​	我们可以用其来设定所能匹配请求的要求。只有符合了设置的要求，请求才能被加了该注解的方法或类处理。
 
-
+​	
 
 ### 3.1 指定请求路径
 
@@ -235,6 +237,8 @@ public class TestController {
 ### 3.2 指定请求方式
 
 ​	method属性可以用来指定可处理的请求方式。
+
+​	**如果不指定method属性，默认情况下@RequestMapping注解可以处理所有的HTTP请求方法。**
 
 例如：
 
@@ -436,11 +440,12 @@ public class TestController {
 
 主要规则如下：
 
-- ​	 每一个URI代表1种资源     
+- 每一个URI代表1种资源     
 
-- ​     客户端使用GET、POST、PUT、DELETE 4个表示操作方式的动词对服务端资源进行操作：GET用来获取资源，POST用来新建资源，PUT用来更新资源，DELETE用来删除资源； 
-- ​	 简单参数例如id等写到url路径上  例如： /user/1 HTTP GET：获取id=1的user信息      /user/1 HTTP DELETE ：删除id=1的user信息    
-- ​	 复杂的参数转换成json或者xml（现在基本都是json）写到请求体中。
+- 客户端使用GET、POST、PUT、DELETE 4个表示操作方式的动词对服务端资源进行操作：GET用来获取资源，POST用来新建资源，PUT用来更新资源，DELETE用来删除资源； 
+- 简单参数例如id等写到url路径上  例如： /user/1 HTTP GET：获取id=1的user信息      /user/1 HTTP DELETE ：删除id=1的user信息    
+- 复杂的参数转换成json或者xml（现在基本都是json）写到请求体中。
+- 符合 RESTful 风格的响应通常应该包含 JSON 格式的数据，响应应该写入响应体中。
 
 ## 5.获取请求参数
 
@@ -868,12 +873,6 @@ public class StringToDateConverter implements Converter<String, Date> {
 
 #### 范例一
 
-​	要求定义个RestFul风格的接口，该接口可以用来根据id查询用户。请求路径要求为  /response/user  ，请求方式要求为GET。
-
-​	而请求参数id要写在请求路径上，例如   /response/user/1   这里的1就是id。
-
-​	要求获取参数id,去查询对应id的用户信息（模拟查询即可，可以选择直接new一个User对象），并且转换成json响应到响应体中。
-
 ~~~~java
 @Controller
 @RequestMapping("/response")
@@ -882,7 +881,7 @@ public class ResponseController {
     @ResponseBody //表示这方法的返回值将会放入响应体中
     public User testResponse(@PathVariable Integer id){
         User user = new User(id,null,null,null);
-        return user;//因为上面做过json转换的配置，所以会把返回的对象转换成json字符串
+        return user;//因为上面做过json转换的配置，所以会把返回的对象转换成json字符串写入响应体中
     }
 }
 
@@ -891,10 +890,6 @@ public class ResponseController {
 
 
 #### 范例二
-
-​	要求定义个RestFul风格的接口，该接口可以查询所有用户。请求路径要求为  /response/user  ，请求方式要求为GET。
-
-​	去查询所有的用户信息（模拟查询即可，可以选择直接创建集合，添加几个User对象），并且转换成json响应到响应体中。
 
 ~~~~java
 @Controller
@@ -919,7 +914,7 @@ public class ResponseController {
 }
 ~~~~
 
-​	如果一个Controller中的所有方法返回值都要放入响应体，那么我们可以直接在Controller类上加@ResponseBody。
+​	如果一个Controller中的所有方法返回值都要放入响应体，那么我们可以**直接在Controller类上加@ResponseBody。**
 
 ​	我们可以使用**@RestController** 注解替换@Controller和@ResponseBody两个注解
 
@@ -950,6 +945,14 @@ public class ResponseController {
 
 ## 3.页面跳转
 
+​	**请求转发**和**重定向**是两种不同的HTTP请求处理方式。
+
+1 请求转发是指在服务器端将请求转发给另一个资源，然后由该资源处理请求并生成响应返回给客户端。客户端不会察觉到请求被转发了，因为整个处理过程是在服务器端进行的。请求转发通常用于服务器内部资源之间的交互，比如在Servlet中进行请求转发。
+
+2 重定向是指在服务器端接收到客户端的请求后，向客户端发送一个特殊的响应，包含目标资源的URL，客户端收到响应后会发起新的请求去获取目标资源。在重定向的过程中，客户端会看到浏览器地址栏中的URL发生变化。重定向通常用于告知客户端资源已经被移到了其他位置，需要在新的URL上重新发起请求。
+
+简而言之，请求转发是服务器端内部资源的交互过程，而重定向是告知客户端资源已经被移到了其他位置。
+
 ​	在SpringMVC中我们可以非常轻松的实现页面跳转，只需要把方法的返回值写成要跳转页面的路径即可。
 
 例如：
@@ -966,7 +969,7 @@ public class PageJumpController {
 
 ​	
 
-​	默认的跳转其实是转发的方式跳转的。我们也可以选择加上标识，在要跳转的路径前加上**forward:** 。这样SpringMVC也会帮我们进行请求转发。
+​	默认的跳转其实是**请求转发**的方式跳转的。我们也可以选择加上标识，在要跳转的路径前加上**forward:** 。这样SpringMVC也会帮我们进行请求转发。
 
 例如：
 
@@ -1023,12 +1026,16 @@ public class PageJumpController {
 
 #### ②页面跳转
 
+​	**WEB-INF目录及下面的文件是受保护的，浏览器直接访问是访问不到的。**
+
+​	不能够与@ResponseBody注解一起使用，因为@ResponseBody会把返回值写入响应体中。
+
 ​	视图解析器会在逻辑视图的基础上拼接得到物理视图。
 
 ~~~~java
     @RequestMapping("/testJumpToJsp")
     public String testJumpToJsp(){
-//        return "/WEB-INF/page/test.jsp";
+//        实际上相当于： return "/WEB-INF/page/test.jsp";
         return "test";
     }
 ~~~~
@@ -1044,7 +1051,7 @@ public class PageJumpController {
 ~~~~java
     @RequestMapping("/testJumpHtml")
     public String testJumpHtml(){
-        //如果加了forward:  或者redirect: 就不会进行前后缀的拼接
+        //如果加了forward:  或者redirect: 视图解析器就不会进行前后缀的拼接
         return "forward:/hello1.html";
     }
 ~~~~
@@ -1065,6 +1072,7 @@ public class PageJumpController {
 @Controller
 public class RequestResponseController {
     @RequestMapping("/getReqAndRes")
+    // 获取Request、Response、Session等原生对象
     public String getReqAndRes(HttpServletRequest request, HttpServletResponse response, HttpSession session){
         System.out.println();
         return "test";
@@ -1091,7 +1099,7 @@ public class RequestResponseController {
 public class RequestResponseController {
 
 
-    @RequestMapping("/getHeader")
+    @RequestMapping("/getHeader") // 告诉Spring MVC从请求头中获取名为device-type的数据进行赋值
     public String getHeader(@RequestHeader(value = "device-type") String deviceType){
         System.out.println(deviceType);
         return "test";
@@ -1114,7 +1122,7 @@ public class RequestResponseController {
 @Controller
 public class RequestResponseController {
 
-    @RequestMapping("/getCookie")
+    @RequestMapping("/getCookie")// 告诉Spring MVC从cookie中获取名为JSESSIONID的数据进行赋值
     public String getCookie(@CookieValue("JSESSIONID") String sessionId){
         System.out.println(sessionId);
         return "test";
@@ -1127,13 +1135,13 @@ public class RequestResponseController {
 
 ## 7.JSP开发模式（了解）
 
-​	如果我们使用JSP进行开发，那我们就需要在域中存数据，然后跳转到对应的JSP页面中，在JSP页面中获取域中的数据然后进行相关处理。
+​	**如果我们使用JSP进行开发，那我们就需要在域中存数据，然后跳转到对应的JSP页面中，在JSP页面中获取域中的数据然后进行相关处理。**
 
 ​	使用如果是类似JSP的开发模式就会涉及到**往域中存数据**和**携带数据跳转页面**的操作。
 
 ​	所以我们来看下如果用SpringMVC进行相关操作。
 
-
+**域、Request域、Session域**
 
 ### 7.1 往Requet域存数据并跳转
 
@@ -1154,7 +1162,7 @@ public class RequestResponseController {
 public class JspController {
     @RequestMapping("/testRquestScope")
     public String testRquestScope(Model model){
-        //往请求域存数据
+        //往请求域存数据，实际上是存储到HttpServletRequest对象的一个map集合中，jsp页面再从map中获取数据
         model.addAttribute("name","三更");
         model.addAttribute("title","不知名Java教程UP主");
         return "testScope";
@@ -1162,17 +1170,30 @@ public class JspController {
 }
 ~~~~
 
+**jsp能够从RequestScope中获取到数据，因为是请求转发的方式进行页面跳转的，请求头是相同的。**
+
+在jsp中获取相应的数据：
+
+~~~jsp
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <title>Title</title>
+</head>
+<body>
+    ${requestScope.get("name")}
+    ${requestScope.get("title")}
+</body>
+</html>
+~~~
+
 
 
 #### 7.1.2 使用ModelAndView
 
 ​	我们可以使用**ModelAndView**来往域中存数据和页面跳转。
 
-例如
-
-​	我们要求访问  **/testRequestScope2**  这个路径时能往域中存name和title数据，然后跳转到 **/WEB-INF/page/testScope.jsp** 这个页面。在Jsp中获取域中的数据。
-
-​	则可以使用如下写法:
+例如：
 
 ~~~~java
 @Controller
@@ -1182,7 +1203,7 @@ public class JspController {
         //往域中添加数据
         modelAndView.addObject("name","三更");
         modelAndView.addObject("title","不知名Java教程UP主");
-        //页面跳转
+        //页面跳转：相当于return "testScope"，也会被视图解析器添加前后缀
         modelAndView.setViewName("testScope");
         return modelAndView;
     }
@@ -1191,13 +1212,28 @@ public class JspController {
 
 ​	**注意要把modelAndView对象作为方法的返回值返回。**
 
+在jsp中获取相应的数据：
+
+~~~jsp
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <title>Title</title>
+</head>
+<body>
+    ${name}
+    ${title}
+</body>
+</html>
+~~~
+
 
 
 ### 7.2 从Request域中获取数据
 
 ​	我们可以使用**@RequestAttribute** 把他加在方法参数上，可以让SpringMVC帮我们从Request域中获取相关数据。
 
-
+**Request域中的数据实际上存储在HttpServletRequest对象的map集合属性中。**
 
 例如
 
@@ -1206,8 +1242,9 @@ public class JspController {
 public class JspController {
 
     @RequestMapping("/testGetAttribute")
-    public String testGetAttribute(@RequestAttribute("org.springframework.web.servlet.HandlerMapping.bestMatchingPattern")
+    public String   testGetAttribute(@RequestAttribute("org.springframework.web.servlet.HandlerMapping.bestMatchingPattern")
                                                String value,HttpServletRequest request){
+        // 表示让SpringMVC帮我们从Request域中获取默认的key = org.springframework.web.servlet.HandlerMapping.bestMatchingPattern的value
         System.out.println(value);
         return "testScope";
     }
@@ -1221,7 +1258,9 @@ public class JspController {
 
 ### 7.3 往Session域存数据并跳转
 
-​	我们可以使用**@SessionAttributes**注解来进行标识，用里面的属性来标识哪些数据要存入Session域。
+​	1.我们可以使用**@SessionAttributes**注解来进行标识，用里面的属性来标识哪些数据要存入Session域。
+
+2.也可以使用HttpSession对象，使用httpSession.setAttribute("name","三更")把数据存储到session域中
 
 
 
@@ -1241,6 +1280,8 @@ public class JspController {
 
     @RequestMapping("/testSessionScope")
     public String testSessionScope(Model model){
+        // 默认向request域中存储，但是使用@SessionAttributes({"name"})进行了配置
+        // 所以name这个数据也要存储一份到session域中
         model.addAttribute("name","三更");
         model.addAttribute("title","不知名Java教程UP主");
         return "testScope";
@@ -1248,7 +1289,23 @@ public class JspController {
 }
 ~~~~
 
+在jsp中获取相应的数据：
 
+~~~jsp
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <title>Title</title>
+</head>
+<body>
+    ${requestScope.get("name")}
+    ${requestScope.get("title")}
+    <hr>
+    ${sessionScope.get("name")}
+    ${sessionScope.get("title")} // 空
+</body>
+</html>
+~~~
 
 
 
@@ -1256,7 +1313,7 @@ public class JspController {
 
 ​	我们可以使用**@SessionAttribute**把他加在方法参数上，可以让SpringMVC帮我们从**Session域**中获取相关数据。
 
-
+**Session域中的数据实际上存储在HttpSession对象的map集合属性中。**
 
 例如：
 
@@ -1272,5 +1329,677 @@ public class JspController {
 
 }
 
+~~~~
+
+# SpringMVC-03
+
+## 1.拦截器
+
+### 1.1 应用场景
+
+​	如果我们想在多个Handler方法执行之前或者之后都进行一些处理，甚至某些情况下需要拦截掉，不让Handler方法执行。那么可以使用SpringMVC为我们提供的拦截器（底层也是aop实现的）。
+
+
+
+### 1.2 拦截器和过滤器的区别
+
+​	过滤器是在Servlet执行之前或者之后进行处理。而拦截器是对Handler（处理器）执行前后进行处理。
+
+如图：
+
+![image-20210516215721896](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\SpringMVC\img\image-20210516215721896.png)
+
+
+
+### 1.3 创建并配置拦截器
+
+#### ①创建类实现HandlerInterceptor接口
+
+~~~~java
+public class MyInterceptor implements HandlerInterceptor {
+}
+~~~~
+
+#### ②实现方法
+
+~~~~java
+public class MyInterceptor implements HandlerInterceptor {
+    
+    //在handler方法执行之前会被调用
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        System.out.println("preHandle");
+        //返回值代表是否放行，如果为true则放行，如果为fasle则拦截，目标方法执行不到
+        return true;
+    }
+
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        System.out.println("postHandle");
+    }
+
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        System.out.println("afterCompletion");
+    }
+}
+~~~~
+
+#### ③配置拦截器
+
+在spring-mvc.xml中：
+
+~~~~xml
+    <!--配置拦截器拦截的规则与注入自定义拦截器对象,告诉ioc容器这是一个拦截器对象-->
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <!--
+                    配置拦截器要拦截的路径
+                    /*    代表当前一级路径，不包含子路径
+                    /**   代表当前一级路径和多级路径，使用的更多
+
+                    例如：
+                        /test/*   这种会拦截下面这种路径/test/add  /test/delete
+                                  但是拦截不了多级路径的情况例如  /test/add/abc  /test/add/abc/bcd
+                        /test/**  这种可以拦截多级目录的情况，无论    /test/add还是/test/add/abc/bcd 都可以拦截
+            -->
+            <mvc:mapping path="/**"/>
+            <!--配置排除拦截的路径-->
+            <!--<mvc:exclude-mapping path="/"/>-->
+            <!--配置拦截器对象注入容器-->
+            <bean class="com.sangeng.interceptor.MyInterceptor"></bean>
+        </mvc:interceptor>
+    </mvc:interceptors>
+~~~~
+
+
+
+### 1.4 拦截器方法及参数详解
+
+- preHandle方法会**在Handler方法执行之前执行**，我们可以在其中进行一些前置的判断或者处理。
+- postHandle方法会**在Handler方法执行之后执行**，我们可以在其中对域中的数据进行修改，也可以修改要跳转的页面(修改modelAndView对象即可实现，一般方法的返回值为**字符串时也会转换为modelAndView对象)**。
+- afterCompletion方法**会在最后执行**，这个时候已经**没有办法对域中的数据进行修改**，也没有办法修改要跳转的页面。我们在这个方法中一般进行一些资源的释放。
+
+~~~~java
+    /**
+     * 在handler方法执行之前会被调用
+     * @param request 当前请求对象
+     * @param response 响应对象
+     * @param handler 相当于是真正能够处理请求的handler方法封装成的对象，对象中有这方法的相关信息
+     * @return 返回值代表是否放行，如果为true则放行，如果为fasle则拦截，目标方法执行不到
+     * @throws Exception
+     */
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        System.out.println("preHandle");
+        //返回值代表是否放行，如果为true则放行，如果为fasle则拦截，目标方法执行不到
+        return true;
+    }
+~~~~
+
+~~~~java
+    /**
+     * postHandle方法会在Handler方法执行之后执行
+     * @param request 当前请求对象
+     * @param response 响应对象
+     * @param handler 相当于是真正能够处理请求的handler方法封装成的对象，对象中有这方法的相关信息
+     * @param modelAndView handler方法执行后的modelAndView对象，我们可以修改其中要跳转的路径或者是域中的数据
+     * @throws Exception
+     */
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        System.out.println("postHandle");
+    }
+~~~~
+
+~~~~java
+    /**
+     * afterCompletion方法会在最后执行
+     * @param request 当前请求对象
+     * @param response 响应对象
+     * @param handler 相当于是真正能够处理请求的handler方法封装成的对象，对象中有这方法的相关信息
+     * @param ex 异常对象
+     * @throws Exception
+     */
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        System.out.println("afterCompletion");
+    }
+~~~~
+
+
+
+### 1.5 案例-登录状态拦截器
+
+#### 1.5.1需求
+
+​	我们的接口需要做用户登录状态的校验，如果用户没有登录则跳转到登录页面，登录的情况下则可以正常访问我们的接口。
+
+#### 1.5.2 分析
+
+​	怎么判断是否登录？
+
+​			登录时往session写入用户相关信息，然后在其他请求中从session中获取这些信息，如果获取不到说明不是登录状态。
+
+​	很多接口都要去写判断的代码，难道在每个Handler中写判断逻辑？
+
+​			用拦截器，在拦截器中进行登录状态的判断。
+
+​	登录接口是否应该进行拦截？
+
+​			不能拦截
+
+​	静态资源是否要进行拦截？
+
+​			不能拦截
+
+#### 1.5.3 步骤分析
+
+​	①登录页面，请求发送给登录接口
+
+​	②登录接口中，校验用户名密码是否正确（模拟校验即可，先不查询数据库）。
+
+​				如果用户名密码正确，登录成功。把用户名写入session中。
+
+​	 ③定义其他请求的Handler方法
+
+​	 ④定义拦截器来进行登录状态判断
+
+​	 			如果能从session中获取用户名则说明是登录的状态，则放行
+
+​				 如果获取不到，则说明未登录，要跳转到登录页面。
+
+#### 1.5.4 代码实现
+
+##### 1.5.4.1 登录功能代码实现
+
+###### 	①编写登录页面
+
+~~~~html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <form method="post" action="/login">
+        用户名：<input type="text" name="username">
+        密码：<input type="password" name="password">
+        <input type="submit">
+    </form>
+</body>
+</html>
+~~~~
+
+###### 	②编写登录接口
+
+​	接口中，校验用户名密码是否正确（模拟校验即可，先不查询数据库）。如果用户名密码正确，登录成功。把用户名写入session中。
+
+~~~~java
+@Controller
+public class LoginController {
+
+    @PostMapping("/login")
+    public String longin(String username, String password, HttpSession session){
+        //往session域中写入用户名用来代表登录成功
+        session.setAttribute("username",username);
+        return "/WEB-INF/page/success.jsp";
+    }
+}
+
+~~~~
+
+
+
+##### 1.5.4.2 登录状态校验代码实现
+
+###### ①定义拦截器
+
+~~~~java
+public class LoginInterceptor implements HandlerInterceptor {
+}
+~~~~
+
+###### ②重写方法，在preHandle方法中实现状态校验
+
+~~~~java
+public class LoginInterceptor implements HandlerInterceptor {
+
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        //从session中获取用户名，判断是否存在
+        HttpSession session = request.getSession();
+        String username = (String) session.getAttribute("username");
+        if(StringUtils.isEmpty(username)){
+            //如果获取不到说明未登录 ，重定向跳转到登录页面
+            String contextPath = request.getServletContext().getContextPath();
+            // sendRedirect方法设置状态码为重定向304并且设置请求头location的值为contextPath+"/static/login.html,表示浏览器重新发送请求的路径
+            response.sendRedirect(contextPath+"/static/login.html");
+        }else{
+            //如果获取到了，说明之前登录过。放行。
+            return true;
+        }
+        return false;
+    }
+}
+~~~~
+
+###### ③配置拦截器
+
+- ​	登录相关接口不应该拦截
+- ​	静态资源不拦截
+
+~~~~xml
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <!--要拦截的路径-->
+            <mvc:mapping path="/**"/>
+            <!--排除不拦截的路径-->
+            <mvc:exclude-mapping path="/static/**"></mvc:exclude-mapping>
+            <mvc:exclude-mapping path="/WEB-INF/page/**"></mvc:exclude-mapping>
+            <mvc:exclude-mapping path="/login"></mvc:exclude-mapping>
+            <bean class="com.sangeng.interceptor.LoginInterceptor"></bean>
+        </mvc:interceptor>
+    </mvc:interceptors>
+~~~~
+
+
+
+### 1.6 多拦截器执行顺序
+
+​	如果我们配置了多个拦截器，拦截器的顺序是**按照配置的先后顺序**的。
+
+​	这些拦截器中方法的执行顺序如图（**preHandler都返回true的情况下**）：
+
+![image-20210517165433983](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\SpringMVC\img\多拦截器执行顺序.png)
+
+- 先执行preHandle,再执行postHandle,最后执行afterCompletion,不会出现篡位的情况。
+
+
+
+
+如果**拦截器3的preHandle方法返回值为false**。执行顺序如图：
+
+![image-20210519213325101](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\SpringMVC\img\多拦截器执行顺序2.png)
+
+- ​	只有所有拦截器都放行了，请求被Handler处理器处理之后，postHandle方法才会被执行。
+- ​	只有当前拦截器放行了，当前拦截器的afterCompletion方法才会执行。
+
+
+
+## 2.统一异常处理
+
+​	我们在实际项目中**Dao层和Service层的异常都会被抛到Controller层**。但是如果我们在Controller的方法中都加上异常的try...catch处理也会显的非常的繁琐。
+
+​	所以SpringMVC为我们提供了统一异常处理方案。可以把Controller层的异常进行统一处理。这样既提高了代码的复用性也让异常处理代码和我们的业务代码解耦。
+
+​	一种是实现HandlerExceptionResolver接口的方式，一种是使用@ControllerAdvice注解的方式。
+
+
+
+### 2.1 HandlerExceptionResolver
+
+#### ①实现接口
+
+~~~~java
+public class MyHandlerExceptionResolver implements HandlerExceptionResolver {
+
+}
+
+~~~~
+
+
+
+#### ②重写方法
+
+~~~~java
+public class MyHandlerExceptionResolver implements HandlerExceptionResolver {
+    
+    //如果handler中出现了异常，就会调用到该方法，我们可以在本方法中进行统一的异常处理。
+    public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {// Object handler：发生异常的方法所封装的对象，Exception ex：出现的异常对象
+        //获取异常信息，把异常信息放入域对象中
+        String msg = ex.getMessage();
+        ModelAndView modelAndView = new ModelAndView();
+        modelAndView.addObject("msg",msg);
+        //跳转到error.jsp
+        modelAndView.setViewName("/WEB-INF/page/error.jsp");
+        return modelAndView;
+    }
+}
+
+~~~~
+
+
+
+#### ③注入容器
+
+​	可以使用注解注入也可以使用xml配置注入。这里使用注解注入的方式。在类上加**@Component**注解，注意要保证类能被组件扫描扫描到。
+
+~~~~~java
+@Component
+public class MyHandlerExceptionResolver implements HandlerExceptionResolver {
+	//....省略无关代码
+}
+~~~~~
+
+
+
+### 2.2 @ControllerAdvice（重要）
+
+#### ①创建类加上@ControllerAdvice注解进行标识
+
+~~~~java
+@ControllerAdvice
+public class MyControllerAdvice {
+
+}
+~~~~
+
+
+
+#### ②定义异常处理方法	
+
+​	定义异常处理方法，使用**@ExceptionHandler**标识可以处理的异常。
+
+~~~~java
+@ControllerAdvice
+public class MyControllerAdvice {
+
+    @ExceptionHandler({NullPointerException.class,ArithmeticException.class})
+    public ModelAndView handlerException(Exception ex){
+        //如果出现了相关的异常，就会调用该方法
+        String msg = ex.getMessage();
+        ModelAndView modelAndView = new ModelAndView();
+        //把异常信息存入域中
+        modelAndView.addObject("msg",msg);
+        //跳转到error.jsp
+        modelAndView.setViewName("/WEB-INF/page/error.jsp");
+        return modelAndView;
+    }
+}
+~~~~
+
+
+
+#### ③注入容器
+
+​	可以使用注解注入也可以使用xml配置注入。这里使用注解注入的方式。在类上加**@Component**注解，注意要保证类能被组件扫描扫描到。
+
+~~~~java
+@ControllerAdvice
+@Component
+public class MyControllerAdvice {
+	//省略无关代码
+}
+~~~~
+
+
+
+### 2.3 总结
+
+​	我们在实际项目中一般会选择使用@ControllerAdvice 来进行异常的统一处理。
+
+​	因为如果在前后端不分离的项目中，异常处理一般是跳转到错误页面，让用户有个更好的体验。而前后端分离的项目中，异常处理一般是把异常信息封装到Json中写入响应体。无论是哪种情况，使用@ControllerAdvice的写法都能比较方便的实现。
+
+​	例如下面这种方式就是前后端分离的异常处理方案，把异常信息封装到对象中，转换成json写入响应体。
+
+~~~~java
+@ControllerAdvice
+@Component
+public class MyControllerAdvice {
+
+    @ExceptionHandler({NullPointerException.class,ArithmeticException.class})
+    @ResponseBody
+    public Result handlerException(Exception ex){
+        Result result = new Result();
+        result.setMsg(ex.getMessage());
+        result.setCode(500);
+        return result;
+    }
+}
+
+~~~~
+
+
+
+## 3.文件上传
+
+### 3.1 文件上传要求
+
+​	Http协议规定了我们在进行文件上传时的请求格式要求。所以在进行文件上传时，除了在表单中增加一个用于**上传文件的表单项（input标签，type=file）**外必须要满足以下的条件才能进行上传。
+
+#### ①请求方式为POST请求
+
+​	如果是使用表单进行提交的话，可以把form标签的**method**属性设置为**POST**。例如:
+
+~~~~html
+    <form action="/upload" method="post">
+
+    </form>
+~~~~
+
+#### ②请求头**Content-Type**必须为**multipart/form-data**
+
+​	如果是使用表单的话可以把表单的**entype**属性设置成**multipart/form-data**。例如：
+
+~~~~html
+    <form action="/upload" method="post" enctype="multipart/form-data">
+
+    </form>
+~~~~
+
+
+
+​	
+
+
+
+### 3.2 SpringMVC接收上传过来的文件
+
+​	SpringMVC使用commons-fileupload的包对文件上传进行了封装，我们只需要引入相关依赖和进行相应配置就可以很轻松的实现文件上传的功能。
+
+#### ①导入依赖
+
+~~~~xml
+        <!--commons文件上传，如果需要文件上传功能，需要添加本依赖-->
+        <dependency>
+            <groupId>commons-fileupload</groupId>
+            <artifactId>commons-fileupload</artifactId>
+            <version>1.4</version>
+        </dependency>
+~~~~
+
+#### ②配置
+
+~~~~xml
+  <!--
+            文件上传解析器
+            注意：id 必须为 multipartResolver
+        -->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <!-- 设置默认字符编码 -->
+        <property name="defaultEncoding" value="utf-8"/>
+        <!-- 一次请求上传的文件的总大小的最大值，单位是字节-->
+        <property name="maxUploadSize" value="#{1024*1024*100}"/>
+        <!-- 每个上传文件大小的最大值，单位是字节-->
+        <property name="maxUploadSizePerFile" value="#{1024*1024*50}"/>
+    </bean>
+~~~~
+
+
+
+#### ③接收上传的文件数据并处理
+
+上传表单：提交参数必须有name属性
+
+~~~~html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="uploadFile">
+        <input type="submit">
+    </form>
+</body>
+</html>
+~~~~
+
+
+
+~~~~java
+@Controller
+public class UploadController {
+
+    @RequestMapping("/upload")
+    public String upload(MultipartFile uploadFile) throws IOException {
+        //文件存储：把上传上来的文件存储的对应的路径
+        uploadFile.transferTo(new File("test.sql"));
+        return "/success.jsp";
+    }
+}
+~~~~
+
+
+
+注意：方法参数名要和表单提交上来的参数名一致(类似QueryString格式的提交)。
+
+其他例子：
+
+~~~java
+/**
+     * 接收前端上传的图片(MultipartFile对象)存储到七牛云的图床并把图片的链接(url)响应给前端
+     */
+    @Override
+    public ResponseResult uploadImg(MultipartFile img) {//使用MultipartFile类接收图片数据
+        //判断上传的文件类型
+        String originalFilename = img.getOriginalFilename();
+        assert originalFilename != null;
+        //只能上传png格式
+        if(!originalFilename.endsWith(".png")){
+            throw new SystemException(AppHttpCodeEnum.FILE_TYPE_ERROR);
+        }
+        //生成文件的存储路径（原始路径+新的文件名）
+        String filePath = PathUtils.generateFilePath(originalFilename);
+        //存储到七牛云的图床中并返回url
+        String url = uploadOSS(img,filePath);
+        return ResponseResult.okResult(url);
+    }
+
+~~~
+
+### 
+
+### 3.3 MultipartFile常见用法
+
+- 获取上传文件的原名
+
+  ~~~~java
+  uploadFile.getOriginalFilename()
+  ~~~~
+
+- 获取文件类型的MIME类型
+
+  ~~~~java
+  uploadFile.getContentType()
+  ~~~~
+
+- 获取上传文件的大小
+
+  ~~~~java
+  uploadFile.getSize()
+  ~~~~
+
+- 获取对应上传文件的输入流
+
+  ~~~~java
+  uploadFile.getInputStream()
+  ~~~~
+
+  
+
+## 4.文件下载
+
+### 4.1 文件下载要求
+
+​	如果我们想提供文件下载的功能。HTTP协议要求我们的必须满足如下规则。
+
+#### ①设置响应头Content-Type
+
+​	要求把提供下载文件的MIME类型作为响应头Content-Type的值
+
+#### ②设置响应头Content-disposition
+
+​	要求把文件名经过URL编码后的值写入响应头Content-disposition。但是要求符合以下格式，因为这样可以解决不同浏览器中文文件名 乱码问题。
+
+~~~~java
+Content-disposition: attachment; filename=%E4%B8%8B%E6%B5%B7%E5%81%9Aup%E4%B8%BB%E9%82%A3%E4%BA%9B%E5%B9%B4.txt;filename*=utf-8''%E4%B8%8B%E6%B5%B7%E5%81%9Aup%E4%B8%BB%E9%82%A3%E4%BA%9B%E5%B9%B4.txt
+~~~~
+
+#### ③文件数据写入响应体中
+
+
+
+### 4.2 代码实现
+
+​	我们可以使用之前封装的下载工具类实现文件下载
+
+工具类代码：
+
+~~~~java
+import javax.servlet.ServletContext;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.FileInputStream;
+import java.net.URLEncoder;
+
+public class DownLoadUtils {
+    /**
+     * 该方法可以快速实现设置两个下载需要的响应头和把文件数据写入响应体
+     * @param filePath 该文件的相对路径
+     * @param context  ServletContext对象
+     * @param response
+     * @throws Exception
+     */
+    public static void downloadFile(String filePath, ServletContext context, HttpServletResponse response) throws Exception {
+        // 获得绝对路径
+        String realPath = context.getRealPath(filePath);
+        File file = new File(realPath);
+        String filename = file.getName();
+        FileInputStream fis = new FileInputStream(realPath);
+        String mimeType = context.getMimeType(filename);//获取文件的mime类型
+        // 1.设置响应头Content-Type
+        response.setHeader("content-type",mimeType);
+        String fname= URLEncoder.encode(filename,"UTF-8");
+        // 2.设置响应头Content-disposition
+        response.setHeader("Content-disposition","attachment; filename="+fname+";"+"filename*=utf-8''"+fname);
+        ServletOutputStream sos = response.getOutputStream();
+        byte[] buff = new byte[1024 * 8];
+        int len = 0;
+        // 写入响应体中
+        while((len = fis.read(buff)) != -1){
+            sos.write(buff,0,len);
+        }
+        sos.close();
+        fis.close();
+    }
+}
+
+~~~~
+
+注意：**响应体中写完数据后就会进行提交，无法修改数据了**，如果此时进行页面跳转到jsp页面（相当于写入jsp页面的内容到响应体中），就会报错已经提交，不能再开启session进行写入了。
+
+
+
+Handler方法定义
+
+~~~~java
+@Controller
+public class DownLoadController {
+
+    @RequestMapping("/download")
+    public void download(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        //文件下载
+        DownLoadUtils.downloadFile("/WEB-INF/file/下海做UP主那些年.txt",request.getServletContext(),response);
+    }
+}
 ~~~~
 
