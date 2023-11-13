@@ -3,9 +3,9 @@
 ## 1 关键字的使用
 
 
-### limit和offset的用法 跳过几条数据？取几条数据?
+### limit和offset的用法 从哪一个索引开始获取？取几条数据?
 
-1.当limit后面跟两个参数的时候，第一个数表示要跳过的数量，后一位表示要取的数量,例如：
+1.当limit后面跟两个参数的时候，第一个数表示要跳过的数量(或者**从哪一个索引开始获取，第一条的数据为0)**，后一位表示**要获取的数量**,例如：
 
 ```sql
 select * from article LIMIT 1,3 # 表示跳过1条数据,从第2条数据开始取，取3条数据，也就是取2,3,4三条数据
@@ -40,6 +40,8 @@ select * from article LIMIT 1,3
 
 
 ### groub by ... having的使用
+
+group by**会把组变成一行，**前提是group by后面的字段的**值全部相同**，否则group by相当于没写。
 
 group by 有一个原则,就是 **select 中没有使用聚合函数的列,必须出现在 group by 后面**
 
@@ -161,11 +163,19 @@ ORDER BY sc.`s_score` DESC
 
 语法：
 
+1:
+
 ~~~sql
-select rank() over(PARTITION BY ? ORDER BY ? DESC)
+select rank() over(PARTITION BY ? ORDER BY ? DESC) -- 根据PARTITION BY指定的分组方式，一组一组的进行排名
 ~~~
 
+2:
 
+~~~sql
+select rank() over(ORDER BY ? DESC) -- 默认以当前整个表格作为一组进行排名
+~~~
+
+注意：？处可以使用聚集函数，但是不能使用聚集函数的别名
 
 
 
@@ -593,6 +603,20 @@ ON s.c_id = c.c_id
 GROUP BY c.c_id,c_name
 ~~~
 
+p27: case when与聚合函数、group by的使用(注意：group by的使用)
+
+~~~sql
+-- 23、使用分段[100-85)，[85-70)，[70-60)，[<60]来统计各科成绩，分别统计各分数段人数：课程ID和课程名称
+
+select sc.c_id,c.c_name,
+sum(case when sc.s_score<=100 and sc.s_score > 85 then 1 else 0 end) '[100-85)',
+count(case when sc.s_score<=85 and sc.s_score > 70 then -1 else null end) '[85-70)',
+sum(case when sc.s_score<=70 and sc.s_score > 60 then 1 else 0 end) '[70-60)',
+sum(case when sc.s_score<=60 then 1 else 0 end) '[<60]'
+from score sc inner join course c on sc.c_id = c.c_id
+GROUP BY sc.c_id,c.c_name
+~~~
+
 ### 3.5 窗口函数的使用
 
 p23: rank()的基本使用
@@ -638,9 +662,17 @@ where a.排名 in (2,3)
 
 ~~~
 
-p27:
+p28: 窗口函数与聚集函数的配合使用，窗口函数的格式，可以不分组
 
+~~~sql
+-- 查询学生平均成绩及其名次(重点)
+select sc.s_id,avg(sc.s_score) avg_score,
+rank() over(order by avg(sc.s_score) desc) '排名'
+from score sc
+GROUP BY sc.s_id
+~~~
 
+p29:
 
 ## 4 DCL 数据库控制语言
 

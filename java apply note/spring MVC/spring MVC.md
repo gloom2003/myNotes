@@ -10,7 +10,7 @@
 
 ## 使用maven创建web项目
 
-1.在ided是Project Structure中新建一个模块，并且设置为web模块(都是点击左上角的+号)
+1.在ided的左上角File中的Project Structure中新建一个模块(或者新建一个maven项目,使用新的模块)，并且设置为web模块(都是点击左上角的+号)
 
 2.web模块多了一个web目录，把web目录移动到src/main目录下面，并且改名为webapp目录
 
@@ -1333,7 +1333,13 @@ public class JspController {
 
 # SpringMVC-03
 
-## 1.拦截器
+## 1.拦截器（对Handler方法进行增强专用的AOP）
+
+​	注意，自己去使用AOP进行增强时，应该是对Service进行增强，不能对Controller进行增强。
+
+因为切面类会被放入父容器(Spring容器)，而我们的Controller是在子容器（MVC容器）中的。父容器中的切面类不能访问子容器的Controller方法来进行增强。
+
+​	并且我们如果需要**对Controller进行增强，使用拦截器也会更加的好用**。
 
 ### 1.1 应用场景
 
@@ -1414,7 +1420,7 @@ public class MyInterceptor implements HandlerInterceptor {
 ### 1.4 拦截器方法及参数详解
 
 - preHandle方法会**在Handler方法执行之前执行**，我们可以在其中进行一些前置的判断或者处理。
-- postHandle方法会**在Handler方法执行之后执行**，我们可以在其中对域中的数据进行修改，也可以修改要跳转的页面(修改modelAndView对象即可实现，一般方法的返回值为**字符串时也会转换为modelAndView对象)**。
+- postHandle方法会**在Handler方法执行之后执行，如果在Handler方法中出现异常则不会执行**，我们可以在其中对域中的数据进行修改，也可以修改要跳转的页面(修改modelAndView对象即可实现，一般方法的返回值为**字符串时也会转换为modelAndView对象)**。
 - afterCompletion方法**会在最后执行**，这个时候已经**没有办法对域中的数据进行修改**，也没有办法修改要跳转的页面。我们在这个方法中一般进行一些资源的释放。
 
 ~~~~java

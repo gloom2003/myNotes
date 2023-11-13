@@ -94,66 +94,6 @@ public class UpdateViewCountJob {
 
 ~~~
 
-## 2: maven项目转springBoot项目的相关配置
-
-### 2.1maven的相关配置
-
-~~~~xml
-  配置maven镜像源
-<mirrors>
-    <mirror>
-      <id>aliyunmaven</id>
-      <mirrorOf>central</mirrorOf>
-      <name>aliyun maven</name>
-      <url>https://maven.aliyun.com/repository/public </url>
-    </mirror>
-  </mirrors>
-~~~~
-
-~~~~xml
-  通过这个profile的配置，可以确保在编译项目时，使用Java 1.8版本进行编译，避免版本不兼容的问题。
-通过在Maven中配置profile和相关的属性设置，我们可以更方便地管理和控制项目的构建过程，确保在不同的开发环境中的一致性。
-<profiles>
-    <profile>
-      <id>jdk-1.8</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-        <jdk>1.8</jdk>
-      </activation>
-      <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.compilerVersion>1.8</maven.compiler.compilerVersion>
-      </properties>
-    </profile>
-  </profiles>
-~~~~
-
-### 2.2 配置pom.xml文件
-
-①指定springBoot父工程进行了**版本锁定**  在pom.xml中添加一下配置，继承spring-boot-starter-parent这个父工程
-
-~~~~xmL
-    我们的SpringBoot模块都需要继承一个父工程：spring-boot-starter-parent。在spring-boot-starter-parent的父工程spring-boot-dependencies中对常用的依赖进行了版本锁定。这样我们在添加依赖时，很多时候都不需要添加依赖的版本号了。
-	<parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.5.0</version>
-    </parent>
-~~~~
-
-
-
-②添加springBoot启动依赖
-
-~~~~xml
-   <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-    </dependencies>
-~~~~
 
 ### 2.3创建启动类
 

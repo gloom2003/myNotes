@@ -1330,13 +1330,13 @@ public interface RoleDao {
 
 ~~~~java
 	UserDao userDao = session.getMapper(UserDao.class);
-    //设置分页查询参数
+    //设置分页查询参数,调用这个方法后，就会进行分页查询，会自动帮助我们拼接limit语句了
     PageHelper.startPage(1,1);
     List<User> users = userDao.findAll();
     System.out.println(users.get(0));
 ~~~~
 
-如果需要获取总页数总条数等分页相关数据，只需要创建一个PageInfo对象，把刚刚查询出的返回值做为构造方法参数传入。然后使用pageInfo对象获取即可。
+如果需要获取总页数总条数等分页相关数据，只需要创建一个PageInfo对象，**把刚刚查询出的返回值做为构造方法参数传入**。然后使用pageInfo对象获取即可。
 
 ~~~~java
 	PageInfo<User> pageInfo = new PageInfo<User>(users);

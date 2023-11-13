@@ -582,6 +582,8 @@ Car car = CarStaticFactory.getCar();
 
 ​	主要用于String,Integer等可以直接赋值的属性注入。不依赖setter方法，支持SpEL表达式。
 
+​	使用此注解只能获取简单类型的值（8种基本数据类型及其包装类，String,Date）
+
 例如：
 
 ~~~~java
