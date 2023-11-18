@@ -282,7 +282,9 @@ mybatis:
 
 #### ④编写Mapper接口   
 
-注意在接口上加上@Mapper 和@Repository 注解
+**注意:在接口上加上@Mapper 和@Repository 注解**(值得一提的是，最简洁的写法是只写@Mapper注解而不写@Repository，因为运行时Mybatis会自动把这个Bean注入容器中，不需要我们手动的进行注入，但是不写的话，idea编译时会显示红色波浪线，表示在容器中找不到这个类型的Bean)
+
+**也可以在启动类上使用@MapperScan("com.kana.mapper")注解，指定扫描的mapper包**
 
 ~~~~java
 @Repository
@@ -328,13 +330,13 @@ public class SpringMyTest {
 
 ### 4.1 静态资源访问
 
-​	由于SpringBoot的项目是打成jar包的所以没有之前web项目的那些web资源目录(webapps)。
+​	由于SpringBoot的项目是**打成jar包而不是war包**的所以没有之前web项目的那些web资源目录(webapps)。
 
 ​	那么我们的静态资源要放到哪里呢？
 
 ​	从SpringBoot官方文档中我们可以知道，我们可以把静态资源放到 `resources/static`   (或者 `resources/public` 或者`resources/resources` 或者 `resources/META-INF/resources`) 中即可。
 
-​	静态资源放完后，
+​	静态资源放完后，**/ 相当于 resources/static/**
 
 ​	例如我们想访问文件：resources/static/index.html  只需要在访问时资源路径写成/index.html即可。  
 
@@ -344,7 +346,13 @@ public class SpringMyTest {
 
 #### 4.1.1 修改静态资源访问路径
 
-​	SpringBoot默认的静态资源路径匹配为/** 。如果想要修改可以通过 `spring.mvc.static-path-pattern` 这个配置进行修改。
+**静态资源访问路径，即：（想要访问静态资源时应该访问的路径，访问路径后会跳转到静态资源存放目录中）**
+
+​	**注意：**
+
+​	SpringBoot默认的静态资源路径匹配为/**,意味着请求/index.html时会访问resources/static/index.html 。
+
+​	如果想要修改可以通过 `spring.mvc.static-path-pattern` 这个配置进行修改。
 
 ​	例如想让访问静态资源的url必须前缀有/res。例如/res/index.html 才能访问到static目录中的。我们可以修改如下：
 
@@ -353,12 +361,14 @@ public class SpringMyTest {
 ~~~~yml
 spring:
   mvc:
-    static-path-pattern: /res/** #修改静态资源访问路径
+    static-path-pattern: /res/** #修改静态资源访问路径，设置为访问res下的目录及其子目录，表示请求/res/index.html时才可以访问resources/static/index.html
 ~~~~
 
 
 
 #### 4.1.2 修改静态资源存放目录
+
+**静态资源存放目录，即：存放静态资源的目录(可以有多个)**
 
 ​	我们可以修改 spring.web.resources.static-locations 这个配置来修改静态资源的存放目录。
 
@@ -375,565 +385,6 @@ spring:
 
 
 
-### 4.2 设置请求映射规则@RequestMapping
-
-​	详细讲解：https://www.bilibili.com/video/BV1AK4y1o74Y  P5-P12
-
-​	该注解可以加到方法上或者是类上。（查看其源码可知）
-
-​	我们可以用其来设定所能匹配请求的要求。只有符合了设置的要求，请求才能被加了该注解的方法或类处理。
-
-#### 4.2.1 指定请求路径
-
-​	path或者value属性都可以用来指定请求路径。
-
-例如：
-
-​	我们期望让请求的资源路径为**/test/testPath**的请求能够被**testPath**方法处理则可以写如下代码
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class HelloController {
-    @RequestMapping("/testPath")
-    public String testPath(){
-        return "testPath";
-    }
-}
-~~~~
-
-~~~~java
-@RestController
-public class HelloController {
-
-    @RequestMapping("/test/testPath")
-    public String testPath(){
-        return "testPath";
-    }
-}
-~~~~
-
-
-
-#### 4.2.2 指定请求方式
-
-​	method属性可以用来指定可处理的请求方式。
-
-例如：
-
-​	我们期望让请求的资源路径为**/test/testMethod**的**POST**请求能够被**testMethod**方法处理。则可以写如下代码
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-
-    @RequestMapping(value = "/testMethod",method = RequestMethod.POST)
-    public String testMethod(){
-        System.out.println("testMethod处理了请求");
-        return "testMethod";
-    }
-}
-
-~~~~
-
-
-
-注意：我们可以也可以运用如下注解来进行替换
-
-- ​    @PostMapping    等价于   @RequestMapping(method = RequestMethod.POST) 
-
-- ​	@GetMapping    等价于   @RequestMapping(method = RequestMethod.GET) 
-- ​	@PutMapping    等价于   @RequestMapping(method = RequestMethod.PUT) 
-- ​	@DeleteMapping    等价于   @RequestMapping(method = RequestMethod.DELETE) 
-
-例如：
-
-​	上面的需求我们可以使用下面的写法实现
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-
-    @PostMapping(value = "/testMethod")
-    public String testMethod(){
-        System.out.println("testMethod处理了请求");
-        return "testMethod";
-    }
-}
-~~~~
-
-
-
-#### 4.2.3 指定请求参数
-
-​	我们可以使用**params**属性来对请求参数进行一些限制。可以要求必须具有某些参数，或者是某些参数必须是某个值，或者是某些参数必须不是某个值。
-
-
-
-例如：
-
-​	我们期望让请求的资源路径为**/test/testParams**的**GET**请求,并且请求参数中**具有code参数**的请求能够被testParams方法处理。则可以写如下代码
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-    @RequestMapping(value = "/testParams",method = RequestMethod.GET,params = "code")
-    public String testParams(){
-        System.out.println("testParams处理了请求");
-        return "testParams";
-    }
-}
-~~~~
-
-​	
-
-​	如果是要求**不能有code**这个参数可以把改成如下形式
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-    @RequestMapping(value = "/testParams",method = RequestMethod.GET,params = "!code")
-    public String testParams(){
-        System.out.println("testParams处理了请求");
-        return "testParams";
-    }
-}
-~~~~
-
-​	
-
-​	如果要求有code这参数，并且这参数值必须**是某个值**可以改成如下形式
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-    @RequestMapping(value = "/testParams",method = RequestMethod.GET,params = "code=sgct")
-    public String testParams(){
-        System.out.println("testParams处理了请求");
-        return "testParams";
-    }
-}
-~~~~
-
-
-
-​	如果要求有code这参数，并且这参数值必须**不是某个值**可以改成如下形式	
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-    @RequestMapping(value = "/testParams",method = RequestMethod.GET,params = "code!=sgct")
-    public String testParams(){
-        System.out.println("testParams处理了请求");
-        return "testParams";
-    }
-}
-~~~~
-
-
-
-#### 4.2.4 指定请求头
-
-​	我们可以使用**headers**属性来对请求头进行一些限制。
-
-
-
-例如：
-
-​	我们期望让请求的资源路径为**/test/testHeaders的**GET**请求,并且请求头中**具有**deviceType**的请求能够被testHeaders方法处理。则可以写如下代码
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-    
-    @RequestMapping(value = "/testHeaders",method = RequestMethod.GET,headers = "deviceType")
-    public String testHeaders(){
-        System.out.println("testHeaders处理了请求");
-        return "testHeaders";
-    }
-}
-~~~~
-
-
-
-​	如果是要求不能有**deviceType**这个请求头可以把改成如下形式
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-    
-    @RequestMapping(value = "/testHeaders",method = RequestMethod.GET,headers = "!deviceType")
-    public String testHeaders(){
-        System.out.println("testHeaders处理了请求");
-        return "testHeaders";
-    }
-}
-~~~~
-
-
-
-​	如果要求有deviceType这个请求头，并且其值必须**是某个值**可以改成如下形式
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-    
-    @RequestMapping(value = "/testHeaders",method = RequestMethod.GET,headers = "deviceType=ios")
-    public String testHeaders(){
-        System.out.println("testHeaders处理了请求");
-        return "testHeaders";
-    }
-}
-~~~~
-
-
-
-​	如果要求有deviceType这个请求头，并且其值必须**不是某个值**可以改成如下形式
-
-~~~~java
-@RestController
-@RequestMapping("/test")
-public class TestController {
-    
-    @RequestMapping(value = "/testHeaders",method = RequestMethod.GET,headers = "deviceType!=ios")
-    public String testHeaders(){
-        System.out.println("testHeaders处理了请求");
-        return "testHeaders";
-    }
-}
-~~~~
-
-
-
-#### 4.2.5 指定请求头Content-Type
-
-​	我们可以使用**consumes**属性来对**Content-Type**这个请求头进行一些限制。
-
-
-
-##### 范例一
-
-​	我们期望让请求的资源路径为**/test/testConsumes**的POST请求,并且请求头中的Content-Type头必须为 **multipart/from-data** 的请求能够被testConsumes方法处理。则可以写如下代码
-
-~~~~java
-    @RequestMapping(value = "/testConsumes",method = RequestMethod.POST,consumes = "multipart/from-data")
-    public String testConsumes(){
-        System.out.println("testConsumes处理了请求");
-        return "testConsumes";
-    }
-~~~~
-
-##### 范例二
-
-​	如果我们要求请求头Content-Type的值必须**不能为某个multipart/from-data**则可以改成如下形式：
-
-~~~~java
-    @RequestMapping(value = "/testConsumes",method = RequestMethod.POST,consumes = "!multipart/from-data")
-    public String testConsumes(){
-        System.out.println("testConsumes处理了请求");
-        return "testConsumes";
-    }
-~~~~
-
-
-
-### 4.3 获取请求参数
-
-#### 4.3.1 获取路径参数
-
-​	RestFul风格的接口一些参数是在请求路径上的。类似： /user/1  这里的1就是id。
-
-​	如果我们想获取这种格式的数据可以使用**@PathVariable**来实现。
-
-
-
-##### 范例一
-
-​	要求定义个RestFul风格的接口，该接口可以用来根据id查询用户。请求路径要求为  /user  ，请求方式要求为GET。
-
-​	而请求参数id要写在请求路径上，例如  /user/1   这里的1就是id。
-
-​	我们可以定义如下方法，通过如下方式来获取路径参数：
-
-~~~~java
-@RestController
-public class UserController {
-
-    @RequestMapping(value = "/user/{id}",method = RequestMethod.GET)
-    public String findUserById( @PathVariable("id")Integer id){
-        System.out.println("findUserById");
-        System.out.println(id);
-        return "findUserById";
-    }
-}
-~~~~
-
-##### 范例二
-
-​	如果这个接口，想根据id和username查询用户。请求路径要求为  /user  ，请求方式要求为GET。
-
-​	而请求参数id和name要写在请求路径上，例如  /user/1/zs   这里的1就是id，zs是name
-
-​	我们可以定义如下方法，通过如下方式来获取路径参数：
-
-~~~~java
-@RestController
-public class UserController {
-    @RequestMapping(value = "/user/{id}/{name}",method = RequestMethod.GET)
-    public String findUser(@PathVariable("id") Integer id,@PathVariable("name") String name){
-        System.out.println("findUser");
-        System.out.println(id);
-        System.out.println(name);
-        return "findUser";
-    }
-}
-
-~~~~
-
-
-
-
-
-#### 4.3.2 获取请求体中的Json格式参数
-
-​	RestFul风格的接口一些比较复杂的参数会转换成Json通过请求体传递过来。这种时候我们可以使用**@RequestBody**注解获取请求体中的数据。
-
-##### 4.3.2.1 配置
-
-​	SpringBoot的web启动器已经默认导入了jackson的依赖，不需要再额外导入依赖了。
-
-
-
-##### 4.3.2.2 使用
-
-###### 范例一
-
-​	要求定义个RestFul风格的接口，该接口可以用来新建用户。请求路径要求为  /user  ，请求方式要求为POST。
-
-用户数据会转换成json通过请求体传递。
-​	请求体数据
-
-~~~~json
-{"name":"三更","age":15}
-~~~~
-
-​	
-
-1.获取参数封装成实体对象
-
-​	如果我们想把Json数据获取出来封装User对象,我们可以这样定义方法：
-
-~~~~~java
-@RestController
-public class UserController {
-    @RequestMapping(value = "/user",method = RequestMethod.POST)
-    public String insertUser(@RequestBody User user){
-        System.out.println("insertUser");
-        System.out.println(user);
-        return "insertUser";
-    }
-}
-~~~~~
-
-​	User实体类如下：
-
-~~~~java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class User {
-    private Integer id;
-    private String name;
-    private Integer age;
-}
-
-~~~~
-
-​	
-
-2.获取参数封装成Map集合
-
-​	也可以把该数据获取出来封装成Map集合：
-
-~~~~java
-    @RequestMapping(value = "/user",method = RequestMethod.POST)
-    public String insertUser(@RequestBody Map map){
-        System.out.println("insertUser");
-        System.out.println(map);
-        return "insertUser";
-    }
-~~~~
-
-
-
-###### 范例二
-
-​	如果请求体传递过来的数据是一个User集合转换成的json，Json数据可以这样定义：
-
-~~~~java
-[{"name":"三更1","age":14},{"name":"三更2","age":15},{"name":"三更3","age":16}]
-~~~~
-
-​	方法定义：
-
-~~~~java
-    @RequestMapping(value = "/users",method = RequestMethod.POST)
-    public String insertUsers(@RequestBody List<User> users){
-        System.out.println("insertUsers");
-        System.out.println(users);
-        return "insertUser";
-    }
-~~~~
-
-
-
-##### 4.3.2.3 注意事项
-
-​	如果需要使用**@RequestBody**来获取请求体中Json并且进行转换，要求请求头 Content-Type 的值要为： application/json 。
-
-
-
-#### 4.3.3 获取QueryString格式参数 
-
-​	如果接口的参数是使用QueryString的格式的话，我们也可以使用SpringMVC快速获取参数。
-
-​	我们可以使用**@RequestParam**来获取QueryString格式的参数。
-
-
-
-##### 4.3.3.1 使用
-
-###### 范例一
-
-​	要求定义个接口，该接口请求路径要求为  /testRequestParam，请求方式无要求。参数为id和name和likes。使用QueryString的格式传递。
-
-
-
-1.参数单独的获取
-
-​	如果我们想把id，name，likes单独获取出来可以使用如下写法：
-
-​	在方法中定义方法参数，方法参数名要和请求参数名一致，这种情况下我们可以省略**@RequestParam**注解。
-
-~~~~java
-    @RequestMapping("/testRquestParam")
-    public String testRquestParam(Integer id, String name, String[] likes){
-        System.out.println("testRquestParam");
-        System.out.println(id);
-        System.out.println(name);
-        System.out.println(Arrays.toString(likes));
-        return "testRquestParam";
-    }
-
-~~~~
-
-​	如果方法参数名和请求参数名不一致，我们可以加上**@RequestParam**注解例如：
-
-~~~~java
-    @RequestMapping("/testRquestParam")
-    public String testRquestParam(@RequestParam("id") Integer uid,@RequestParam("name") String name, @RequestParam("likes")String[] likes){
-        System.out.println("testRquestParam");
-        System.out.println(uid);
-        System.out.println(name);
-        System.out.println(Arrays.toString(likes));
-        return "testRquestParam";
-    }
-~~~~
-
-
-
-2.获取参数封装成实体对象
-
-​	如果我们想把这些参数封装到一个User对象中可以使用如下写法：
-
-~~~~java
-    @RequestMapping("/testRquestParam")
-    public String testRquestParam(User user){
-        System.out.println("testRquestParam");
-        System.out.println(user);
-        return "testRquestParam";
-    }
-~~~~
-
-​	User类定义如下：
-
-~~~~java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class User {
-    private Integer id;
-    private String name;
-    private Integer age;
-    private String[] likes;
-}
-~~~~
-
-​	测试时请求url如下：
-
-~~~~java
-http://localhost:8080/testRquestParam?id=1&name=三更草堂&likes=编程&likes=录课&likes=烫头
-~~~~
-
-
-
-​	**注意：实体类中的成员变量要和请求参数名对应上。并且要提供对应的set/get方法。**
-
-
-
-#### 4.3.4 相关注解其他属性
-
-##### 4.3.4.1 required
-
-​	代表是否必须，默认值为true也就是必须要有对应的参数。如果没有就会报错。
-
-​	如果对应的参数可传可不传则可以把其设置为fasle
-
-例如：
-
-~~~~java
-    @RequestMapping("/testRquestParam")
-    public String testRquestParam(@RequestParam(value = "id",required = false) Integer uid,@RequestParam("name") String name, @RequestParam("likes")String[] likes){
-        System.out.println("testRquestParam");
-        System.out.println(uid);
-        System.out.println(name);
-        System.out.println(Arrays.toString(likes));
-        return "testRquestParam";
-    }
-~~~~
-
-
-
-##### 4.3.4.2 defaultValue
-
-​	如果对应的参数没有，我们可以用defaultValue属性设置默认值。
-
-例如：
-
-~~~~java
-    @RequestMapping("/testRquestParam")
-    public String testRquestParam(@RequestParam(value = "id",required = false,defaultValue = "777") Integer uid,@RequestParam("name") String name, @RequestParam("likes")String[] likes){
-        System.out.println("testRquestParam");
-        System.out.println(uid);
-        System.out.println(name);
-        System.out.println(Arrays.toString(likes));
-        return "testRquestParam";
-    }
-~~~~
-
-
-
-
-
 ### 4.4 响应体响应数据
 
 ​	无论是RestFul风格还是我们之前web阶段接触过的异步请求，都需要把数据转换成Json放入响应体中。
@@ -945,8 +396,6 @@ http://localhost:8080/testRquestParam?id=1&name=三更草堂&likes=编程&likes=
 ​	我们的SpringMVC为我们提供了**@ResponseBody**来非常方便的把Json放到响应体中。
 
 ​	**@ResponseBody**可以加在哪些东西上面？类上和方法上
-
-​	具体代码请参考范例。
 
 
 
@@ -965,14 +414,6 @@ http://localhost:8080/testRquestParam?id=1&name=三更草堂&likes=编程&likes=
 
 
 #### 4.4.3 范例
-
-##### 范例一
-
-​	要求定义个RestFul风格的接口，该接口可以用来根据id查询用户。请求路径要求为  /response/user  ，请求方式要求为GET。
-
-​	而请求参数id要写在请求路径上，例如   /response/user/1   这里的1就是id。
-
-​	要求获取参数id,去查询对应id的用户信息（模拟查询即可，可以选择直接new一个User对象），并且转换成json响应到响应体中。
 
 ~~~~java
 @Controller
@@ -994,7 +435,15 @@ public class ResponseController {
 
 #### 4.5.1 什么是跨域
 
-​	浏览器出于安全的考虑，使用 XMLHttpRequest对象发起 HTTP请求时必须遵守同源策略，否则就是跨域的HTTP请求，默认情况下是被禁止的。 同源策略要求源相同才能正常进行通信，即协议、域名、端口号都完全一致。 
+​	浏览器出于安全的考虑（移动端发起请求并不会发生这种错误），使用 XMLHttpRequest对象(AJAX)发起 HTTP请求时必须遵守同源策略，否则就是跨域的HTTP请求，默认情况下是被禁止的。 同源策略要求源相同才能正常进行通信，即**协议、域名、端口号都完全一致(主要是端口不同导致的)**。 
+
+为什么移动端发起请求并不会发生这种错误？
+
+​	gpt4回答：
+
+​	对于移动端（如手机或平板电脑）的非浏览器应用（通常被称作“**原生应用**”），它们不受同源策略的约束。原生应用可以使用各自平台（如iOS中的`NSURLSession`，Android中的`HttpURLConnection`或`OkHttpClient`）的网络API向任何服务器发送HTTP请求。由于它们不执行在浏览器的安全上下文中，因此可以自由地发起跨域请求。
+
+要注意的是，虽然原生应用可以绕过同源策略，但它们仍需要考虑服务器在CORS（跨源资源共享）策略上的设定。如果服务器端没有正确配置CORS响应头来允许来自其他源的请求，这些请求可能会由于无法满足CORS预检要求而失败。
 
 
 
@@ -1002,7 +451,11 @@ public class ResponseController {
 
 ​	CORS是一个W3C标准，全称是”跨域资源共享”（Cross-origin resource sharing），允许浏览器向跨源服务器，发出XMLHttpRequest请求，从而克服了AJAX只能同源使用的限制。
 
-​	它通过服务器增加一个特殊的Header[Access-Control-Allow-Origin]来告诉客户端跨域的限制，如果浏览器支持CORS、并且判断Origin通过的话，就会允许XMLHttpRequest发起跨域请求。
+​	它通过使服务器增加一个特殊的Header[Access-Control-Allow-Origin]来告诉客户端跨域的限制（客户端需要看服务器是否同意），如果浏览器支持CORS、并且判断Origin通过的话，就会允许XMLHttpRequest发起跨域请求。
+
+​	**大致流程：**
+
+​	发起跨域请求时，**请求头**中会有**Origin:**http: //localhost:63379属性，表示当前浏览器发起了一个跨域请求，发起请求的地址为http: //localhost:63379。如果服务器中配置了允许这个地址进行跨域访问，则**响应头**中会有**Access-Control-Allow-Origin**：http: //localhost:63379属性，表示允许http: //localhost:63379进行跨域访问。
 
 ​	
 
@@ -1010,7 +463,7 @@ public class ResponseController {
 
 ##### 1.使用@CrossOrigin
 
-可以在支持跨域的方法上或者是Controller上加上@CrossOrigin注解
+可以在支持跨域的方法上或者是Controller上加上@CrossOrigin注解。
 
 ~~~~java
 @RestController
@@ -1034,7 +487,11 @@ public class UserController {
 
 
 
-##### 2.使用 WebMvcConfigurer 的 addCorsMappings 方法配置CorsInterceptor
+##### 2. 实现WebMvcConfigurer 接口
+
+重写addCorsMappings 方法，**配置CorsInterceptor拦截器**
+
+在CorsInterceptor拦截器中会读取并按照下面配置的信息进行跨域的处理:
 
 ~~~~java
 @Configuration
@@ -1052,15 +509,15 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "DELETE", "PUT")
                 // 设置允许的header属性
                 .allowedHeaders("*")
-                // 跨域允许时间
+                // 跨域允许持续的时间 3600秒，有的复杂请求例如put请求，会在发起跨域put请求之前会先发送一个请求来询问服务器是否允许跨域，服务器允许跨域后，在接下来的3600秒内发起put的跨域请求后，就不需要再次向服务器进行确认了。
                 .maxAge(3600);
     }
 }
 ~~~~
 
+发起一个跨域的post请求时，会先发送一个**(OPTIONS方法)Request Method:OPTIONS**的请求来询问是否允许跨域。
 
-
-### 4.6 拦截器
+### 4.6 登录案例
 
 #### 4.6.0 登录案例
 
@@ -1070,17 +527,23 @@ public class CorsConfig implements WebMvcConfigurer {
 
 ​		在前后端分离的场景中，很多时候会采用token的方案进行登录校验。
 
-​		登录成功时，后端会根据一些用户信息生成一个token字符串返回给前端。
+​		**大致流程：**
+
+​		登录成功时，后端会根据一些用户信息(id...)生成一个token字符串返回给前端。
 
 ​		前端会存储这个token。以后前端发起请求时如果有token就会把token放在请求头中发送给后端。
 
-​		后端接口就可以获取请求头中的token信息进行解析，如果解析不成功说明token超时了或者不是正确的token，相当于是未登录状态。
+​		后端接口就可以获取请求头中的token信息进行解析，如果解析不成功说明token超时了或者不是正确的token，相当于是未登录状态。解析成功则登录成功，可以访问一些需要权限的资源。
 
 ​		如果解析成功，说明前端是已经登录过的。
 
 ##### 4.6.0.2 Token生成方案-JWT
 
 ​		本案例采用目前企业中运用比较多的JWT来生成token。
+
+​		**token方案的优点：**采用JWT方案来生成token可以统一实现前端与移动端的登录校验流程，这是之前的Session方案不能做到的，因为**移动端没有Session的概念。**
+
+​		**使用UUID类来生成唯一的id，UUID.randomUUID().toString().**
 
 ​		使用时先引入相关依赖
 
@@ -1118,8 +581,8 @@ public class JwtUtil {
 
     /**
      * 创建token
-     * @param id
-     * @param subject
+     * @param id  使用UUID类生成一个不重复的id
+     * @param subject 传入要加密的内容(用户的相关信息,如id)
      * @param ttlMillis
      * @return
      */
@@ -1176,38 +639,6 @@ public class JwtUtil {
 
 ##### 4.6.0.3 登录接口实现
 
-数据准备
-
-~~~~sql
-DROP TABLE IF EXISTS `sys_user`;
-CREATE TABLE `sys_user` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `username` varchar(50) DEFAULT NULL,
-  `password` varchar(50) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
-
-/*Data for the table `sys_user` */
-
-insert  into `sys_user`(`id`,`username`,`password`) values (1,'root','root'),(2,'sangeng','caotang');
-
-
-~~~~
-
-实体类
-
-~~~~java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class SystemUser {
-
-    private Integer id;
-    private String username;
-    private String password;
-}
-
-~~~~
 
 SystemUserController
 
@@ -1236,6 +667,7 @@ public class SystemUserController {
     public ResponseResult login(@RequestBody SystemUser user) {
         //校验用户名密码是否正确
         SystemUser loginUser = userService.login(user);
+        // 可能不止返回token这一个数据，使用map进行统一存储（顺便命名）
         Map<String, Object> map;
         if (loginUser != null) {
             //如果正确 生成token返回
@@ -1252,60 +684,11 @@ public class SystemUserController {
 
 ~~~~
 
-Service
-
-~~~~java
-public interface SystemUserService {
-
-    public SystemUser login(SystemUser user);
-}
-@Service
-public class SystemUserServcieImpl implements SystemUserService {
-    @Autowired
-    private SystemUserMapper systemUserMapper;
-
-    @Override
-    public SystemUser login(SystemUser user) {
-        SystemUser loginUser = systemUserMapper.login(user);
-        return loginUser;
-    }
-}
-~~~~
-
-dao
-
-~~~~java
-@Mapper
-@Repository
-public interface UserMapper {
-    List<User> findAll();
-}
-
-~~~~
-
-~~~~xml
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.sangeng.mapper.SystemUserMapper">
-    <select id="login" resultType="com.sangeng.domain.SystemUser">
-        select * from sys_user where username = #{username} and password = #{password}
-    </select>
-</mapper>
-~~~~
-
-
-
-##### 4.6.0.4 登录页面
-
-​	见资料
-
 
 
 #### 4.6.1 拦截器的概念
 
-​		如果我们想在多个Handler方法执行之前或者之后都进行一些处理，甚至某些情况下需要拦截掉，不让Handler方法执行。那么可以使用SpringMVC为我们提供的拦截器。
-
-​		详情见 https://space.bilibili.com/663528522 SpringMVC课程中拦截器相关章节。
+​		**拦截器在Handler方法之前，过滤器在Servlet之前。**
 
 #### 4.6.1 使用步骤
 
@@ -1348,7 +731,9 @@ public class LoginInterceptor implements HandlerInterceptor {
 }
 ~~~~
 
-##### ③配置拦截器
+##### ③配置拦截器(实现WebMvcConfigurer接口重写方法代替xml配置)
+
+**注意**：如果这个工程（模块）中有**静态资源**，则应该默认放行不拦截。
 
 
 ~~~~java
@@ -1425,16 +810,16 @@ public class TestController {
 
 
 
-### 4.9 自定义参数解析
+### 4.9 自定义参数解析（如果有相应的注解，则执行相应的方法,把方法的返回值进行赋值）
 
 ​	如果我们想实现像获取请求体中的数据那样，在Handler方法的参数上增加一个@RepuestBody注解就可以获取到对应的数据的话。
 
-​	可以使用HandlerMethodArgumentResolver来实现自定义的参数解析。
+​	可以**使用HandlerMethodArgumentResolver来实现自定义的参数解析**。
 
 ①定义用来标识的注解
 
 ~~~~java
-@Target(ElementType.PARAMETER)
+@Target(ElementType.PARAMETER) // 指定注解可以作用于方法的参数上
 @Retention(RetentionPolicy.RUNTIME)
 public @interface CurrentUserId {
 
@@ -1446,9 +831,10 @@ public @interface CurrentUserId {
 **注意加上@Component注解注入Spring容器**
 
 ~~~~java
+@Component
 public class UserIdArgumentResolver implements HandlerMethodArgumentResolver {
 
-    //判断方法参数使用能使用当前的参数解析器进行解析
+    //判断方法参数是否能使用当前的参数解析器进行解析
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         //如果方法参数有加上CurrentUserId注解，就能把被我们的解析器解析
@@ -1477,11 +863,12 @@ public class UserIdArgumentResolver implements HandlerMethodArgumentResolver {
 @Configuration
 public class ArgumentResolverConfig implements WebMvcConfigurer {
 
-    @Autowired
+    @Autowired //注意：这里需要使用子类UserIdArgumentResolver来获取对象，不能使用父类
     private UserIdArgumentResolver userIdArgumentResolver;
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+        // 在参数解析器列表中直接添加即可
         resolvers.add(userIdArgumentResolver);
     }
 }
@@ -1496,7 +883,6 @@ public class ArgumentResolverConfig implements WebMvcConfigurer {
 ~~~~java
 @RestController
 @RequestMapping("/user")
-//@CrossOrigin
 public class UserController {
 
     @Autowired
@@ -1505,8 +891,6 @@ public class UserController {
     @RequestMapping("/findAll")
     public ResponseResult findAll(@CurrentUserId String userId) throws Exception {
         System.out.println(userId);
-        //调用service查询数据 ，进行返回s
-        List<User> users = userServcie.findAll();
 
         return new ResponseResult(200,users);
     }
@@ -1516,6 +900,10 @@ public class UserController {
 
 
 ### 4.10 声明式事务
+
+​	**保证一组数据库的操作，要么同时成功，要么同时失败**
+
+​	对数据库的操作通过mapper层的方法来实现，而service则是通过操作mapper的方法来进行对数据库的操作，使用**@Transactional注解放在Service层中。**
 
 ​	直接在需要事务控制的方法上加上对应的注解**@Transactional**
 
@@ -1550,9 +938,7 @@ public class UserServiceImpl implements UserServcie {
 
 ### 4.11 AOP
 
-​		AOP详细知识学习见：https://space.bilibili.com/663528522  中的Spring教程
-
-​		在SpringBoot中默认是开启AOP功能的。如果不想开启AOP功能可以使用如下配置设置为false
+​		在SpringBoot中**默认是开启AOP功能的**。如果不想开启AOP功能可以使用如下配置设置为false(一般使用不到)
 
 ~~~~yml
 spring:
@@ -1644,7 +1030,7 @@ public class UserServiceImpl implements UserServcie {
 
 ​	我们可以使用以下方式修改：
 
-​	在配置文件中配置spring.aop.proxy-target-class为false这为使用jdk动态代理。该配置默认值为true，代表使用cglib动态代理。
+​	在配置文件中配置spring.aop.proxy-target-class为false这为使用jdk动态代理。该配置默认值为true，代表**默认使用cglib动态代理。**
 
 ~~~~java
 @SpringBootApplication
@@ -1666,11 +1052,11 @@ spring:
 
 
 
-### 4.12 模板引擎相关-Thymeleaf
+### 4.12 模板引擎相关-Thymeleaf（Jsp）
 
 #### 4.12.1 快速入门
 
-##### 4.12.1.1依赖
+##### 4.12.1.1 导入依赖
 
 ~~~~xml
         <!--thymeleaf依赖-->
@@ -1680,7 +1066,7 @@ spring:
         </dependency>
 ~~~~
 
-##### 4.12.1.2定义Controller
+##### 4.12.1.2 定义Controller
 
 在controller中往域中存数据，并且跳转
 
@@ -1698,17 +1084,17 @@ public class ThymeleafController {
         //望域中存入数据
         model.addAttribute("users",users);
         model.addAttribute("msg","hello thymeleaf");
-        //页面跳转
+        //页面跳转 不需要添加前缀与后缀，会自动拼接前缀/resources/与后缀.html,然后跳转到resources\templates\下面寻找table-standard.html文件
         return "table-standard";
     }
 }
 ~~~~
 
-##### 4.12.1.3 htmL
+##### 4.12.1.3 书写htmL
 
-在**resources\templates**下存放模板页面。
+springBoot中的thymeleaf默认在**resources\templates**下存放模板页面，静态资源(css,js)存放在resources\static文件夹下。
 
-在html标签中加上 xmlns:th="http://www.thymeleaf.org"
+在html标签中加上 xmlns:th="http://www.thymeleaf.org",引入命名空间。
 
 获取域中的name属性的值可以使用： ${name}    注意要在th开头的属性中使用
 
@@ -1718,28 +1104,24 @@ public class ThymeleafController {
  <div class="panel-heading" th:text="${msg}">Kitchen Sink</div>
 ~~~~
 
-如果需要引入静态资源，需要使用如下写法。
+如果需要**引入静态资源**，需要使用如下写法。**语法： th: ... ="@{/ ... }"**
 
 ~~~~html
    <link rel="stylesheet" th:href="@{/app/css/bootstrap.css}">
-   <!-- Vendor CSS-->
    <link rel="stylesheet" th:href="@{/vendor/fontawesome/css/font-awesome.min.css}">
    <link rel="stylesheet" th:href="@{/vendor/animo/animate+animo.css}">
    <link rel="stylesheet" th:href="@{/vendor/csspinner/csspinner.min.css}">
-   <!-- START Page Custom CSS-->
-   <!-- END Page Custom CSS-->
-   <!-- App CSS-->
    <link rel="stylesheet" th:href="@{/app/css/app.css}">
-   <!-- Modernizr JS Script-->
+
    <script th:src="@{/vendor/modernizr/modernizr.js}" type="application/javascript"></script>
-   <!-- FastClick for mobiles-->
    <script th:src="@{/vendor/fastclick/fastclick.js}" type="application/javascript"></script>
 ~~~~
 
 遍历语法：遍历的语法  th:each="自定义的元素变量名称 : ${集合变量名称}" 
 
 ~~~~html
-<tr th:each="user:${users}">
+<tr th:each="user:${users}"><!-- 遍历users集合，把遍历到的每个元素(user对象)命名为user并且存放到域中-->
+    <!-- 从域中获取user对象数据进行渲染-->
     <td th:text="${user.id}"></td>
     <td th:text="${user.username}"></td>
     <td th:text="${user.age}"></td>
@@ -1750,6 +1132,16 @@ public class ThymeleafController {
 
 
 ## 5.整合Redis
+
+### 启动Redis
+
+在Redis目录下面打开cmd
+
+运行下面的命令，读取redis.windows.conf配置文件运行Redis服务端
+
+~~~sh
+redis-server.exe redis.windows.conf
+~~~
 
 ### ①依赖
 
@@ -1782,8 +1174,6 @@ spring:
     }
 ~~~~
 
-
-
 ## 6.环境切换
 
 ### 6.1 为什么要使用profile
@@ -1802,29 +1192,48 @@ spring:
 
 ​			需要一个生产环境的配置文件，可以命名为：**application-prod.yml**
 
-​	我们可以不同环境下不同的配置放到对应的profile文件中进行配置。然后把不同环境下都相同的配置放到application.yml文件中配置。
+​	我们可以不同环境下**不同的配置**放到对应的profile文件中进行配置。然后把不同环境下都**相同的配置**放到application.yml文件中配置。
 
 
 
 #### 6.2.2 激活环境
 
-​	我们可以再**application.yml**文件中使用**spring.profiles.active**属性来配置激活哪个环境。 
+​	1.我们可以再**application.yml**文件中使用**spring.profiles.active**属性来配置激活哪个环境。 
 
-​	也可以使用虚拟机参数来指定激活环境。例如 ： **-Dspring.profiles.active=test**
+~~~yml
+spring:
+  profiles:
+    active: test # 使用application-test.yml+公共的application.yml作为配置文件
+~~~
 
-​	也可以使用命令行参数来激活环境。例如： **--spring.profiles.active =test**
+
+
+​	2.也可以使用**虚拟机参数**来指定激活环境。例如 ： **-Dspring.profiles.active=test**
+
+​	![https://image.itbaima.net/images/173/image-20231118221852948.png](https://image.itbaima.net/images/173/image-20231118221852948.png)
+
+​	3.也可以使用命令行参数来激活环境。例如： **--spring.profiles.active=test**
+
+把项目打包为jar包后，在jar包目录下面的cmd中执行即可：
+
+~~~sh
+java -jar xxx.jar  --spring.profiles.active=test
+~~~
+
+
 
 ​	
 
 ## 7.日志
 
-​	开启日志
+​	开启日志：开启后，别人请求了什么接口，传输的参数是什么都会进行打印日志，mybatis日志也会打印
 
 ~~~~yml
-debug: true #开启日志
+debug: true #开启日志(除了自己写的代码之外的日志都会打印)
 logging:
   level:
-    com.sangeng: debug #设置日志级别
+    com.sangeng: debug #设置com.sangeng包的日志级别为debug,debug级别的日志都会打印
+    
 ~~~~
 
 

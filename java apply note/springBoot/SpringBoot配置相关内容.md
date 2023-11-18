@@ -170,6 +170,20 @@ public class HelloApplication {
 }
 ~~~~
 
+方法的返回值为:
+
+~~~java
+@SpringBootApplication
+public class HelloApplication {
+    public static void main(String[] args) {
+        // 返回一个spring容器
+        ConfigurableApplicationContext run = SpringApplication.run(HelloApplication.class, args);
+        User user = run.getBean(User.class);
+        System.out.println(user);
+    }
+}
+~~~
+
 
 
 ④定义Controller
@@ -198,7 +212,7 @@ public class HelloController {
 
 ​	我们可以把springboot的项目打成jar包直接去运行。
 
-①添加maven插件
+①添加maven插件(不添加的话也可以打成jar包，但是java -jar xxx.jar不能运行,会报错：没有主菜单属性)
 
 ~~~~xml
     <build>

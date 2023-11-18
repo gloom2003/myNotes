@@ -1,14 +1,18 @@
 # Spring-01
 
-## java文件编译知识
+## java文件编译后文件的存储知识
 
-编译后的文件存放在target目录中，target/class为类加载路径(classpath)，与com文件夹并列，**Recourses目录下面的资源文件编译后会存放到target/class目录下面(即类加载路径classpath下面)**。在**单元测试中的类加载路径**为target/test-classes而不是target/classes
+**类加载路径**：即target/class目录，**对应**src/main/**java目录**和**Recourses目录**
 
-其他的文件一一对应，target/class目录相当于src/main/java目录,
+src/main/**java目录**下面的代码编译成.class字节码文件后就存放在target/class目录中，例如：
 
-原本在**src/main/java**/com/sg/Main.java文件则对应为
+**src/main/java**/com/sg/Main.java文件对应
 
-​			**target/class**/com/sg/Main.class文件
+​	 **target/class**/com/sg/Main.class文件
+
+**Recourses目录下面的资源文件编译后也会存放到target/class目录中**。
+
+在**单元测试中的类加载路径**为target/test-classes，**对应test/java目录**
 
 ## 1.Spring简介
 
@@ -887,11 +891,13 @@ public class ApplicationConfig {
 
 ## AOP核心概念
 
- - Aspect（切面）：是切入点和通知（引介）的结合，即切面类
+ - Aspect（切面）：是切入点和通知（引介）的结合，即切面类(使用@Aspect进行标识)
 
 - Advice（通知/ 增强）：所谓通知是**指具体增强的代码**
 
 - Pointcut（切入点）：所谓切入点是**指被增强的方法**
+
+**在切面类中设置切点与通知。**
 
 ## Aop的使用
 
@@ -1157,7 +1163,8 @@ public class LogAspect {
         Object[] args = jp.getArgs();//方法调用时传入的参数
         Object target = jp.getTarget();//被代理对象
         MethodSignature signature = (MethodSignature) jp.getSignature();//获取被被增强方法签名封装的对象
-        System.out.println("Before方法被调用了");
+        String methodName = signature.getMethod().getName()
+        System.out.println(methodName+"方法即将被调用");
     }
 ~~~~
 
@@ -1225,7 +1232,10 @@ public class PrintLogAspect {
     public Object around(ProceedingJoinPoint pjp) {
         Object[] args = pjp.getArgs();//方法调用时传入的参数
         Object target = pjp.getTarget();//被代理对象
+        // pjp.getSignature()方法返回一个父接口，操作时使用MethodSignature这个实现类进行操作
         MethodSignature signature = (MethodSignature) pjp.getSignature();//获取被被增强方法签名封装的对象
+        String methodName = signature.getMethod().getName()
+        System.out.println(methodName+"方法即将被调用");
         Object ret = null;
         try {
             ret = pjp.proceed();//ret就是目标方法执行后的返回值
@@ -1371,110 +1381,6 @@ public class CryptAspect {
 ~~~~
 
 
-
-## 6 AOP原理-动态代理
-
-​	实际上Spring的AOP其实底层就是使用动态代理来完成的。并且使用了两种动态代理分别是JDK的动态代理和Cglib动态代理。
-
-​	所以我们接下去来学习下这两种动态代理，理解下它们的不同点。
-
-### 6.1 JDK动态代理 生成对应接口的实现类对象
-
-​	JDK的动态代理使用的java.lang.reflect.Proxy这个类来进行实现的。**要求被代理（被增强）的类需要实现了接口**。并且JDK动态代理也**只能对接口中的方法进行增强**。
-
-~~~~java
-public static void main(String[] args) {
-        AIControllerImpl aiController = new AIControllerImpl();
-        //使用动态代理增强getAnswer方法
-        //1.JDK动态代理
-        //获取类加载器
-        ClassLoader cl = Demo.class.getClassLoader();
-        //被代理类所实现接口的字节码对象数组
-        Class<?>[] interfaces = AIControllerImpl.class.getInterfaces();
-    	//Proxy.newProxyInstance()方法返回一个代理对象，是接口的实现类对象，所以这里使用父接口进行接收
-        AIController proxy = (AIController) Proxy.newProxyInstance(cl, interfaces, new InvocationHandler() {
-            //使用代理对象的任何方法 都会调用到invoke方法
-                public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                //proxy   是代理对象
-                //method 是当前被调用的方法封装的Method对象
-                //args   是调用方法时传入的参数
-               
-                //模拟进行aop增强：判断 当前调用的是否是getAnswer方法
-                if(method.getName().equals("getAnswer")){
-                    System.out.println("增强");
-                }
-                //调用被代理对象的对应方法: 相当于调用aiController.method(args)
-                Object ret = method.invoke(aiController, args);
-                return ret;
-            }
-        });
-        String answer = proxy.getAnswer("三连了吗？");
-		System.out.println(answer);
-    }
-~~~~
-
-
-
-### 6.2 Cglib动态代理
-
-​	使用的是org.springframework.cglib.proxy.Enhancer类进行实现的。类在spring-context依赖所依赖的aop jar包中，生成的代理类为被代理类的子类。
-
-1.导入依赖
-
-~~~xml
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>5.1.9.RELEASE</version>
-        </dependency>
-~~~
-
-2.代码实现
-
-~~~~java
-public class CglibDemo {
-    public static void main(String[] args) {
-        Enhancer enhancer = new Enhancer();
-        //设置父类的字节码对象,设置代理类的父类
-        enhancer.setSuperclass(AIControllerImpl.class);
-        //设置方法回调
-        enhancer.setCallback(new MethodInterceptor() {
-            //使用代理对象执行任何方法时都会调用到intercept方法
-            @Override
-            public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
-                //判断当前调用的方法是不是getAnswer方法 如果是进行增强
-                if ("getAnswer".equals(method.getName())){
-                    System.out.println("被增强了");
-                }
-                //调用父类中对应的方法(没有使用method.invoke()方法)
-                Object ret = methodProxy.invokeSuper(o, objects);
-                return ret;
-            }
-        });
-        // 使用create()方法生成代理对象
-        AIControllerImpl proxy = (AIControllerImpl) enhancer.create();
-//        System.out.println(proxy.getAnswer("你好吗？"));
-        System.out.println(proxy.fortuneTelling("你好吗？"));
-    }
-}
-
-~~~~
-
-
-
-### 6.3 总结
-
-​	JDK动态代理要求被代理（被增强）的类必须要实现接口，生成的代理对象相当于是被代理对象的**兄弟**。
-
-​	Cglib的动态代理不要求被代理（被增强）的类要实现接口，生成的代理对象相当于被代理对象的**子类**对象(父子关系)。
-
-​	**Spring的AOP默认情况下优先使用的是JDK的动态代理，如果使用不了JDK的动态代理才会使用Cglib的动态代理。**
-
-​	**注意**：**使用AOP对被代理对象进行增强后，容器中就没有被代理对象了。**因为使用注解如@Service把想把被代理对象注入容器时，**注入的其实是增强后的代理对象**。
-
-1. 如果被代理对象实现了接口，那么AOP使用的是**JDK动态代理**，此时使用getBean(被代理对象.class)方法是获取不到被代理对象的，因为容器中注入的是代理对象，而代理对象与被代理对象是同一个接口的实现类，所以**可以使用getBean(被代理对象实现的接口.class)方法成功获取代理对象**。
-
-2. 如果被代理对象没有实现接口（或者配置了**使用Cglib动态代理**），那么此时**使用getBean(被代理对象.class)方法仍然能够获取到被代理对象**，因为容器中注入的是代理对象，而代理对象是被代理对象的子类，两者是父子关系。
 
 
 
@@ -1677,7 +1583,7 @@ mybatis配置文件**mybatis-config.xml**如下:
 
 #### **3.1.1 事务的概念**
 
-​		保证一组数据库的操作，要么同时成功，要么同时失败
+​		**保证一组数据库的操作，要么同时成功，要么同时失败**
 
 
 
@@ -1791,7 +1697,7 @@ mybatis配置文件**mybatis-config.xml**如下:
 
 #### 3.3.1 事务传播行为propagation
 
-​	当事务方法嵌套调用时，需要控制是否开启新事务，可以使用事务传播行为来控制。
+​	当**事务方法嵌套调用时**，需要控制是否开启新事务，可以使用事务传播行为来控制。
 
 
 
@@ -1864,7 +1770,9 @@ public class AccountServiceImpl implements AccountService {
 | MANDATORY（强制要求外层有）                              | 外层方法有事务，内层方法加入。外层没有。内层就报错     |
 | NEVER(绝不允许有)                                        | 外层方法有事务，内层方法就报错。外层没有。内层就也没有 |
 
-**重点：前三个**，**(内层)事务为什么失效？**可能是事务传播行为propagation设置错误，比如设置为SUPPORTS并且此时外层方法没有设置事务时，内层的事务就会失效。
+**重点掌握：前三个即可**。
+
+**(内层)事务为什么失效？**可能是事务传播行为propagation设置错误，比如设置为SUPPORTS并且此时外层方法没有设置事务时，内层的事务就会失效。
 
 
 

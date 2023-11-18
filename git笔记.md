@@ -265,7 +265,7 @@ git cherry-pick commit哈希码 把对应的提交拷贝过来作为新的提交
 
 ## 3 远程仓库的详细操作
 
-### 3.1 详细操作
+### 3.1 push、pull详细操作
 
 查看远仓名
 
@@ -336,13 +336,33 @@ a与b先后从中央仓库拉取(或者clone)代码到本地，a修改了test.ja
 
 ### 4.1 使用git push代码到github上时报错：OpenSSL SSL_read: Connection was reset, errno 10054
 
-(此时又必须开着vpn才能访问到github)
+使用https链接进行推送时报错：
+
+~~~sh
+git push https链接 本地分支:远程分支
+~~~
 
 参考网上的回答，成功解决问题：
 
-修改设置，解除ssl验证git config --global http.sslVerify "false" 此时，再执行git操作即可。
+**修改设置，解除ssl验证**
 
-注：设置后关闭当前git窗口，重新打开再执行git操作
+```sh
+git config --global http.sslVerify "false"
+# 不行则试试下面这个
+git config --global https.sslVerify "false"
+```
+
+ 此时，再执行git操作即可。
+
+**注意：**设置后关闭当前git窗口，重新打开再执行git操作
+
+实在不行，可以**使用仓库的ssh链接**进行推送（前提是在本地电脑配置了ssh免密登录）
+
+~~~sh
+git push ssh链接 本地分支:远程分支
+~~~
+
+
 
 
 
@@ -352,13 +372,21 @@ a与b先后从中央仓库拉取(或者clone)代码到本地，a修改了test.ja
 
 1.在gitHub中新建一个仓库origin
 
-2.在本地的test文件夹中使用git clone命令把整个仓库文件夹origin克隆下来,会自动生成名称为origin的远程仓库别名**（重要的是把远程仓库的提交记录也克隆了下来，这是后面成功push到远程仓库的关键）**
+2.1 在本地的test文件夹中使用git clone命令把整个仓库文件夹origin克隆下来,会自动生成名称为origin的远程仓库别名**（重要的是把远程仓库的提交记录也克隆了下来，这是后面成功push到远程仓库的关键）**
 
 ~~~sh
 git clone 链接
 ~~~
 
-3.把要推送的文件复制到origin文件夹中，使用git进入origin文件夹(test文件夹中没有.git文件，不是一个git仓库)
+2.2 在本地的test文件夹(已经包含要提交的文件，要确保没有冲突)中使用git init命令初始化后，再使用命令：
+
+~~~sh
+git pull 链接 远分支
+~~~
+
+拉取远程仓库的文件在本地进行合并，同时**把远程仓库的提交记录也拉取了下来，这是后面成功push到远程仓库的关键**,直接跳转第4步即可。
+
+3.把要推送的文件复制到origin文件夹中（**注意：不能包含.git文件夹**），使用git进入origin文件夹(test文件夹中没有.git文件，不是一个git仓库)	
 
 ~~~sh
 cd origin/
@@ -370,7 +398,7 @@ cd origin/
 git add .
 ~~~
 
-5.提交本地库
+5.提交本地库(**注意**：提交之前一定要检查一遍提交的文件【是否包含：个人信息、不必要的文件】)
 
 ~~~sh
 gti commit -m '注释'

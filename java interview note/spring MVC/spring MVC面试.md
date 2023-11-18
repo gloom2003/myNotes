@@ -1,3 +1,24 @@
+# Spring MVC 面试类知识点
+
+
+
+
+
+## 4.RestFul风格
+
+​	 RestFul是一种网络应用程序的设计风格和开发方式 。现在很多互联网企业的**网络接口**定义都会符合其风格。
+
+
+
+主要规则如下：
+
+- 每一个URI代表1种资源     
+
+- 客户端使用GET、POST、PUT、DELETE 4个表示操作方式的动词对服务端资源进行操作：GET用来获取资源，POST用来新建资源，PUT用来更新资源，DELETE用来删除资源； 
+- 简单参数例如id等写到url路径上  例如： /user/1 HTTP GET：获取id=1的user信息      /user/1 HTTP DELETE ：删除id=1的user信息    
+- 复杂的参数转换成json或者xml（现在基本都是json）写到请求体中。
+- 符合 RESTful 风格的响应通常应该包含 JSON 格式的数据，响应应该写入响应体中。
+
 ## 5 SpringMVC执行流程（面试必问）
 
 ​	因为我们有两种开发模式，我们分别来讲解两种模式在SpringMVC中的执行流程。

@@ -331,8 +331,9 @@ set也是花括号{ }，如s={1,2,3}
 
 ### 1.4字符串的使用
 
-- 替换: str.replace("/","")  表示把/去除
+- 替换: str.replace("/","")  表示把字符串中的"/"替换为""
 - 清除前后的空格：str.strip()
+- 将字符串分割成一个字符串列表 [] = str.split("/")
 
 
 
@@ -820,3 +821,27 @@ keys排序结果 => [5, 9,  12,  21, 36]
 >>> sorted(['bob', 'about', 'Zoo', 'Credit'], key=str.lower, reverse=True)
 ['Zoo', 'Credit', 'bob', 'about']
 ```
+
+## 2 各种api
+
+### collections的Counter 计数器
+
+计数：
+
+~~~python
+from collections import Counter
+
+def find_most_frequent_strings(strings):
+    # 使用Counter来计数,计算字符串列表中每个字符串出现的次数
+    counter = Counter(strings)
+
+    # 找到出现次数最多的字符串和次数
+    most_common = counter.most_common()
+
+    # most_common返回的是一个列表，列表的元素是元组，第一个元素是字符串，第二个是次数
+    most_frequent_string, most_frequent_count = most_common[0]
+    # 找到出现次数最少的字符串和次数
+    # return counter.most_common()[-1]
+
+    return most_frequent_string, most_frequent_count, dict(counter) # 把字符串与数量存储到字典中
+~~~

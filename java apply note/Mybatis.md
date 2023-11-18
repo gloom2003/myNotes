@@ -415,20 +415,6 @@ log4j.rootLogger=debug, stdout
         </dependency>
 ~~~~
 
-## 8.获取参数时 #{}和${}的区别
-
-​	**如果使用#{}.他是预编译的sql，可以防止SQL注入攻击，更加安全**
-**​	如果使用${}他是直接把参数值拿来进行字符串拼接，这样会有SQL注入的危险**
-
-如果使用的是#{}来获取参数值日志如下：
-Preparing: select * from user where id = **?** and username = **?** and age = **?** and address = **?** 
-Parameters: 2(Integer), 快乐风男(String), 29(Integer), 北京(String)
-
-如果使用${}来获取参数值日志如下：
-Preparing: select * from user where id = 2 and username = 快乐风男 and age = 29 and address = 北京 
-
-并且因为“快乐风男”字符串没有使用引号进行包裹，会报错
-
 ## 9. 注解开发
 
 ​	我们也可以使用注解的形式来进行开发，用注解来替换掉xml。 使用注解来映射简单语句会使代码显得更加简洁，但对于稍微复杂一点的语句，Java 注解不仅力不从心，还会让你本就复杂的 SQL 语句更加混乱不堪。 所以我们在实际企业开发中一般都是使用XML的形式。
@@ -1435,13 +1421,3 @@ public class User implements Serializable
 2.创建packge时,使用com.kana.mybatis,创建目录时使用com/kana/mybatis
 
 
-
-
-
-
-
-## Mybatis原理(动态代理)：
-
-1.读取接口对应的xml映射文件生成代理对象
-
-2.执行代理对象的方法时，其实是执行xml映射文件中的sql语句，并把sql语句的结果集根据名称映射为对应的实体类,作为方法的返回值。

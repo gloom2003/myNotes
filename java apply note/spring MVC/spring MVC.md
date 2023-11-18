@@ -432,21 +432,6 @@ public class TestController {
     }
 ~~~~
 
-## 4.RestFul风格
-
-​	 RestFul是一种网络应用程序的设计风格和开发方式 。现在很多互联网企业的**网络接口**定义都会符合其风格。
-
-
-
-主要规则如下：
-
-- 每一个URI代表1种资源     
-
-- 客户端使用GET、POST、PUT、DELETE 4个表示操作方式的动词对服务端资源进行操作：GET用来获取资源，POST用来新建资源，PUT用来更新资源，DELETE用来删除资源； 
-- 简单参数例如id等写到url路径上  例如： /user/1 HTTP GET：获取id=1的user信息      /user/1 HTTP DELETE ：删除id=1的user信息    
-- 复杂的参数转换成json或者xml（现在基本都是json）写到请求体中。
-- 符合 RESTful 风格的响应通常应该包含 JSON 格式的数据，响应应该写入响应体中。
-
 ## 5.获取请求参数
 
 ### 5.1 获取路径参数 @PathVariable
@@ -492,7 +477,7 @@ public class UserController {
 
 
 
-### 5.2 获取请求体中的Json格式参数
+### 5.2 获取请求体中的Json格式参数(存放到entry,map,LIst< entry>中)
 
 ​	RestFul风格的接口一些比较复杂的参数会转换成Json通过请求体传递过来。这种时候我们可以使用**@RequestBody**注解获取请求体中的数据。
 
@@ -1108,7 +1093,7 @@ public class RequestResponseController {
 
 ~~~~
 
-
+或者**使用原生对象HttpServletRequest request**，String res = request.getHeader("device-type")
 
 ### 6.2 获取Cookie
 

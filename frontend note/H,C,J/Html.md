@@ -147,7 +147,7 @@ td:
 ### 1.8 表单元素
 
 ~~~html
-<!-- action属性：指定表单提交的地址 -->
+<!-- action属性：指定表单提交的地址 ,form表单默认提交的是QueryString格式的参数，并不是在请求体中-->
     <form action="">
         <!-- 文字标签，for属性：设置点击文字时for属性指定的文本框的光标会闪烁 -->
         <label for="username">用户名:</label>

@@ -47,7 +47,7 @@ group by 有一个原则,就是 **select 中没有使用聚合函数的列,必�
 
 **where 子句**的作用是在对查询结果进行**分组前**，将不符合where条件的行去掉，即在分组之前过滤数据，条件中**不能包含聚组函数**，使用where条件显示特定的行。
 
-**having 子句**的作用是筛选满足条件的组，即在**分组之后过滤数据**，条件中经常包含聚组函数(不能使用字段?)，having子句限制的是组，而不是行。where子句中不能使用聚集函数，而having子句中可以。
+**having 子句**的作用是筛选满足条件的组，即在**分组之后过滤数据**，条件中经常包含聚组函数(不能使用字段?)，having子句限制的是组，而不是行。where子句中不能**使用聚集函数，而having子句中可以**。
 
 **select –>where –> group by–> having–>order by**
 
@@ -99,7 +99,8 @@ ORDER BY sc.`s_score` DESC
 ###【时间日期函数】
 
 - Now(),current_timestamp() //当前日期时间
-- Current_date() //当前日期
+- year('2023-10-22') = 2023,month('2023-10-22') = 10 // 获取字符串中的年、月 **日期字符串支持下面4种格式**：1.YYYY-MM-DD,2.YYYY/MM/DD,3.YYYYMMDD,4.YYMMDD
+- Current_date(),curdate()  //当前日期
 - current_time() //当前时间
 - Date(‘yyyy-mm-dd HH;ii:ss’) //获取日期部分
 - Time(‘yyyy-mm-dd HH;ii:ss’) //获取时间部分
@@ -142,7 +143,7 @@ ORDER BY sc.`s_score` DESC
 
 ###【聚合函数】
 
-- Count()
+- Count() **注意：count(null) = 0,count(666) = 1**,检测配合group by或者case when来使用
 - Sum()
 - Max()
 - Min()
@@ -458,7 +459,9 @@ GROUP BY st.s_id,st.s_name
 
 ### 3.3 inner join 与 in的效率问题
 
-p16  inner join写法在数据量大时,效率比in高
+ inner join写法在数据量大时,**效率比in高**,是否走索引的问题？
+
+p16 
 
 ~~~sql
 # 11、查询至少有一门课与学号为"01“的学生所学课程相同的学生的学号和姓名（重点）
@@ -531,6 +534,22 @@ FROM student a INNER JOIN (
 ~~~
 
 ### 3.4 case when语句的使用
+
+在select语句中的case when ... 会在最后查询出来的结果上面占一个字段，一般会起一个别名。
+
+经常**配合sum()**使用来**计算符合某个条件数量**，**sum(case when ... then 1 else 0 end)** 如:
+
+~~~sql
+select SUM(CASE WHEN sc.`s_score`>=60 THEN 1 ELSE 0 END)/COUNT(sc.s_id) 及格率
+~~~
+
+使用count()来达到同样的效果：**count(case when ... then 666 else null end)**,注意：count(null) = 0
+
+~~~sql
+select COUNT(CASE WHEN s.s_score >=70 AND s.s_score < 80 THEN 999 ELSE NULL END)/COUNT(s_id) "中等率",
+~~~
+
+也可以配合其他聚集函数使用
 
 p21: case when与聚合函数、group by的使用
 
@@ -672,7 +691,70 @@ from score sc
 GROUP BY sc.s_id
 ~~~
 
-p29:
+下一题p35:
+
+
+
+### 3.6 经典题目
+
+充分理解题意与考虑罕见的情况：
+
+#### 3.6.1 求总分最高的学生信息的及总分
+
+视频讲解：https://www.bilibili.com/video/BV1UH4y1m7uP/?spm_id_from=333.788.recommend_more_video.12&vd_source=d6367c1fc21883823f1fb738f86ef26e
+
+~~~sql
+-- 求总分最高的学生信息的及总分(经典)
+
+-- 子1:查询 总分最高的分数 和 其中之一的学生id
+select sc.s_id,sum(sc.s_score) sum_score
+from score sc
+group by sc.s_id
+order by sum_score desc
+limit 0,1
+
+-- 普通写法
+select sc.s_id,st.s_name,st.s_sex,st.s_birth,sum(sc.s_score) sum_score
+from score sc inner join student st on sc.s_id = st.s_id
+group by sc.s_id,st.s_name,st.s_sex,st.s_birth
+order by sum_score desc
+limit 0,1
+
+-- 考虑到有可能总分最高不止一个时的写法
+-- 子2：
+select sc.s_id,sum(sc.s_score)
+from score sc
+group by sc.s_id having sum(sc.s_score) = (
+	select sum(sc.s_score) sum_score
+	from score sc
+	group by sc.s_id
+	order by sum_score desc
+	limit 0,1
+)
+
+select st.s_id,st.s_name,st.s_sex,st.s_birth,a.sum_score
+from student st right join (
+	select sc.s_id,sum(sc.s_score) sum_score
+	from score sc
+	group by sc.s_id having sum(sc.s_score) = (
+		select sum(sc.s_score) sum_score
+		from score sc
+		group by sc.s_id
+		order by sum_score desc
+		limit 0,1
+	)
+) a on a.s_id = st.s_id
+
+~~~
+
+#### 3.6.2 求单科成绩最高的学生的信息与分数
+
+同理，也是一样的做法（不要认为分数最高永远只有一人即可）:
+
+~~~sql
+~~~
+
+
 
 ## 4 DCL 数据库控制语言
 
