@@ -97,7 +97,7 @@ src/main/**java目录**下面的代码编译成.class字节码文件后就存放
 
 ​	scope主要有两个值：singleton(单例)和prototype(多例)
 
-**singleton**: 1.**单例** 2.**bean创建时机**：**默认**容器创建的时候就会创建该对象（还可以修改）,读取配置文件的class属性使用反射创建对象并且以id为key存储到map中,后面不会创建容器了，所以是单例。
+**singleton**: 1.**单例** 2.**bean创建时机**：**默认**容器创建的时候就会创建该对象（还可以修改）,读取配置文件的class属性使用反射创建对象并且以id为key存储到map中,后面不会创建对象了，所以是单例。
 
 **prototype**：1.**多例** 2.**bean创建时机**：当调用getBean("studentDao")方法时才会读取配置文件的class属性使用反射创建对象并且以id为key存储到map中，当getBean("studentDao")方法再次被调用时，会重复上面的步骤，把创建出来的对象覆盖原来map中key为id的value,以此实现多例。
 
@@ -391,7 +391,7 @@ public class Phone {
 
 #### 6.1.2 lazy-init 懒加载
 
-​	可以控制bean的创建时机，如果设置为true就是在第一次获取该对象的时候才去创建(虽然还是单例，但是bean的创建时机改变了)。
+​	可以控制bean的创建时机，如果设置为true就是在第一次获取该对象的时候才去创建(**虽然还是单例，但是bean的创建时机改变了**)。
 
 ~~~~xml
     <bean class="com.alibaba.druid.pool.DruidDataSource" lazy-init="true"  id="dataSource" name="dataSource2,dataSource3">
@@ -1535,7 +1535,7 @@ public class SpringTest {
         <property name="password" value="${jdbc.password}"></property>
         <property name="driverClassName" value="${jdbc.driver}"></property>
     </bean>   
-<!--spring整合mybatis后控制的创建获取SqlSessionFactory的对象（SqlSessionFactoryBean实现了FactoryBean这个接口，这个接口非常特殊，实现了这个接口的类注入容器后会自动调用getObject()方法，并且把方法的返回值存放到容器中，这里的返回值就是SqlSessionFactory对象,所以下面再配置好mybatis配置文件的路径与数据源，就能够从容器中使用SqlSessionFactory.openSession()方法获取到SqlSession对象，从而能够使用getMapper()方法获取到接口的实现类对象）-->
+<!--spring整合mybatis:注入SqlSessionFactory对象到容器中（SqlSessionFactoryBean实现了FactoryBean这个接口，这个接口非常特殊，实现了这个接口的类注入容器后会自动调用getObject()方法，并且把方法的返回值存放到容器中，这里的返回值就是SqlSessionFactory对象,所以下面再配置好mybatis配置文件的路径与数据源，就能够从容器中使用SqlSessionFactory.openSession()方法获取到SqlSession对象，从而能够使用getMapper()方法获取到接口的实现类对象）-->
     <bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sessionFactory">
         <!--配置连接池-->
         <property name="dataSource" ref="dataSource"></property>

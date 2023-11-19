@@ -1259,17 +1259,21 @@ logging:
 
 ②访问监控接口
 
+根据springBoot打印的日志信息来判断使用哪一个端口，访问哪一个路径
+
 http://localhost:81/actuator
 
 ③配置启用监控端点
 
+**注意：**需要添加双引号，因为在yml中*有特殊的含义
+
 ~~~~yml
 management:
   endpoints:
-    enabled-by-default: true #配置启用所有端点
+    enabled-by-default: true # 配置启用所有端点
 	web:
       exposure:
-        include: "*" #web端暴露所有端点
+        include: "*" # web端暴露所有端点 
 ~~~~
 
 
@@ -1277,6 +1281,8 @@ management:
 
 
 ### 8.2 常用端点
+
+直接在yml文件的最左边书写，根据idea的提示进行选择即可。
 
 | 端点名称         | 描述                                      |
 | :--------------- | :---------------------------------------- |
@@ -1292,9 +1298,11 @@ management:
 
 ### 8.3 图形化界面 SpringBoot Admin
 
+解析返回的JSON信息，使用图形化界面进行展示。
+
 ①创建SpringBoot Admin Server应用
 
-要求引入spring-boot-admin-starter-server依赖
+创建一个新的springBoot模块，引入spring-boot-admin-starter-server依赖
 
 ~~~~xml
         <dependency>
@@ -1305,7 +1313,23 @@ management:
 
 然后在启动类上加上@EnableAdminServer注解
 
+~~~java
+@EnableAdminServer
+@SpringBootApplication
+public class HelloApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(HelloApplication.class, args);
+    }
+}
+~~~
 
+并且配置服务启动的端口：
+
+~~~yml
+server.port=8888
+~~~
+
+启动即可。
 
 ②配置SpringBoot Admin client应用
 
@@ -1328,6 +1352,106 @@ spring:
       client:
         url: http://localhost:8888 #配置 Admin Server的地址
 ~~~~
+
+
+
+
+
+
+
+## 9:特殊功能
+
+### 9.1开跑自启：启动项目时自动执行一些操作：
+
+~~~java
+/**
+ * 自定义一个类implements CommandLineRunner接口来指示springBoot程序启动时要做的一些事情
+ */
+@Component
+public class ViewCountRunner implements CommandLineRunner {
+    @Autowired
+    private ArticleMapper articleMapper;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 程序启动时将数据库中每篇文章的访问量的数据存储到map中最后存储到Redis中
+     * @param args
+     * @throws Exception
+     */
+    @Override
+    public void run(String... args) throws Exception {
+        //获取所有的文章列表
+        List<Article> articles = articleMapper.selectList(null);
+        //存储在map集合中
+        Map<String,Integer> map = articles.stream()
+                .collect(Collectors.toMap(article -> article.getId().toString()
+                        //value值转换为Integer类型而不是Long，后面才能进行递增
+                        , article -> article.getViewCount().intValue()));
+        //存储到Redis中
+        redisCache.setCacheMap(SystemConstants.VIEWCOUNT_MAP_KEY,map);
+
+    }
+
+}
+
+~~~
+
+### 9.2 定时任务：使用cron表达式实现定时任务
+
+ 在线Cron表达式生成器：
+
+[https://www.bejson.com/ot](https://www.bejson.com/ot)
+
+
+
+~~~java
+@Component
+public class UpdateViewCountJob {
+    @Autowired
+    //继承了IService,提供了许多批量操作的方法
+    private ArticleService articleService;
+
+    @Autowired
+    private RedisCache redisCache;
+
+    /**
+     * 
+     * cron表达式的使用  详细版本可参考sanGeng blog.md
+     * 1.允许的特殊字符：, - * /    四个字符
+     * 2.日期和星期两个部分如果其中一个部分设置了值，则另一个必须设置为 “ ? ”。 即：
+     * * 例如：
+     *      *
+     *      *        日期  星期
+     *      * 0\* * * 2 * ?
+     *      *  和
+     *      * 0\* * * ? * 2
+     *      *
+     * 3.cron表达式由七部分组成（一般只写6部分），中间由空格分隔，其中最后一个部分(年)一般该项不设置，直接忽略掉，即可为空值
+
+     每隔5分钟的第1秒把Redis中的访问量数据写入数据库中
+     */
+    @Scheduled(cron = "1 0/5 * * * ?")
+    public void updateViewCount() {
+        Map<String, Integer> viewCountMap = redisCache.getCacheMap(SystemConstants.VIEWCOUNT_MAP_KEY);
+        List<Article> articles = viewCountMap.entrySet()
+                .stream()
+                .map(entry -> {
+                            return new Article(Long.valueOf(entry.getKey()), entry.getValue().longValue());
+                        }
+                )
+                .collect(Collectors.toList());
+        //对于updateBatchById方法，如果批量更新的实体对象属性为空，
+        // 则不会对数据库中对应的字段进行更新，即数据库中原有的值会保持不变。
+        // 使用updateBatchById(articles);或updateById()都会报错：java.lang.NullPointerException
+        //articleService.updateBatchById(articles);
+        articles.forEach(article -> articleService.updateViewCountToMysql(article.getId(),article.getViewCount()));
+
+    }
+}
+
+~~~
 
 
 

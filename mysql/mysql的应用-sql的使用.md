@@ -41,9 +41,15 @@ select * from article LIMIT 1,3
 
 ### groub by ... having的使用
 
-group by**会把组变成一行，**前提是group by后面的字段的**值全部相同**，否则group by相当于没写。
+group by**会把组变成一行，**前提是group by后面的字段的**值有多个相同，而不是全部不同**，否则group by相当于没写。
 
-group by 有一个原则,就是 **select 中没有使用聚合函数的列,必须出现在 group by 后面**
+1 group by 有一个原则,就是 **select中使用了聚合函数时，select 中没有使用聚合函数的字段,必须出现在 group by 后面**
+
+2 而**having中不能出现group by中没有的字段，哪怕使用了聚合函数**，都不可以！
+
+**总结**：**select,having中的字段都依赖于group by**,被group by所限制。
+
+
 
 **where 子句**的作用是在对查询结果进行**分组前**，将不符合where条件的行去掉，即在分组之前过滤数据，条件中**不能包含聚组函数**，使用where条件显示特定的行。
 
@@ -747,11 +753,99 @@ from student st right join (
 
 ~~~
 
-#### 3.6.2 求单科成绩最高的学生的信息与分数
+#### 3.6.2 求语文单科成绩最高的学生的信息与分数
 
 同理，也是一样的做法（不要认为分数最高永远只有一人即可）:
 
 ~~~sql
+-- 求语文单科成绩最高的学生的信息与分数
+
+-- 子1：查询语文课程的id号
+select c.c_id
+from course c
+where  c.c_name = '语文'
+
+-- 子2: 查询语文成绩最高分数为多少
+select max(sc.s_score) max_score
+from score sc
+where sc.c_id = (
+	select c.c_id
+	from course c
+	where  c.c_name = '语文'
+)
+
+-- 子3：查询语文成绩最高分数的学生id与学生分数
+select sc.s_id,sc.s_score
+from score sc
+where sc.s_score = (
+	select max(sc.s_score) max_score
+	from score sc
+	where sc.c_id = (
+		select c.c_id
+		from course c
+		where  c.c_name = '语文'
+	)
+) and sc.c_id = (
+	select c.c_id
+	from course c
+	where  c.c_name = '语文'
+)
+
+-- 结果:
+select a.s_id '学号',st.s_name '姓名',st.s_sex '性别',st.s_birth '出生日期',a.s_score '分数'
+from (
+	select sc.s_id,sc.s_score
+	from score sc
+	where sc.s_score = (
+		select max(sc.s_score) max_score
+		from score sc
+		where sc.c_id = (
+			select c.c_id
+			from course c
+			where  c.c_name = '语文'
+		)
+	) and sc.c_id = (
+		select c.c_id
+		from course c
+		where  c.c_name = '语文'
+	) -- 子3与学生表进行连接
+) a left join student st on a.s_id = st.s_id
+
+
+~~~
+
+#### 3.6.3 求每门课程单科成绩最高的学生的信息与分数
+
+~~~sql
+-- 求每门课程单科成绩最高的学生的信息与分数
+
+-- 求每门课程单科成绩最高的学生的信息与分数
+
+-- 子1：查询每门课程的最高分数
+select sc.c_id,max(sc.s_score) max_score
+from score sc
+group by sc.c_id
+
+-- 子2: 查询每门课程的最高分数以及学生的id
+select sc.s_id,a.c_id,a.max_score
+from score sc right join (
+	select sc.c_id,max(sc.s_score) max_score
+	from score sc
+	group by sc.c_id
+) a on sc.c_id = a.c_id and sc.s_score = a.max_score
+
+-- 结果：查询每门课程的最高分数以及学生的信息
+
+select c.c_name '课程名称',st.s_name '学生姓名',a.max_score '最高分'
+from (
+	select sc.s_id,a.c_id,a.max_score
+	from score sc right join (
+		select sc.c_id,max(sc.s_score) max_score
+		from score sc
+		group by sc.c_id -- 子2与student,course表进行连接
+	) a on sc.c_id = a.c_id and sc.s_score = a.max_score
+) a left join student st on a.s_id = st.s_id 
+left join course c on a.c_id = c.c_id
 ~~~
 
 

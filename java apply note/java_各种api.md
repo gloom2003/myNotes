@@ -142,9 +142,10 @@ Integer num = Integer.valueOf(String str);
 ## 1.HashMap
 
 - 增、改 ：put(key,value)
-- 删：clear()
-- 查：get(key)
-- 找：containsKey(key)
+  - 删：clear(),value = remove(key)如果指定键存在于 HashMap 中，则该方法会删除对应的键值对，并返回所删除的值；如果指定键不存在于 HashMap 中，则返回 null。
+
+- 查：value = get(key)
+- 找：boolean = containsKey(key)
 
 ## 2.HsahSet
 
