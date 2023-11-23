@@ -80,11 +80,54 @@ WHERE sc.`c_id` = '01' AND sc.`s_score` < 60
 ORDER BY sc.`s_score` DESC
 ~~~
 
+### with ... as 的使用
 
+如果一整句查询中**多个子查询都需要使用同一个子查询**的结果，那么就可以用with as，将共用的子查询提取出来，加个别名。后面查询语句可以直接用，对于大量复杂的SQL语句起到了很好的优化作用。
+
+- 相当于一个临时表，但是不同于视图，不会存储起来，要与select配合使用。
+- 同一个select前可以有多个临时表，写一个with就可以，用逗号隔开，最后一个子查询不用写逗号。
+- with子句要用括号括起来。
 
 ~~~sql
+WITH a AS ( SELECT * FROM category WHERE cname = '家电' ),
+b AS ( SELECT * FROM products WHERE pname IN ( '小米电视机', '格力空调' ) ) 
+SELECT * 
+FROM a	LEFT JOIN b ON a.cid = b.category_id;
+~~~
+
+### left join、inner join、right join的使用
+
+1.以谁为主表，谁的表的**顺序就不会改变**，并且**完整保留主表**，另一张表没有相应的连接信息时会直接**使用null进行连接**
+
+2.inner join 取两个表的**公共部分**
+
+案例：视频p37
+
+~~~mysql
+-- 35、查询所有学生的课程及分数情况（重点）
+
+-- 以学生为中心
+select st.s_name,c.c_name,sc.s_score
+from student st left join score sc on st.s_id = sc.s_id
+left join course c on sc.c_id = c.c_id
+
+-- 以课程为中心
+
+-- 子1：查询
+select c_id,s_id,s_score,rank() over(PARTITION by c_id order by s_score desc) '排名'
+from score sc
+-- 结果： 以谁为主表，谁的表的就顺序就不会改变，并且完整保留主表，另一张表没有相应的连接信息时会直接使用null进行连接
+-- 缺点：没有选科的学生没有查询出来，因为为了保证顺序，主表不是student
+select c.c_name '课程名称',st.s_name '学生姓名',a.s_score '分数'
+from
+(
+	select c_id,s_id,s_score,rank() over(PARTITION by c_id order by s_score desc) '排名'
+	from score sc
+) a left join student st on st.s_id = a.s_id left join course c on a.c_id = c.c_id
 
 ~~~
+
+
 
 ## 2 MySQL 常用内置函数的使用
 
@@ -156,7 +199,7 @@ ORDER BY sc.`s_score` DESC
 - Avg()
 - Group_concat()
 
-### 窗口函数的使用
+### 【窗口函数的使用】
 
 窗口函数需要**mysql8.0以上的版本**才能够使用
 
@@ -697,11 +740,15 @@ from score sc
 GROUP BY sc.s_id
 ~~~
 
-下一题p35:
 
 
 
-### 3.6 经典题目
+
+下一题p38:
+
+
+
+### 3.6 经典题目(综合应用)
 
 充分理解题意与考虑罕见的情况：
 
@@ -816,6 +863,8 @@ from (
 
 #### 3.6.3 求每门课程单科成绩最高的学生的信息与分数
 
+解法1：常规解法
+
 ~~~sql
 -- 求每门课程单科成绩最高的学生的信息与分数
 
@@ -848,7 +897,35 @@ from (
 left join course c on a.c_id = c.c_id
 ~~~
 
+解法2：使用窗口函数
 
+~~~mysql
+-- 求每门课程单科成绩最高的学生的信息与分数
+
+-- 子1：给score表按照c_id进行排名
+select s_id,c_id,s_score,rank() over(PARTITION by c_id order by s_score desc) num
+from score
+
+-- 写法1：
+with temp as(
+select s_id,c_id,s_score,rank() over(PARTITION by c_id order by s_score desc) num
+from score
+) select c.c_name '课程',st.s_name '姓名',t.s_score '最高分'
+from temp t left join student st on t.s_id = st.s_id
+left join course c on t.c_id = c.c_id
+where t.num = 1
+
+-- 写法1相当于：
+select c.c_name '课程',st.s_name '姓名',t.s_score '最高分'
+from (
+	select s_id,c_id,s_score,rank() over(PARTITION by c_id order by s_score desc) num
+	from score
+) t left join student st on t.s_id = st.s_id
+left join course c on t.c_id = c.c_id
+where t.num = 1
+~~~
+
+​	
 
 ## 4 DCL 数据库控制语言
 

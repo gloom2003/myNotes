@@ -87,11 +87,11 @@ src/main/**java目录**下面的代码编译成.class字节码文件后就存放
 
 #### 2.3.1 id 
 
-​	bean的唯一标识，同一个Spring容器中不允许重复
+​	bean的唯一标识，同一个Spring容器中不允许重复，**使用name属性设置Bean的名称，没有设置时Bean的名称默认为id的值。**
 
 #### 2.3.2 class
 
-​	全类名，用于反射创建对象
+​	全类名，用于反射创建对象	
 
 #### 2.3.3 scope 
 
@@ -727,7 +727,9 @@ public class ApplicationConfig {
 
 ​	basePackages属性(或者value属性)来指定要扫描的包。
 
-​	注意要加在配置类上。
+​	**注意**：@ComponentScan要加在配置类上。并且在sprnigBoot项目中，当启动类没有配置@ComponentScan时，默认扫描的是启动类所在的包及其子包，如果使用@Configuration定义的配置类A与启动类不在同一个包及其子包下，则@Configuration注解不会生效，A仍然是一个普通类，如果A与启动类在同一个包及其子包下，并且A配置了@ComponentScan("com")注解，则会生效，会对com包进行扫描。
+
+​	
 
 例如：
 
@@ -743,7 +745,7 @@ public class ApplicationConfig {
 
 #### @Bean
 
-​	可以用来代替bean标签，主要**用于第三方类的注入**。
+​	可以用来**代替bean标签**，主要**用于第三方类的注入**。
 
 ​	使用：定义一个方法，在方法中创建对应的对象并且作为返回值返回。然后在方法上加上@Bean注解，
 

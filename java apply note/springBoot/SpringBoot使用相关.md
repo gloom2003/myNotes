@@ -1030,11 +1030,22 @@ public class UserServiceImpl implements UserServcie {
 
 ​	我们可以使用以下方式修改：
 
+​	springBoot默认使用cglib动态代理,切换为jdk动态代理时：
+
+​	引入依赖：
+
+~~~xml
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
+~~~
+
 ​	在配置文件中配置spring.aop.proxy-target-class为false这为使用jdk动态代理。该配置默认值为true，代表**默认使用cglib动态代理。**
 
 ~~~~java
 @SpringBootApplication
-@EnableAspectJAutoProxy(proxyTargetClass = false)//修改代理方式
+@EnableAspectJAutoProxy(proxyTargetClass = false)//修改代理方式为jdk代理
 public class WebApplication {
     public static void main(String[] args) {
         ConfigurableApplicationContext context = SpringApplication.run(WebApplication.class, args);
@@ -1454,4 +1465,451 @@ public class UpdateViewCountJob {
 ~~~
 
 
+
+## 10 @Import注解的使用
+
+### 10.1 @Import作用
+
+(1).**不用被组件扫描就能够把类注册为Bean**:当配置类(实际上不是配置类也可以)不在启动类及其子包下，没有被组件扫描到时，可以使用@Import(Configure.class)引入配置类,使其能够被扫描。
+
+~~~java
+@Import(MyConfigure.class)
+@SpringBootApplication
+public class HelloApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(HelloApplication.class, args);
+    }
+}
+~~~
+
+(2).可以引入**ImportSelector**的子类与**ImportBeanDefinitionRegistrar**的子类（**springBoot自动配置的原理**）,把其注入为Bean**,注意**：使用传统的 被组件扫描到 + @Companent的方式进行注入是成功不了的。
+
+### 10.2 ImportSelector接口的作用：
+
+创建实现类实现此接口返回字符串数组的方法，字符串数组中的每个字符串为某类的全类名，把实现类注入容器后，容器就**会根据字符串数组中的全类名来导入这些类到容器中注册为Bean**。
+
+#### 10.2.1 使用例子：读取配置文件，批量注入Bean
+
+实现类：
+
+~~~java
+public class MyImportSelector implements ImportSelector {
+    // 设置要把哪些类注入容器中
+    @Override
+    public String[] selectImports(AnnotationMetadata annotationMetadata) {
+        // 使用ResourceBundle工具类读取import.properties(Bundle文件)
+        ResourceBundle anImport = ResourceBundle.getBundle("import");
+        // 根据key获取value
+        String className = anImport.getString("className");
+        // 处理格式
+        String[] split = className.split(",");
+        return split;
+    }
+    
+    // 根据设置的条件对selectImports方法中要注入容器中的Bean进行过滤
+    @Override
+    public Predicate<String> getExclusionFilter() {
+        return new Predicate<String>() {
+            // 会把selectImports方法返回的字符串数组中的每个字符串依次传入这个方法中进行判断
+            // true则过滤掉，false则保留
+            @Override
+            public boolean test(String s) {
+                return s.contains("My");
+            }
+        };
+    }
+}
+~~~
+
+启动类：
+
+~~~java
+@Import(MyImportSelector.class) // 使用@Import注解来注入容器
+@SpringBootApplication
+public class HelloApplication {
+    public static void main(String[] args) {
+        // 返回一个spring容器
+        ConfigurableApplicationContext run = SpringApplication.run(HelloApplication.class, args);
+        MyService bean = run.getBean(MyService.class);// 结果：会出现异常，获取不到
+        System.out.println(bean);
+    }
+}
+~~~
+
+被读取的配置文件：import.properties
+
+~~~properties
+# properties文件就是键值对的形式key=value
+# 多个字符串使用,进行分隔，\表示换行符，不会影响到读取的内容
+className=com.service.MyService,\
+  com.service.TestService
+~~~
+
+### 10.3 ImportBeanDefinitionRegistrar接口的作用：
+
+**动态加载Bean**：
+
+如要要实现动态生成Bean的装载可以使用ImportBeanDefinitionRegistrar。尤其是如果想**装载动态代理对象**的时候。例如Mybatis的启动器就是使用了它实现了对Mapper接口的代理对象的装载。
+
+#### 10.3.1 简单案例：实现一个组件扫描功能:
+
+~~~java
+public class MyBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar {
+    /**
+     * 
+     * @param importingClassMetadata 存储着打上@Import注解的类的信息
+     * @param registry beanFactory对象，存储着各种BeanDefinition对象，容器从这里获取BeanDefinition对象进行Bean的注册
+     *                可以在这里添加BeanDefinition对象然后注入到容器中
+     */
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        // 创建扫描对象，true表示使用默认的过滤器(扫描的类中，只有添加了@Component等注解的才会返回这个类的BeanDefinition对象)
+        // registry为存放BeanDefinition对象的beanFactory
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(registry, true);
+        // 指定包的路径进行扫描，源码的doScan方法由于是protected修饰的使用不了，改用scan方法
+        scanner.scan("com.service");
+    }
+}
+~~~
+
+**注意**：记得在启动类上使用@Import注解引入这个实现类才能生效
+
+#### 10.3.2 进阶案例：实现@Component注解的类似功能
+
+自定义一个@SGComponent注解，实现：当类上添加了这个注解并且被组件扫描到时，能够把这个类注入到容器中。
+
+(1)自定义注解： **注意**：添加元注解
+
+~~~java
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface KanaComponent {
+}
+~~~
+
+(2)给类添加注解
+
+~~~java
+@KanaComponent
+public class MyService {
+}
+~~~
+
+(3)使用ImportBeanDefinitionRegistrar接口，实现扫描与注入容器
+
+~~~java
+public class MyBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar {
+    /**
+     *
+     * @param importingClassMetadata 存储着打上@Import注解的类的信息
+     * @param registry beanFactory对象，存储着各种BeanDefinition对象，容器从这里获取BeanDefinition对象进行Bean的注册
+     *                可以在这里添加BeanDefinition对象到beanFactory中最后注入到容器中
+     */
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        // 创建扫描器，不使用默认的过滤器
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(registry, false);
+        // 添加自定义的过滤器
+        scanner.addIncludeFilter(new TypeFilter() {
+            @Override
+            public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
+                // 必须要有@KanaComponent注解才能够放行
+                return metadataReader.getAnnotationMetadata().hasAnnotation("com.kana.annotation.KanaComponent");
+                // 注意：应该填写完整的注解路径
+            }
+        });
+        // 指定包的路径进行扫描，源码的doScan方法由于是protected修饰的使用不了，改用scan方法
+        scanner.scan("com.service");
+    }
+}
+
+
+~~~
+
+(4)使用@Import注入ImportBeanDefinitionRegistrar接口的实现类
+
+~~~java
+@Import(MyBeanDefinitionRegistrar.class)
+@SpringBootApplication
+public class HelloApplication {
+    public static void main(String[] args) {
+        // 返回一个spring容器
+        ConfigurableApplicationContext run = SpringApplication.run(HelloApplication.class, args);
+        TestService bean = run.getBean(MyService.class);
+        System.out.println(bean);
+
+    }
+}
+~~~
+
+(5)debug测试即可
+
+
+
+### 10.4 FactoryBean接口的使用
+
+把复杂Bean的创建写在FactoryBean接口的getObject()方法中，Spring容器直接根据getObject()方法获取对象即可，相当于把复杂Bean的创建工程封装了起来。
+
+#### 10.4.1 基本使用：
+
+(1)实现FactoryBean接口
+
+~~~java
+public class MyFactoryBean implements FactoryBean<User> {
+    // Spring容器会直接根据getObject()方法获取对象
+    @Override
+    public User getObject() throws Exception {
+        User user = new User(1, "jojo", "美国");
+        return user;
+    }
+	
+    @Override
+    public Class<?> getObjectType() {
+        return User.class;
+    }
+}
+
+~~~
+
+
+
+(2)把FactoryBean接口的实现类注入Spring容器
+
+~~~java
+@SpringBootApplication
+public class HelloApplication {
+    public static void main(String[] args) {
+        // 返回一个spring容器
+        ConfigurableApplicationContext run = SpringApplication.run(HelloApplication.class, args);
+
+    }
+	// 注入工厂的同时，工厂中的Bean也注入到了容器中
+    @Bean
+    public MyFactoryBean myFactoryBean(){// 方法的名字myFactoryBean就是容器中这个Bean的名称
+        return new MyFactoryBean();
+    }
+}
+~~~
+
+#### 10.4.2 实现类似Mybatis的根据接口自动生成代理对象与自动注入代理对象
+
+(1)定义接口与方法
+
+~~~java
+public interface UserMapper {
+    void select();
+}
+~~~
+
+
+
+(2)使用jdk动态代理生成代理对象，使用FactoryBean接口把登录对象注入到容器中
+
+测试没有通过：jdk动态代理生成的proxyInstance为null
+
+~~~java
+public class MyFactoryBean implements FactoryBean {
+    // 使用这个字符串变量接收接口的全类名，来生成这个接口的代理对象(实现类)
+    private String interfaceName;
+
+    // 参数通过构造方法传入
+    public MyFactoryBean(String interfaceName) {
+        this.interfaceName = interfaceName;
+    }
+
+    // 使用jdk动态代理生成接口的代理对象，创建一个实现类实现这个接口注入容器中
+    @Override
+    public Object getObject() throws Exception {
+        ClassLoader classLoader = MyFactoryBean.class.getClassLoader();
+        Class<?> interfaceClass = Class.forName(interfaceName);
+        // 使用jdk动态代理生成代理对象 TODO proxyInstance 为null
+        Object proxyInstance = Proxy.newProxyInstance(classLoader, new Class[]{interfaceClass}, new InvocationHandler() {
+            // 代理对象调用任意方法时都会执行invoke方法
+            @Override
+            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
+                if ("select".equals(method.getName())) {
+                    System.out.println(interfaceName + "的代理对象的invoke方法被执行了");
+                }
+                return null;
+            }
+        });
+        return proxyInstance;
+    }
+
+    // 返回Bean类型的字节码对象
+    @Override
+    public Class<?> getObjectType() {
+        // 因为是重写方法，不能给父方法添加异常声明，所以只能使用try-catch进行处理
+        try {
+            Class<?> interfaceClass = Class.forName(interfaceName);
+            return interfaceClass;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
+
+~~~
+
+
+
+(3)把FactoryBean接口的实现类注入Spring容器
+
+~~~java
+    @Bean
+    public MyFactoryBean userMapper(){ // 方法名就是Bean的名称
+        return new MyFactoryBean("com.kana.mapper.UserMapper");
+    }
+	// 相当于：
+	// <bean class="com.MyFactoryBean.MyFactoryBean">作用：调用MyFactoryBean.getObject()方法把返回值的对象注入容器
+    // <constructor-arg value="com.kana.mapper.UserMapper"></constructor-arg> 接口名
+    // <bean/>
+~~~
+
+
+
+#### 10.4.3 究极案例: 实现@Mapper注解
+
+(1)创建注解
+
+~~~java
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface KanaMapper {
+}
+~~~
+
+
+
+(2)创建接口，添加注解
+
+~~~java
+@KanaMapper
+public interface TestMapper {
+    void select();
+}
+~~~
+
+(3)自定义扫描器,使接口能够被注入到容器中
+
+~~~java
+public class MyClassPathScanner extends ClassPathBeanDefinitionScanner {
+
+    // 强制要求重写构造器
+    public MyClassPathScanner(BeanDefinitionRegistry registry) {
+        super(registry);
+    }
+
+    public MyClassPathScanner(BeanDefinitionRegistry registry, boolean useDefaultFilters) {
+        super(registry, useDefaultFilters);
+    }
+    // 重写这个方法覆盖父类的使接口的BeanDefinition也能够存放到容器中
+    @Override
+    protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
+        AnnotationMetadata metadata = beanDefinition.getMetadata();
+        return metadata.isInterface();
+    }
+}
+
+~~~
+
+(4)创建FactoryBean(实现传入接口名称生成实现类)
+
+~~~java
+public class MyFactoryBean implements FactoryBean {
+    // 使用这个字符串变量接收接口的全类名，来生成这个接口的代理对象(实现类)
+    private String interfaceName;
+
+    // 参数通过构造方法传入
+    public MyFactoryBean(String interfaceName) {
+        this.interfaceName = interfaceName;
+    }
+
+    // 使用jdk动态代理生成接口的代理对象，创建一个实现类实现这个接口注入容器中
+    @Override
+    public Object getObject() throws Exception {
+        ClassLoader classLoader = MyFactoryBean.class.getClassLoader();
+        Class<?> interfaceClass = Class.forName(interfaceName);
+        // 使用jdk动态代理生成代理对象 TODO proxyInstance 为null
+        Object proxyInstance = Proxy.newProxyInstance(classLoader, new Class[]{interfaceClass}, new InvocationHandler() {
+            // 代理对象调用任意方法时都会执行invoke方法
+            @Override
+            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
+                if ("select".equals(method.getName())) {
+                    System.out.println(interfaceName + "的代理对象的invoke方法被执行了");
+                }
+                return null;
+            }
+        });
+        return proxyInstance;
+    }
+
+    // 返回Bean类型的字节码对象
+    @Override
+    public Class<?> getObjectType() {
+        // 因为是重写方法，不能给父方法添加异常声明，所以只能使用try-catch进行处理
+        try {
+            Class<?> interfaceClass = Class.forName(interfaceName);
+            return interfaceClass;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
+
+~~~
+
+
+
+(5)实现ImportBeanDefinitionRegistrar接口，自定义过滤器，扫描指定的包，自己封装BeanDefinition
+
+~~~java
+public class MybatisBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar {
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        // 使用自定义的扫描器，不使用默认的过滤器
+        MyClassPathScanner scanner = new MyClassPathScanner(registry, false);
+        // 添加自定义的过滤器
+        scanner.addIncludeFilter(new TypeFilter() {
+            @Override
+            public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
+                return metadataReader.getAnnotationMetadata().hasAnnotation("com.kana.annotation.KanaMapper");
+            }
+        });
+        // 指定要扫描的包的路径，获取通过的beanDefinition（全部为接口）
+        Set<BeanDefinition> beanDefinitions = scanner.findCandidateComponents("com.kana.mapper");
+
+        for(BeanDefinition beanDefinition : beanDefinitions){
+            // 相当于bean标签:
+            // <bean class="com.MyFactoryBean.MyFactoryBean">
+            // <constructor-arg value="${beanDefinition.getBeanClassName()}"></constructor-arg> 接口名
+            // <bean/>
+            String interfaceName = beanDefinition.getBeanClassName();
+            // 使用自定义的MyFactoryBean（传入接口名称生成实现类）封装为新的beanDefinition替换原来接口的beanDefinition
+            AbstractBeanDefinition factoryBeanDefinition = BeanDefinitionBuilder.genericBeanDefinition(MyFactoryBean.class)
+                    .addConstructorArgValue(interfaceName)
+                    .getBeanDefinition();
+            // 把接口的全类名作为bean的名称，把factoryBeanDefinition注册到beanFactory中，以便注入容器
+            registry.registerBeanDefinition(interfaceName,factoryBeanDefinition);
+        }
+    }
+}
+
+~~~
+
+
+
+(6)使用@Import注解引入Registrar实现类
+
+~~~java
+@Import(MybatisBeanDefinitionRegistrar.class)
+@SpringBootApplication
+public class HelloApplication {
+    public static void main(String[] args) {
+        // 返回一个spring容器
+        ConfigurableApplicationContext run = SpringApplication.run(HelloApplication.class, args);
+    }
+~~~
 

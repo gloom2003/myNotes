@@ -166,10 +166,10 @@ public interface CourseDao {
 
 ### 3.1 单个参数 使用#{}
 
-在xml的sql中获取基本数据类型、POJO对象(不继承、实现的普通java类对象)、Map类型的参数、：都是直接使用#{}即可
+在xml的sql中获取基本数据类型、POJO对象(不继承类、实现接口的普通java类对象)、Map类型的参数、：都是直接使用#{}即可
 
 1. 基本数据类型(如int)：#{变量名} 自动返回变量中的值,只有一个参数时，变量名可以随便写
-2. POJO对象：#{对象的属性}
+2. POJO对象：#{对象的属性名}
 3. Map对象: #{key},会自动返回value
 
 ### 3.2 多个参数 使用@Param
@@ -1419,5 +1419,4 @@ public class User implements Serializable
 1.sql中不要使用*，而是具体的写上需要查询的字段名
 
 2.创建packge时,使用com.kana.mybatis,创建目录时使用com/kana/mybatis
-
 

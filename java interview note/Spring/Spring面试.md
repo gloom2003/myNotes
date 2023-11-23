@@ -1,33 +1,24 @@
 # Spring面试型知识
 
-源码学习法：
+## 1 源码相关内容
 
-![img/1700394498542.png](img/1700394498542.png)
+### 1.1 Spring容器中Bean的创建与获取的原理
 
-通过断点(配合idea.md中的debug快捷键与技巧食用)，一行一行代码的进行尝试，判断是哪一行代码执行后达到了想要的效果，不断重复，找到最里面的我们熟悉的代码。
+**结论**：非懒加载的单实例bean会在容器创建的时候创建。容器内部会创建一个beanFactory,使用beanFactory的doGetBean方法来进行创建(因为此时使用beanFactory的doGetBean方法获取到的Bean为null，进行判断发现为null后会去创建这个Bean)，底层其实是使用反射，根据spring配置文件中的全类名获取类的字节码对象，再获取构造器对象，然后使用构造器对象的newInstance()方法传入相应的参数来创建对象,并且在创建后会把bean放入一个单例bean的map集合(singletonObjects)中进行存储,存储时map集合的key就是我们spring配置文件中配置的id属性。这样，当我们在spring的配置文件中写好bean标签的类名与id后，调用容器的getBean方法来获取对象的时，其实他也是使用beanFactory对象调用了doGetBean方法,其实就是去访问这个singletonObjects集合，所以能够获取到对应的Bean。
 
-跳过无关代码：throw异常的安全性校验的代码、assert断言、没有执行的代码
-
-具体例子：
-![img/1700395051522.png](img/1700395051522.png)
-
-1.根据目标使用源码学习法进行探究
-
-2.记录探究过程(图文并茂的记录**每个方法的调用**，圈出**方法中关键的代码**，使用xmind工具)
-
-3.探究完成后要总结出面试时被问到这个问题后如何回答、可以口述出来的结论
-
-4.最后记录探究过程中产生的疑问，循环上面的过程即可
-
-## 1 Spring容器中Bean的创建与获取的原理
-
-**结论1：**非懒加载的单实例bean会在容器创建的时候创建。容器内部会创建一个beanFactory,使用beanFactory的doGetBean方法来进行创建，底层其实是使用反射，根据spring配置文件中的全类名获取类的字节码对象，再获取构造器对象，然后使用构造器对象的newInstance()方法传入相应的参数来创建对象,并且在创建后会把bean放入一个单例bean的map集合(singletonObjects)中进行存储,存储时map集合的key就是我们spring配置文件中配置的id属性。这样，当我们在spring的配置文件中写好bean标签的类名与id后，调用容器的getBean方法来获取对象的时，其实就是去访问这个singletonObjects集合，所以能够获取到对应的Bean。
-
-**口述：**非懒加载的单实例bean其实是在容器创建的时候创建的，它内部其实是借助一个beanFactory去创建的，里面有一个doGetBean方法,在这个方法里面，其实是通过反射创建出来的，在创建出来之后，它还会把这个Bean存放到一个单例bean的map集合(singletonObjects)，所以后面我们去调用容器的getBean方法时，其实就是去访问这个singletonObjects集合，所以能够获取到对应的Bean。
+**口述：**非懒加载的单实例bean其实是在容器创建的时候创建的，它内部其实是借助一个beanFactory去创建的，里面有一个doGetBean方法,在这个方法里面，其实是通过反射创建出来的，在创建出来之后，它还会把这个Bean存放到一个单例bean的map集合(singletonObjects)，所以后面我们去调用容器的getBean方法时，其实他也是使用beanFactory对象调用了doGetBean方法(能够获取到对象，不为null，直接返回,不需要使用反射创建了),其实就是去访问这个singletonObjects集合，所以能够获取到对应的Bean。
 
 
 
+### 1.2 Spring容器中BeanDefinition的创建与作用
 
+**结论1**：在容器创建时会先去创建一个beanFactory,然后使用
+XmlBeanDefinitionReader去读取xml配置文件，把里面的标签进行解析，然后创建BeanDefinition对象来存放bean标签中的各个属性的值。所以BeanDefinition相当于就是保存了bean的定义信息的对象。
+
+**结论2**：BeanDefinition被创建后会被存入beanFactoty的
+beanDefinitionMap集合(Bean名称作为key，BeanDefinition作为value)和beanDefinitionNames列表中	(存储beanDefinition的名称)
+
+**口述**:
 
 
 
@@ -290,10 +281,14 @@ public class AccountServiceImpl implements AccountService {
 
 JDK的动态代理使用的java.lang.reflect.Proxy这个类来进行实现的。**要求被代理（被增强）的类需要实现了接口**。并且JDK动态代理也**只能对接口中的方法进行增强**。
 
+下面演示了使用jdk动态代理对某个类进行AOP增强的过程：
+
+**注意**：jdk动态代理使用的Proxy类所在包为... . cglib.proxy
+
 ~~~~java
 public static void main(String[] args) {
         AIControllerImpl aiController = new AIControllerImpl();
-        //使用动态代理增强getAnswer方法
+        //使用动态代理增强getAnswer方法	
         //1.JDK动态代理
         //获取类加载器
         ClassLoader cl = Demo.class.getClassLoader();
