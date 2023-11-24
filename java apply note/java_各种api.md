@@ -257,6 +257,18 @@ public int test(int[][] envelopes){
     }
 ~~~
 
+### 6 Stack
+
+- stack.**push**()把元素压入堆栈顶部。
+- Object obj = stack.**pop**()移除堆栈顶部的对象，并返回该对象。
+- stack.**peek**()查看堆栈顶部的对象，但不从堆栈中移除它
+- Boolean res = stack.**empty**()测试堆栈是否为空
+- int stack.**search**(obj)返回对象在堆栈中的位置，以 1 为基数。
+
+### 7 Queue
+
+offer()
+
 
 
 # (4) 大数与日期相关的api

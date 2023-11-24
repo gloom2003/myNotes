@@ -101,18 +101,19 @@ FROM a	LEFT JOIN b ON a.cid = b.category_id;
 
 2.inner join 取两个表的**公共部分**
 
-案例：视频p37
+案例：视频p37  查询所有学生的课程及分数情况（重点）
+
+解法1：以学生为中心
 
 ~~~mysql
--- 35、查询所有学生的课程及分数情况（重点）
-
--- 以学生为中心
 select st.s_name,c.c_name,sc.s_score
 from student st left join score sc on st.s_id = sc.s_id
 left join course c on sc.c_id = c.c_id
+~~~
 
--- 以课程为中心
+解法2：以课程为中心
 
+~~~mysql
 -- 子1：查询
 select c_id,s_id,s_score,rank() over(PARTITION by c_id order by s_score desc) '排名'
 from score sc
@@ -125,6 +126,29 @@ from
 	from score sc
 ) a left join student st on st.s_id = a.s_id left join course c on a.c_id = c.c_id
 
+~~~
+
+解法3：一行展示学生的所有成绩
+
+**注意**：主表与其他表之间都有想要查询的字段时，应该**优先从主表中进行查询**，(例如下面的st.s_id与sc.s_id)因为主表中的内容不会被改变，不会突然变为null。
+
+~~~mysql
+SELECT st.`s_id` "学号",st.s_name '姓名',
+MAX(CASE WHEN sc.`c_id` = '01' THEN sc.`s_score` ELSE NULL END) "语文",
+MAX(CASE WHEN sc.`c_id` = '02' THEN sc.`s_score` ELSE NULL END) "数学",
+MAX(CASE WHEN sc.`c_id` = '03' THEN sc.`s_score` ELSE NULL END) "英语",
+MAX(CASE WHEN sc.`c_id` = '04' THEN sc.`s_score` ELSE NULL END) "化学"
+FROM student st LEFT JOIN score sc ON st.`s_id` = sc.`s_id`
+GROUP BY st.`s_id`,st.s_name  
+
+-- 使用其他聚合函数:
+SELECT st.`s_id` "学号",st.s_name '姓名',
+sum(CASE WHEN sc.`c_id` = '01' THEN sc.`s_score` ELSE 0 END) "语文",
+min(CASE WHEN sc.`c_id` = '02' THEN sc.`s_score` ELSE NULL END) "数学",
+MAX(CASE WHEN sc.`c_id` = '03' THEN sc.`s_score` ELSE NULL END) "英语",
+MAX(CASE WHEN sc.`c_id` = '04' THEN sc.`s_score` ELSE NULL END) "化学"
+FROM student st LEFT JOIN score sc ON st.`s_id` = sc.`s_id`
+GROUP BY st.`s_id`,st.s_name
 ~~~
 
 
@@ -586,6 +610,8 @@ FROM student a INNER JOIN (
 
 在select语句中的case when ... 会在最后查询出来的结果上面占一个字段，一般会起一个别名。
 
+1.**配合聚合函数使用:**
+
 经常**配合sum()**使用来**计算符合某个条件数量**，**sum(case when ... then 1 else 0 end)** 如:
 
 ~~~sql
@@ -598,7 +624,45 @@ select SUM(CASE WHEN sc.`s_score`>=60 THEN 1 ELSE 0 END)/COUNT(sc.s_id) 及格�
 select COUNT(CASE WHEN s.s_score >=70 AND s.s_score < 80 THEN 999 ELSE NULL END)/COUNT(s_id) "中等率",
 ~~~
 
-也可以配合其他聚集函数使用
+具体例子与**执行细节**：
+
+group by sc.`s_id`后，max()函数会对每个分组求最大值，具体流程为：遍历一个分组的每条数据，CASE WHEN sc.`c_id` = '01' THEN sc.`s_score` ELSE NULL END 表示：如果c_id = '01',则记为s_score,否则记为null。遍历结束后，相当于从[s_score,null,null...]中求最大值，结果为s_score,添加到查询结果并且重命名为"语文"。
+
+~~~mysql
+SELECT sc.`s_id` "学号",
+# 新增一个字段"语文"，if(sc.`c_id` = '01'){字段值 = sc.`s_score`}else{字段值 = null} 由于group by的关系，case when需要写在聚合函数如：Max()中，一条数据的最大值还是自己
+MAX(CASE WHEN sc.`c_id` = '01' THEN sc.`s_score` ELSE NULL END) "语文",
+MAX(CASE WHEN sc.`c_id` = '02' THEN sc.`s_score` ELSE NULL END) "数学",
+MAX(CASE WHEN sc.`c_id` = '03' THEN sc.`s_score` ELSE NULL END) "英语",
+MAX(CASE WHEN sc.`c_id` = '04' THEN sc.`s_score` ELSE NULL END) "化学",
+AVG(sc.`s_score`) "平均成绩"
+# 没有选课的学生，8号查询不出来，学号也会为null
+FROM student st LEFT JOIN score sc ON st.`s_id` = sc.`s_id`
+GROUP BY sc.`s_id`
+ORDER BY AVG(sc.`s_score`) DESC
+~~~
+
+
+
+2.**不使用聚合函数，直接使用**：
+
+~~~mysql
+select *,case when s_id = '01' then 1 else 0 end '标记学号01'
+from score 
+~~~
+
+**注意**：group by分组后，不使用聚合函数的case when语句仍然对每个组的每条数据进行判断，**但是只会返回每个组的第一条数据**：
+
+如:
+
+~~~mysql
+SELECT st.`s_id` "学号",st.s_name '姓名',
+CASE WHEN sc.`c_id` = '01' THEN sc.`s_score` ELSE 0 END "语文"
+FROM student st LEFT JOIN score sc ON st.`s_id` = sc.`s_id`
+GROUP BY st.`s_id`,st.s_name
+~~~
+
+mysql设置如果为：sql_mode=only_full_group_by时会**直接报错**。因为c_id不在group by中。
 
 p21: case when与聚合函数、group by的使用
 
