@@ -130,13 +130,43 @@ parse?方法与valueOf方法：
 如：并且可以按照名字的规律以此类推其他的api
 
 ```java
-// Integer -> int
+// String -> Integer
 int num = Integer.parseInt(String str);
 
+// String -> Long
 long a = Long.parseLong(String str);
+
 // String -> Integer
 Integer num = Integer.valueOf(String str);
 ```
+
+long类型转换为int类型：
+
+一、强制类型转换
+
+```java
+long ll = 300000;  
+
+int ii = (int)ll; 
+```
+
+二、创建一个包装类，调用intValue()方法
+
+```java
+long ll = 300000;  
+
+int ii= new Long(ll).intValue(); 
+```
+
+三、先把long转换成字符串String，然后在转行成Integer
+
+```java
+long ll = 300000;  
+
+int ii = Integer.parseInt(String.valueOf(ll));
+```
+
+
 
 # (3) 常用的数据结构的api
 

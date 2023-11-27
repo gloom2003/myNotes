@@ -3,7 +3,7 @@
 ## 1 关键字的使用
 
 
-### limit和offset的用法 从哪一个索引开始获取？取几条数据?
+### 1.1 limit和offset的用法 从哪一个索引开始获取？取几条数据?
 
 1.当limit后面跟两个参数的时候，第一个数表示要跳过的数量(或者**从哪一个索引开始获取，第一条的数据为0)**，后一位表示**要获取的数量**,例如：
 
@@ -39,7 +39,7 @@ select * from article LIMIT 1,3
 
 
 
-### groub by ... having的使用
+### 1.2 groub by ... having的使用
 
 group by**会把组变成一行，**前提是group by后面的字段的**值有多个相同，而不是全部不同**，否则group by相当于没写。
 
@@ -68,7 +68,7 @@ WHERE s.`s_id` != '02'
 GROUP BY s.`s_id` HAVING AVG(s.`s_score` > 60)
 ~~~
 
-### Order by desc,asc 设置排序方式
+### 1.3 Order by desc,asc 设置排序方式
 
 ~~~sql
 # 16、检索"01"课程分数小于60，按分数降序排列的学生信息
@@ -80,7 +80,7 @@ WHERE sc.`c_id` = '01' AND sc.`s_score` < 60
 ORDER BY sc.`s_score` DESC
 ~~~
 
-### with ... as 的使用
+### 1.4 with ... as 的使用
 
 如果一整句查询中**多个子查询都需要使用同一个子查询**的结果，那么就可以用with as，将共用的子查询提取出来，加个别名。后面查询语句可以直接用，对于大量复杂的SQL语句起到了很好的优化作用。
 
@@ -95,7 +95,7 @@ SELECT *
 FROM a	LEFT JOIN b ON a.cid = b.category_id;
 ~~~
 
-### left join、inner join、right join的使用
+### 1.5 left join、inner join、right join的使用
 
 1.以谁为主表，谁的表的**顺序就不会改变**，并且**完整保留主表**，另一张表没有相应的连接信息时会直接**使用null进行连接**
 
@@ -151,6 +151,33 @@ FROM student st LEFT JOIN score sc ON st.`s_id` = sc.`s_id`
 GROUP BY st.`s_id`,st.s_name
 ~~~
 
+### 1.6 distinct的使用
+
+例如：distinct的位置不同
+
+~~~mysql
+-- 子1：查询第3名的总分
+select distinct sum(s_score) sum_score -- distinct sum(s_score)表示从总分的结果中去重
+from score -- sum(distinct s_score)表示计算总分时重复的分数不进行计算
+group by s_id
+order by sum_score desc
+limit 2,1
+~~~
+
+再如：distinct去重的字段的选择
+
+视频的p44
+
+~~~mysql
+-- 43、统计每门课程的学生选修人数（超过5人的课程才统计）
+-- 要求输出课程号和选修人数，查询结果按人数降序排列，若人数相同，按课程号升序排列
+
+select c_id '课程号',count(DISTINCT s_id) '选修人数' -- 根据s_id进行计数并且进行去重，防止遇到重修的情况(可能有一个人选了两次这门课)
+from score
+group by c_id having 选修人数 > 5
+order by 选修人数 desc,c_id asc
+~~~
+
 
 
 ## 2 MySQL 常用内置函数的使用
@@ -161,7 +188,7 @@ GROUP BY st.`s_id`,st.s_name
 - Format(X，D) //格式化千分位数值format(1234567.456, 2) =1,234,567.46
 - Ceil(X) //向上取整ceil(10.1) = 11
 - Floor(X) //向下取整floor (10.1) = 10
-- Round(X) //四舍五入去整
+- Round(X) //四舍五入取整
 - Mod(M,N) M%N M MOD N //求余 10%3=1
 - Pi() //获得圆周率
 - Pow(M,N) //M^N
@@ -171,8 +198,9 @@ GROUP BY st.`s_id`,st.s_name
 
 ###【时间日期函数】
 
-- Now(),current_timestamp() //当前日期时间
+- Now(),current_timestamp() //获取当前日期时间 返回：2023-11-27 04:03:27
 - year('2023-10-22') = 2023,month('2023-10-22') = 10 // 获取字符串中的年、月 **日期字符串支持下面4种格式**：1.YYYY-MM-DD,2.YYYY/MM/DD,3.YYYYMMDD,4.YYMMDD
+- datediff("2023-11-27","2023-11-26") 返回 1表示第一个日期与第二个日期相差的天数
 - Current_date(),curdate()  //当前日期
 - current_time() //当前时间
 - Date(‘yyyy-mm-dd HH;ii:ss’) //获取日期部分
@@ -227,9 +255,9 @@ GROUP BY st.`s_id`,st.s_name
 
 窗口函数需要**mysql8.0以上的版本**才能够使用
 
-- row_number()
-- dense_rank()
-- rank()
+- row_number() 1234
+- dense_rank() 1223
+- rank() 1224
 
 区别：
 
@@ -528,6 +556,26 @@ WHERE st.s_id IN (
 GROUP BY st.s_id,st.s_name
 ~~~
 
+视频p43:视频中写的复杂了，题目还有歧义，下面的写法更加简单易懂
+
+也是group by ... having 聚合函数的使用
+
+~~~mysql
+-- 41.查询课程成绩全部都相同的学生的学生编号、课程编号、学生成绩（重点）
+
+select sc.s_id
+from score sc
+group by sc.s_id having max(sc.s_score) = min(sc.s_score)
+
+select sc.s_id '学生编号',sc.c_id '课程编号',sc.s_score '学生成绩'
+from score sc
+where sc.s_id = (
+	select sc.s_id
+	from score sc
+	group by sc.s_id having max(sc.s_score) = min(sc.s_score)
+)
+~~~
+
 
 
 ### 3.3 inner join 与 in的效率问题
@@ -806,12 +854,6 @@ GROUP BY sc.s_id
 
 
 
-
-
-下一题p38:
-
-
-
 ### 3.6 经典题目(综合应用)
 
 充分理解题意与考虑罕见的情况：
@@ -989,7 +1031,195 @@ left join course c on t.c_id = c.c_id
 where t.num = 1
 ~~~
 
-​	
+
+
+#### 3.6.4 求总分前3的学生分数与学生姓名(大厂)
+
+解法1：总分前3不止3人，查询第3名的总分后使用having进行过滤即可
+
+写法1：一个子查询+join 
+
+~~~mysql
+-- 子1：查询第3名的总分
+select distinct sum(s_score) sum_score -- distinct sum(s_score)表示从总分的结果中去重,
+from score -- sum(distinct s_score)表示计算总分时重复的分数不进行计算
+group by s_id
+order by sum_score desc
+limit 2,1
+
+-- 结果1：
+select sc.s_id '学号',st.s_name '姓名',sum(s_score) '总分'
+from score sc left join student st on sc.s_id = st.s_id
+group by sc.s_id,st.s_name having sum(s_score) >= 
+(
+	select sum(s_score) sum_score
+	from score
+	group by s_id
+	order by sum_score desc
+	limit 2,1
+)
+order by 总分 desc
+~~~
+
+写法2：两个子查询 + join (连接时总分表这边的行数少了很多)
+
+~~~mysql
+-- 子1：查询第3名的总分
+select distinct sum(s_score) sum_score -- distinct sum(s_score)表示从总分的结果中去重,
+from score -- sum(distinct s_score)表示计算总分时重复的分数不进行计算
+group by s_id
+order by sum_score desc
+limit 2,1
+
+-- 子2：总分前3的学生id与分数
+select sc.s_id,sum(s_score) sum_score
+from score sc
+group by sc.s_id having sum(s_score) >= 
+(
+	select sum(s_score) sum_score
+	from score
+	group by s_id
+	order by sum_score desc
+	limit 2,1
+)
+order by sum_score desc
+
+-- 结果2：
+select st.s_name '姓名',a.sum_score '总分数'
+from 
+(
+	select sc.s_id,sum(s_score) sum_score
+	from score sc
+	group by sc.s_id having sum(s_score) >= 
+	(
+		select sum(s_score) sum_score
+		from score
+		group by s_id
+		order by sum_score desc
+		limit 2,1
+	)
+	order by sum_score desc
+) a 
+left join student st on a.s_id = st.s_id
+
+
+~~~
+
+
+
+解法2：使用窗口函数
+
+~~~mysql
+-- 求总分前3的学生分数与学生姓名
+
+-- 子1：查询每个学生的总分
+select s_id,sum(s_score) sum_score
+from score
+group by s_id
+
+-- 子2：根据总分添加排名字段
+select a.s_id,a.sum_score,DENSE_RANK() over(order by a.sum_score desc) '排名'
+from 
+(
+	select s_id,sum(s_score) sum_score
+	from score
+	group by s_id
+) a
+
+-- 结果：
+select st.s_name '姓名',b.sum_score '分数'
+from 
+(
+	select a.s_id,a.sum_score,DENSE_RANK() over(order by a.sum_score desc) '排名'
+	from 
+	(
+		select s_id,sum(s_score) sum_score
+		from score
+		group by s_id
+	) a
+) b left join student st on b.s_id = st.s_id
+where b.排名 <= 3
+~~~
+
+#### 3.6.5 查询选修“张三”老师所授课程的学生中成绩最高的学生姓名及其成绩
+
+成绩最高的学生可能不止一个
+
+解法1：
+
+~~~mysql
+-- 查询选修“张三”老师所授课程的学生中成绩最高的学生姓名及其成绩
+
+-- join写法 可读性好，写起来方便简洁，效率不如子查询
+select DISTINCT max(sc.s_score) max_score
+from teacher t inner join course c on t.t_id = c.t_id
+inner join score sc on sc.c_id = c.c_id
+where t.t_name = '张三'
+
+select st.s_name,c.c_name,sc.s_score
+from teacher t inner join course c on t.t_id = c.t_id
+inner join score sc on sc.c_id = c.c_id
+inner join student st on sc.s_id = st.s_id
+where t.t_name = '张三' and sc.s_score = 
+(
+	select DISTINCT max(sc.s_score) max_score
+	from teacher t inner join course c on t.t_id = c.t_id
+	inner join score sc on sc.c_id = c.c_id
+	where t.t_name = '张三'
+)
+~~~
+
+解法2：
+
+~~~mysql
+-- 子查询写法(一个join都没有...)
+select st.s_name '学生姓名',a.s_score '成绩'
+from student st right join (
+	select sc.s_id,sc.s_score
+	from score sc
+	where sc.c_id in 
+	(
+		select c.c_id
+		from course c 
+		where c.t_id = 
+		(
+			select t.t_id
+			from teacher t
+			where t.t_name = '张三'
+		) 
+	) and sc.s_score = (
+		select max(sc.s_score) max_score
+		from score sc
+		where sc.c_id in 
+		(
+			select c.c_id
+			from course c 
+			where c.t_id = 
+			(
+				select t.t_id
+				from teacher t
+				where t.t_name = '张三'
+			) 
+		)
+	)
+) a on st.s_id = a.s_id
+~~~
+
+### 3.7 时间相关的sql题
+
+视频p47
+
+~~~mysql
+-- 46.查询各学生的年龄
+
+select s_name '姓名',s_birth '出生日期',
+floor(DATEDIFF(now(),s_birth)/365) '年龄'
+from student
+~~~
+
+下一题p49:
+
+
 
 ## 4 DCL 数据库控制语言
 

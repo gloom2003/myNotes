@@ -11,11 +11,21 @@ ls -alF
 ```
 
 - -a: 查看隐藏文件
--  -l: 查看详细信息 
+- -l: 查看详细信息 
 - -F: 在列出的文件名称后加一符号；例如可执行档则加 "*", 目录则加 "/" 
 - -h: 以人类可读的方式显示当前目录中目录大小(如:7.2K 表示大小为7.2KB)
 
-### pwd 查看当前路径
+
+
+查看指定目录下面的内容
+
+~~~sh
+ls -l /etc | grep bash # 查看/etc目录下名称包含bash的文件
+~~~
+
+
+
+### pwd 查看当前工作路径的绝对路径
 
 ### cd 移动
 
@@ -33,23 +43,35 @@ su - study 表示切换为study用户
 
 ### rm 删除文件
 
-rm -rf /* 删库跑路 -r:表示递归的删除目录和目录下面的文件 
+rm -rf /* 删库跑路
 
 参数：
 
 - -i 删除前逐一询问确认。
 - -f 即使原档案属性设为只读，亦直接删除，无需逐一确认。
-- -r 将目录及以下之档案亦逐一删除。
+- -r 表示递归的删除目录和目录下面的文件 
 
 ### exit 退出root用户或者退出终端
 
 exit:可以是退出当前用户然后返回上一个用户
 
-### who 查看用户
+### who 查看当前用户的相关信息
 
-who查看登录的用户是哪一个
+信息分别为：哪一个用户，使用的控制台、登录时间和ip地址
 
-whoami 查看当前是哪一个用户在操作
+查看当前的所有用户的信息
+
+~~~sh
+who
+~~~
+
+查看当前操作的用户的信息
+
+```sh
+who am i # 查看当前操作的是哪一个用户，使用的控制台、登录时间和ip地址
+```
+
+
 
 ### groups 查看当前用户所有的用户组
 
@@ -108,19 +130,23 @@ ln -s .bash_logout kkk 表示给.bash_logout创建一个软链接文件(文件�
 
 ### chmod修改文件的权限
 
-u用户 、g用户组、o其他
+ugo:u用户 、g用户组、o其他
 
 读r、写w、执行x
 
- 表示修改test文件的user,groups的权限：去除w权限
+目录没有x权限就不能使用cd进入
+
+例如：
 
 ```sh
-chmod ug-w test
+chmod ug-w test # 表示修改test文件的user,groups的权限：去除w权限
+chmod u+w test # 给当前用户添加执行test文件的权限
 ```
 
-表示修改test文件的user,groups,other的权限(r=4，w=2，x=1): 改为rw-rw-r--
+表示修改test文件的user,groups,other的权限(**r=4，w=2，x=1)**: 改为rw-rw-r--
 ```sh
 chmod 664 test 
+chmod 777 test # 赋予ugo所有权限
 ```
 
 
@@ -203,32 +229,60 @@ sudo shutdown now 马上关机
 
 ### tar压缩命令
 
-touch 1.txt 2.txt
+压缩命令：
 
 ```sh
-tar -zcvf test.tar.gz *.txt  表示使用gzip格式压缩所有的txt文件变成一个压缩文件test.tar.gz
+tar -zcvf test.tar.gz *.txt  # 表示使用gzip格式压缩当前目录下面所有的txt文件，变成一个压缩文件命名为test.tar.gz
+tar -zcvf test.tar.gz test/ # 压缩test目录下面的所有文件
 ```
 
-tar -zxvf test.tar.gz 表示解压压缩文件test.tar.gz
+解压命令：
+
+```sh
+tar -zxvf test.tar.gz # 表示解压压缩文件test.tar.gz
+```
+
+参数含义：
 
 - -c表示对文件进行压缩，创建新的压缩文件
 - -x表示进行解压操作，-z表示以gzip格式进行操作
 - -v可以在处理过程中输出一些日志信息
 - -f表示对普通文件进行操作
 
-mkdir test
 
-tar -zcvf test1.tar.gz test/ 表示压缩test文件夹里的使用文件为test1.tar.gz压缩包
-
-tar -zxvf test1.tar.gz
 
 ### vim编辑器
 
-**实用命令：**
+#### 方便的配置
 
-1.按下i并且输入完成后，按下Esc退出，使用yy复制当前行，使用p自动粘贴到下一行。
+每次使用 Vim 打开文件时，Vim 都会到**当前登录用户**的宿主目录（~中）中读取 .vimrc 文件，此文件可以对 Vim 进行一些默认配置设定。
 
-**基础：**
+在~中编辑.vimrc文件：
+
+~~~sh
+vim .vimrc
+~~~
+
+输入下面的配置：
+
+~~~sh
+set nu # 开启行号的显示
+syn off # 关闭颜色的显示
+~~~
+
+在/root配置了后，只有root用户才会生效
+
+#### 实用命令：
+
+1.快速复制一行
+
+按下i并且输入完成后，按下Esc退出，使用yy复制当前行，使用p自动粘贴到下一行。
+
+2.复制多行
+
+按下i并且输入完成后，按下Esc退出，输入v以当前光标为起点进入可视化模式，键盘上下移动光标进行选取，输入y进行复制，键盘上下移动光标到合适位置然后输入p进行粘贴。
+
+#### 基础知识：
 
 vim hello.txt  表示使用vim编辑hello.txt文件，不存在则会自动创建
 
@@ -285,18 +339,37 @@ sudo apt update 表示更新apt，服务器第一次使用时需要执行
 
 sudo apt install gcc 表示下载gcc编译器
 
-### | 使用管道进行搜索
+### | grep 使用管道进行搜索
 
 管道符号“|”,表示将前一个命令你个处理结果交给后面命令处理。
 
 ps aux 表示查看进程状态（Process Status）
 
-ps aux | grep -n study 表示搜索进程状态中含有study的文件并且显示行号
+```sh
+ps aux | grep -n study # 表示搜索进程状态中含有study的文件并且显示行号
+```
+
+
 
 | grep 参数 | 含义         |
 | --------- | ------------ |
 | -n        | 显示行号     |
 | -i        | 不区分大小写 |
+| -m                   |  设置返回的行数        |
+
+使用正则表达式匹配文件的内容
+
+~~~sh
+cat /etc/passwd | grep r..t # 对/etc/passwd文件的每一行进行匹配，匹配的规则为正则表达式，返回匹配成功的行
+~~~
+
+匹配一个手机号：
+
+~~~sh
+echo"15912345678" | grep -E ^1[34578][0-9]{9}$ # -E表示支持拓展的正则表达式，使{9}能够生效
+~~~
+
+
 
 ### curl命令
 
@@ -374,6 +447,45 @@ systemctl restart nginx.service 表示重启nginx
 - sudo systemctl status nginx 表示查看Nginx的状态，检查是否正常运行 
 - sudo systemctl start nginx 表示启动nginx
 - sudo systemctl stop nginx 表示停止nginx
+
+### ps 查看进程
+
+使用`ps -f`命令可以列出当前**正在运行的进程**的详细信息，
+
+包括进程的PID（进程ID）、PPID（父进程ID）、用户、CPU使用情况、内存使用情况等
+
+### date 日期相关命令
+
+~~~sh
+date # 显示当前日期
+date +%s # 显示当前时间的时间戳
+date +%y%m%d # 显示当前日期并且转换为231126的格式
+~~~
+
+### crontab 定时任务命令
+
+查看当前所有的定时任务
+
+~~~sh
+crontab -l
+~~~
+
+创建一个定时任务
+
+~~~sh
+crontab -e
+~~~
+
+设置定时任务的内容：
+
+每天2点开始执行
+
+~~~sh
+# 分别表示 分钟、小时、一个月的第几天、第几个月、星期几
+0 2 * * * /root/jb/bf.sh /root/my_bf # 表示执行/root/jb/bf.sh这个脚本，脚本需要的参数为/root/my_bf
+
+~~~
+
 
 
 ## 2:基础知识
