@@ -156,6 +156,10 @@ td:
         <input id="username" type="text" placeholder="用户名">
         <label for="password">密码：</label>
         <input id="password" type="password" placeholder="密码">
+            <!-- value属性：设置文本框的内容 -->
+    	<input type="text" value="123">
+            <!-- disabled属性：设置输入框为禁用状态，不能输入内容 -->
+    	<input type="text" value="123" disabled="true">
         
         <!-- 下拉列表标签:  -->
         <!-- name属性:指定提交数据时的变量名 -->
@@ -171,10 +175,6 @@ td:
         <label>女</label>
         <input name="sex" type="radio">
         
-        <!-- 复选框(对错框):type = checkout -->
-        <label>是否同意本公司的相关协议</label>
-        <input type="checkbox">
-        
         <!-- 按钮标签：submit按钮点击后会提交数据给后台，而button不会(需要自定义) -->
         <!--  submit默认的value属性为"提交",button默认为空" -->
         <input type="submit" value="登录">
@@ -186,7 +186,305 @@ td:
 </body>
 ~~~
 
-html元素的分类：
+
+
+#### 复选框：
+
+~~~html
+<!-- 复选框(对错框):type = checkout -->
+<label>是否同意本公司的相关协议</label>
+<input type="checkbox" checked="checked"><!-- checked="checked"表示设置状态为√的状态 -->
+~~~
+
+##### 成品应用：一键多选框的实现
+
+解法1：pink::
+
+~~~html
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+        
+        .wrap {
+            width: 300px;
+            margin: 100px auto 0;
+        }
+        
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            border: 1px solid #c0c0c0;
+            width: 300px;
+        }
+        
+        th,
+        td {
+            border: 1px solid #d0d0d0;
+            color: #404060;
+            padding: 10px;
+        }
+        
+        th {
+            background-color: #09c;
+            font: bold 16px "微软雅黑";
+            color: #fff;
+        }
+        
+        td {
+            font: 14px "微软雅黑";
+        }
+        
+        tbody tr {
+            background-color: #f0f0f0;
+        }
+        
+        tbody tr:hover {
+            cursor: pointer;
+            background-color: #fafafa;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>
+                        <input type="checkbox" id="j_cbAll" />
+                    </th>
+                    <th>商品</th>
+                    <th>价钱</th>
+                </tr>
+            </thead>
+            <tbody id="j_tb">
+                <tr>
+                    <td>
+                        <input type="checkbox" />
+                    </td>
+                    <td>iPhone8</td>
+                    <td>8000</td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="checkbox" />
+                    </td>
+                    <td>iPad Pro</td>
+                    <td>5000</td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="checkbox" />
+                    </td>
+                    <td>iPad Air</td>
+                    <td>2000</td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="checkbox" />
+                    </td>
+                    <td>Apple Watch</td>
+                    <td>2000</td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+    <script>
+        // 1. 全选和取消全选做法：  让下面所有复选框的checked属性（选中状态） 跟随 全选按钮即可
+        // 获取元素
+        var j_cbAll = document.getElementById('j_cbAll'); // 全选按钮
+        var j_tbs = document.getElementById('j_tb').getElementsByTagName('input'); // 下面所有的复选框
+        // 注册事件
+        j_cbAll.onclick = function() {
+                // 点击复选框时，首先执行的是复选框本身的this.checked属性的更改，然后再执行点击事件
+                // this.checked 它可以得到当前复选框的选中状态如果是true 就是选中，如果是false 就是未选中
+                console.log(this.checked);// 返回类型为boolean
+                for (var i = 0; i < j_tbs.length; i++) {
+                    j_tbs[i].checked = this.checked;
+                }
+            }
+            // 2. 下面复选框需要全部选中， 上面全选才能选中。做法： 给下面所有复选框绑定点击事件，
+            // 每次点击，都要循环查看下面所有的复选框是否有没选中的，如果有一个没选中的， 
+            // 上面全选就不选中。
+        for (var i = 0; i < j_tbs.length; i++) {
+            j_tbs[i].onclick = function() {
+                // flag 控制全选按钮是否选中
+                var flag = true;
+                // 每次点击下面的复选框都要循环检查这4个小按钮是否全被选中
+                for (var i = 0; i < j_tbs.length; i++) {
+                    if (!j_tbs[i].checked) {
+                        flag = false;
+                        break; // 退出for循环 这样可以提高执行效率 因为只要有一个没有选中，剩下的就无需循环判断了
+                    }
+                }
+                j_cbAll.checked = flag;
+            }
+        }
+    </script>
+</body>
+
+</html>
+~~~
+
+解法2：my
+
+~~~html
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+        
+        .wrap {
+            width: 300px;
+            margin: 100px auto 0;
+        }
+        
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            border: 1px solid #c0c0c0;
+            width: 300px;
+        }
+        
+        th,
+        td {
+            border: 1px solid #d0d0d0;
+            color: #404060;
+            padding: 10px;
+        }
+        
+        th {
+            background-color: #09c;
+            font: bold 16px "微软雅黑";
+            color: #fff;
+        }
+        
+        td {
+            font: 14px "微软雅黑";
+        }
+        
+        tbody tr {
+            background-color: #f0f0f0;
+        }
+        
+        tbody tr:hover {
+            cursor: pointer;
+            background-color: #fafafa;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>
+                        <input type="checkbox" id="j_cbAll" />
+                    </th>
+                    <th>商品</th>
+                    <th>价钱</th>
+                </tr>
+            </thead>
+            <tbody id="j_tb">
+                <tr>
+                    <td>
+                        <input type="checkbox" />
+                    </td>
+                    <td>iPhone8</td>
+                    <td>8000</td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="checkbox" />
+                    </td>
+                    <td>iPad Pro</td>
+                    <td>5000</td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="checkbox" />
+                    </td>
+                    <td>iPad Air</td>
+                    <td>2000</td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="checkbox" />
+                    </td>
+                    <td>Apple Watch</td>
+                    <td>2000</td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+    <script>
+        // 1. 全选和取消全选做法：  让下面所有复选框的checked属性（选中状态） 跟随 全选按钮即可
+        // 获取元素
+        var j_cbAll = document.getElementById('j_cbAll'); // 全选按钮
+        var j_tbs = document.getElementById('j_tb').getElementsByTagName('input'); // 下面所有的复选框
+        var count = 0;
+        // 注册事件
+        j_cbAll.onclick = function() {
+                // 点击复选框时，首先执行的是复选框本身的this.checked属性的更改，然后再执行点击事件
+                // this.checked 它可以得到当前复选框的选中状态如果是true 就是选中，如果是false 就是未选中
+                console.log(this.checked);// 返回类型为boolean
+                if(this.checked){
+                    count = 4;
+                }else{
+                    count = 0;
+                }
+                for (var i = 0; i < j_tbs.length; i++) {
+                    j_tbs[i].checked = this.checked; // 注意：没有引号包裹
+                }
+            }
+            // 2. 下面复选框需要全部选中， 上面全选才能选中。做法： 给下面所有复选框绑定点击事件，
+            // 每次点击，都要循环查看下面所有的复选框是否有没选中的，如果有一个没选中的， 
+            // 上面全选就不选中。
+        for (var i = 0; i < j_tbs.length; i++) {
+            j_tbs[i].onclick = function() {
+                if(this.checked){
+                    count++;
+                }else{
+                    count--;
+                }
+                if(count === j_tbs.length){
+                    j_cbAll.checked = true;
+                }else{
+                    j_cbAll.checked = false;
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
+~~~
+
+
+
+
+
+### html元素的分类：
 
 - 块元素
 - 行内元素
@@ -196,6 +494,17 @@ html元素的分类：
 | ---------- | ---------------------------- | -------------------- |
 | 独立成行   | 块元素：h1-h6,p,div,ul,li    |                      |
 | 不独立成行 | 行内块元素：img,input,button | 行内元素：a,span     |
+
+### 1.9 文本域 textarea
+
+一个大文本框
+
+~~~html
+<textarea>
+</textarea>
+~~~
+
+
 
 ## 2.vsCode快捷键
 
@@ -238,4 +547,58 @@ video
     <!-- autoplay设置视频自动播放(需要搭配muted设置静音才能生效) -->
     <video src="medio/1.mp4" controls autoplay muted></video>
 ~~~
+
+
+
+## 待定
+
+
+
+
+
+### 自定义属性
+
+- getAttribute("属性")
+- setAttribute("属性"，"值")
+- removeAttribute("属性")
+
+使用data-作为自定义属性的前缀来命名
+
+如：
+
+~~~html
+    <div data-index="1" id="index"></div>
+
+    <script>
+        let index = document.querySelector("#index");
+        // 使用getAttribute获取自定义的属性 兼容性好，ie各各版本都支持
+        let res = index.getAttribute("data-index");
+        console.log(res);
+        // 使用setAttribute来添加自定义的属性
+        index.setAttribute('data-time',20);
+        console.log(index.getAttribute("data-time"));
+    </script>
+~~~
+
+H5新增的获取自定义属性的方法：ie 11才支持
+
+只能获取data-开头的属性
+
+1 element.dataset.自定义属性 
+
+2 element.dataset['自定义属性']
+
+如：
+
+~~~html
+    <div data-index="1" id="index"></div>
+
+    <script>
+        let index = document.querySelector("#index");
+        console.log(index.dataset.index);
+        console.log(index.dataset['index']);
+    </script>
+~~~
+
+
 

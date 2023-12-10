@@ -24,7 +24,8 @@ board.set(row,sb.toString());//使用修改后的字符串来替换原来的字�
 3. String res = str.**replace**("\r\n",""): 表示把str字符串的所有"\r\n"替换为空字符串
 4. char[] chars = str.**toCharArray**();
 5. char c = str.**charAt**(0);
-6. String str =  str.trim(); 去除字符串前后的空格
+6. String str =  str.**trim**(); 去除字符串前后的空格
+7. String res = str.**substring**(0,2) 左闭右开的截取字符串
 
 ### 2.1 contains函数：
 
@@ -182,6 +183,7 @@ int ii = Integer.parseInt(String.valueOf(ll));
 
 - add(obj) 增
 - Boolean boolean = set.contains("key") 找
+- remove(key) 删
 
 ## 3.ArrayList
 

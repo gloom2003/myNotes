@@ -198,12 +198,24 @@ order by 选修人数 desc,c_id asc
 
 ###【时间日期函数】
 
-- Now(),current_timestamp() //获取当前日期时间 返回：2023-11-27 04:03:27
-- year('2023-10-22') = 2023,month('2023-10-22') = 10 // 获取字符串中的年、月 **日期字符串支持下面4种格式**：1.YYYY-MM-DD,2.YYYY/MM/DD,3.YYYYMMDD,4.YYMMDD
+- Now(),current_timestamp() //获取当前的日期与时间 返回：2023-11-27 04:03:27
+- year('2023-10-22') = 2023 // 获取字符串中的年、月 **日期字符串支持下面4种格式**：1.YYYY-MM-DD,2.YYYY/MM/DD,3.YYYYMMDD,4.YYMMDD
+- month('2023-10-22') = 10
+- day('2023-10-22') = 22
 - datediff("2023-11-27","2023-11-26") 返回 1表示第一个日期与第二个日期相差的天数
+- week('2021-10-05',1) 获取'2021-10-05'这一天是这一年的第几周，1表示从星期一作为一周的开始
 - Current_date(),curdate()  //当前日期
 - current_time() //当前时间
-- Date(‘yyyy-mm-dd HH;ii:ss’) //获取日期部分
+- Date(‘yyyy-mm-dd HH;ii:ss’) =  yyyy-mm-dd //获取年月日的日期部分
+
+例如：
+
+~~~mysql
+select date(now()) -- 结果：2023-12-29
+~~~
+
+
+
 - Time(‘yyyy-mm-dd HH;ii:ss’) //获取时间部分
 - Date_format(‘yyyy-mm-dd HH;ii:ss’,’%D %y %a %d %m %b %j')
 - Unix_timestamp() //获得unix时间戳
@@ -216,10 +228,24 @@ order by 选修人数 desc,c_id asc
 - ASCII(str) //返回字符串str的最左面字符的ASCII代码值.如果str是空字符串,返回0.如果str是NULL,返回NULL.
 - LENGTH(string ) //string长度，字节
 - CHAR_LENGTH(string) //string的字符个数
-- SUBSTRING(str ,position [,length ]) //从str的position开始,取length个字符
+- SUBSTRING(str ,position [,length ]) //从str的position开始（从1开始数）,取length个字符
+
+~~~mysql
+substring('2023-11-04',6,5) -- 结果：11-04
+~~~
+
+
+
 - REPLACE(str ,search_str ,replace_str) //在str中用replace_str替换search_str
 - INSTR(string ,substring ) //返回substring首次在string中出现的位置
 - CONCAT(string [,... ]) //连接字串
+
+~~~mysql
+concat('2022-','11-11') -- 结果：2022-11-11
+~~~
+
+
+
 - CHARSET(str) //返回字串字符集
 - LCASE(string ) //转换成小写
 - LEFT(string ,length) //从string2中的左边起取length个字符
@@ -658,7 +684,7 @@ FROM student a INNER JOIN (
 
 在select语句中的case when ... 会在最后查询出来的结果上面占一个字段，一般会起一个别名。
 
-1.**配合聚合函数使用:**
+1.**在select中配合聚合函数使用:**
 
 经常**配合sum()**使用来**计算符合某个条件数量**，**sum(case when ... then 1 else 0 end)** 如:
 
@@ -692,7 +718,7 @@ ORDER BY AVG(sc.`s_score`) DESC
 
 
 
-2.**不使用聚合函数，直接使用**：
+2.**在select中不使用聚合函数，直接使用**：
 
 ~~~mysql
 select *,case when s_id = '01' then 1 else 0 end '标记学号01'
@@ -711,6 +737,18 @@ GROUP BY st.`s_id`,st.s_name
 ~~~
 
 mysql设置如果为：sql_mode=only_full_group_by时会**直接报错**。因为c_id不在group by中。
+
+3.**在where子句中使用**
+
+~~~mysql
+-- 查询下一个月过生日的学生 在where中使用case when
+SELECT *
+FROM student -- 如果MONTH(NOW()) = 12则执行where MONTH(s_birth) = 1否则执行where MONTH(s_birth)=MONTH(NOW())+1
+WHERE CASE WHEN MONTH(NOW()) = 12 THEN MONTH(s_birth) = 1 
+ELSE MONTH(s_birth) = MONTH(NOW()) + 1 END
+~~~
+
+
 
 p21: case when与聚合函数、group by的使用
 
@@ -1205,7 +1243,7 @@ from student st right join (
 ) a on st.s_id = a.s_id
 ~~~
 
-### 3.7 时间相关的sql题
+### 3.7 日期时间相关的sql题
 
 视频p47
 
@@ -1217,7 +1255,42 @@ floor(DATEDIFF(now(),s_birth)/365) '年龄'
 from student
 ~~~
 
-下一题p49:
+视频p50:
+
+~~~mysql
+-- 查询下周过生日的同学 假设当前为2023-11-26号 都没有完美解决
+-- 方法1：计算天数的差
+select s_name,s_birth
+from student 
+where DATEDIFF(replace(s_birth,year(s_birth),'2023')),'2023-11-26') >= 7
+
+-- 方法2：计算是否在下一周
+select s_name,s_birth
+from student
+where week(replace(s_birth,year(s_birth),year(date(now()))),1) = week('2023-11-26',1) + 1
+~~~
+
+视频p52:
+
+解法1：
+
+~~~mysql
+-- 查询下一个月过生日的学生 使用%
+SELECT s_name,s_birth
+FROM student
+WHERE MONTH(s_birth) = (MONTH(NOW()) + 1) % 12
+~~~
+
+解法2：
+
+~~~mysql
+-- 查询下一个月过生日的学生 在where中使用case when
+SELECT *
+FROM student
+WHERE CASE WHEN MONTH(NOW()) = 12 THEN MONTH(s_birth) = 1 
+ELSE MONTH(s_birth) = MONTH(NOW()) + 1 END
+
+~~~
 
 
 

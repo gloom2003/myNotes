@@ -2,6 +2,16 @@
 
 网页的样式由css控制
 
+## 特殊字符
+
+空格：
+
+```html
+&nbsp;
+```
+
+
+
 ## 1.基础知识
 
 ### 1.1常用选择器
@@ -179,7 +189,7 @@
 
 ~~~html
 <!-- 表示引入style目录下的index.css文件-->
-<link rel="stylesheet" href="style/index.css">
+<link rel="stylesheet" href="style/index.css"/>
 ~~~
 
 ## 2盒子模型的css属性
@@ -471,6 +481,8 @@ float: left;元素会向左边靠
 </body>
 </html>
 ~~~
+
+### 4.3 全选菜单
 
 
 
@@ -969,7 +981,7 @@ float: left;元素会向左边靠
 
 
 
-#### 7.3.5 应用：让一个元素在网页水平垂直居中
+#### 7.3.5 应用：让一个元素在网页水平垂直居中(使其在图片上面显示)
 
 ~~~css
 .box{
@@ -989,6 +1001,8 @@ float: left;元素会向左边靠
 
 transition：
 #### 7.4.1 transition-property：过渡属性
+
+设置对哪一个属性添加过度效果
 
 （例如transform);
 
@@ -1077,7 +1091,7 @@ transition：
 
 ~~~css
 .box{
-    		/* 添加rotate的动画效果 2秒结束 匀速执行 延迟1s执行 无限循环
+    		/* 添加名称为rotate的动画效果 2秒结束 匀速执行 延迟1s执行 无限循环
     			类似java的构造器？中间可以漏直接写后面的参数*/
             animation: rotate 2s linear 1s infinite;
 }

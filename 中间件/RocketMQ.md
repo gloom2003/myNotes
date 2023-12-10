@@ -6,9 +6,9 @@
 
 Broker:代理;消息代理;   MQ服务器，有两个，主和从
 
-dashboard:仪表板
-
 slave:奴隶;
+
+dashboard:仪表板
 
 ![https://image.itbaima.net/images/173/image-20230928154347857.png](https://image.itbaima.net/images/173/image-20230928154347857.png)
 
@@ -161,6 +161,7 @@ logging:
 public DefaultMQProducer producer (){
     //创建一个生产者并且放在pg1生产者组中
     DefaultMQProducer producer = new DefaultMQProducer("pg1");
+    // 向nameServer进行注册
     producer.setNamesrvAddr ("localhost:9876");
     try{
         //

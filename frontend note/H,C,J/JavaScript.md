@@ -57,6 +57,17 @@ var:声明变量(ES2015中使用let声明变量)
 </script>
 ```
 
+遍历方式：
+
+~~~html
+<script>
+    for(let name in cat){
+        // name为cat对象的属性名
+        // cat[name]为属性值
+    }
+</script>
+~~~
+
 
 
 ### 1.3 比较运算符 ==
@@ -150,7 +161,10 @@ var:声明变量(ES2015中使用let声明变量)
 <body>
     <script>
       var arr = [1,2,3];
-        
+      // 类似java版本
+      for(let i = 0;i<arr.length;i++){
+          consile.log(arr[i]);
+      }
       //for in 版本
       for(var i in arr){
           //i为索引
@@ -597,25 +611,96 @@ world`;
 
 ## 4 Dom基础
 
-### 4.1 获取dom节点(html元素)
+### 4.1 获取dom节点的方式
 
-1. ​		document.getElementByld();  根据id属性获取整个节点
-2. ​        document.getElementsByClassName(); 根据类名获取dom节点的集合,以数组的方式进行存储
-3. ​        document.querySelector();// 根据css选择器获取节点,只返回第一个dom节点
-4. ​        document.querySelectorAllO;
+1 		let timer = document.getElementByld("time");  **根据id属性**获取整个节点
+2        let arr = document.getElementByTagName("li") **根据标签名字**从document对象中**获取所有的**li标签(包括li和里面的文本内容)，存放在数组中进行返回，相当于document.querySelectorAll()的功能但是兼容老版本
+3        let boxs = document.getElementsByClassName('box'); **根据类名**获取dom节点的集合,以数组的方式进行存储
+4       let box = document.querySelector('.box');  **根据css选择器**获取节点,只返回第一个dom节点
+5       document.querySelectorAll();
+
+特殊获取方式：
+
+~~~html
+    <script>
+        let bodyEle = document.body; // 获取body标签
+        let htmlEle = document.documentElement; // 获取html标签
+        console.log(bodyEle);
+        console.dir(htmlEle); // dir方法可以查看对象的各种属性
+    </script>
+~~~
+
+
 
 ### 4.2 监听事件
 #### 4.2.1 监听事件类型 click,move...
-1. onclick:点击事件
+
+**鼠标**类：
+
+1. onclick:鼠标点击事件
 
 2. onmouseenter:鼠标移入元素
+
 3. onmouseleave:鼠标移出元素
+
 4. onmousemove:鼠标移动时
-5. onkeydown: 监听键盘的输入
-6. ontouchstart:监听触屏的点击事件
-7. ontouchend:监听触屏点击后的抬起事件
-8. ontouchmove:监听触屏的点击后的抬起之前的滑动事件
-9. window.onscroll:监听鼠标滚轮的移动
+
+5. window.onscroll:监听鼠标滚轮的移动
+
+6. 输入框获得焦点时：onfucus
+
+7. 输入框失去焦点时：onblur
+
+如：仿京东输入框：
+
+~~~html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>test</title>
+    <style>
+        input{
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <input type="text" value="手机">
+    <script>
+        let text = document.querySelector("input");
+        text.onfocus = function(){
+            if(text.value === '手机'){
+                text.value = '';
+            }
+            text.style.color = '#333';
+        }
+        text.onblur = function(){
+            if(text.value === ''){
+                text.value = '手机';
+            }
+            text.style.color = '#999';
+        }
+    </script>
+</body>
+</html>
+~~~
+
+
+
+**键盘**类：
+1 onkeydown: 监听键盘的输入
+
+**触屏**类：
+
+1 ontouchstart:监听触屏的点击事件
+
+2 ontouchend:监听触屏点击后的抬起事件
+
+3 ontouchmove:监听触屏的点击后的抬起之前的滑动事件
+
+   
 
 ~~~html
 <body>
@@ -722,7 +807,7 @@ world`;
         let pictureListContainer = document.querySelector(".picture-list");
         let bigPictureContainer = document.querySelector(".big-picture-container");
         for(let i in imgList){
-            imgList[i].onmouseenter = function(){
+            imgList[i].onmouseenter = function(){ // 使用反引号+ ${}，添加变量到字符串中
                 bigPictureContainer.innerHTML = `<img src="${this.src}" alt="">`;
             }
 
@@ -730,9 +815,8 @@ world`;
                 bigPictureContainer.innerHTML = ``;
             }
         }
-
+        // 实现大图跟随着鼠标的移动而移动
         pictureListContainer.onmousemove = function(e){
-            	//加上默认的外边距10px
                 bigPictureContainer.style.top = e.clientY + 10 + "px";
                 bigPictureContainer.style.left = e.clientX + 10 + "px";
             }
@@ -751,12 +835,25 @@ world`;
 
 
 
-### 4.3 设置css样式
+### 4.3 使用JS添加行内样式
 
-1. element.style.color
-2. element.style.backgroundColor
+（1）设置的样式比较少时：
 
-通过click、.mouseenter、mouseleave事件控制样式
+1. element.style.color = '#999' 相当于 
+
+   ~~~html
+   <div style="color:#999"></div>
+   ~~~
+
+   
+
+2. element.style.backgroundColor   在JS中设置样式时使用的是驼峰命名法
+
+3. element.src
+
+4. element.id
+
+通过click、mouseenter、mouseleave事件控制样式
 
 ~~~html
 <body>
@@ -764,6 +861,8 @@ world`;
     <script>
         let title = document.querySelector("#title");
         title.onmouseenter = function(){
+            // 注意1：在JS中设置样式时使用的是驼峰命名法
+            // 注意2：使用JS设置样式本质上其实是设置了行内样式，即：直接把设置后的样式添加到标签的style属性上。
             this.style.backgroundColor = "blue";
         }
         title.onmouseleave = function(){
@@ -773,9 +872,89 @@ world`;
 </body>
 ~~~
 
-1. element.src
-2. element.id
-3. element.className
+
+
+（2）设置的样式比较多时：
+
+使用：  element.className = 'a' 相当于设置 class='a'
+
+**注意**： element.className = 'a' 会给class属性进行赋值，会覆盖原来的类名，不会保留原来的类名。
+
+~~~html
+    <script>
+        let text = document.querySelector("input");
+        // 想要保留原本设置好的first类并且添加新的类时：
+        text.className = 'first a';
+    </script>
+~~~
+
+##### 仿新浪注册页面:
+
+~~~html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        div {
+            width: 600px;
+            margin: 100px auto;
+        }
+        
+        .message {
+            display: inline-block;
+            font-size: 12px;
+            color: #999;
+            background: url(images/mess.png) no-repeat left center;
+            padding-left: 20px;
+        }
+        
+        .wrong {
+            color: red;
+            background-image: url(images/wrong.png);
+        }
+        
+        .right {
+            color: green;
+            background-image: url(images/right.png);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="register">
+        <input type="password" class="ipt">
+        <p class="message">请输入6~16位密码</p>
+    </div>
+    <script>
+        // 首先判断的事件是表单失去焦点 onblur
+        // 如果输入正确则提示正确的信息颜色为绿色小图标变化
+        // 如果输入不是6到16位，则提示错误信息颜色为红色 小图标变化
+        // 因为里面变化样式较多，我们采取className修改样式
+        // 1.获取元素
+        var ipt = document.querySelector('.ipt');
+        var message = document.querySelector('.message');
+        //2. 注册事件 失去焦点
+        ipt.onblur = function() {
+            // 根据表单里面值的长度 ipt.value.length
+            if (this.value.length < 6 || this.value.length > 16) {
+                // console.log('错误');
+                message.className = 'message wrong';
+                message.innerHTML = '您输入的位数不对要求6~16位';
+            } else {
+                message.className = 'message right';
+                message.innerHTML = '您输入的正确';
+            }
+        }
+    </script>
+</body>
+
+</html>
+~~~
 
 
 
@@ -877,11 +1056,43 @@ world`;
 </html>
 ~~~
 
+### 4.4 修改标签的内容
+
+1 innerHTML 识别html标签，不会去除空格，换行，是标准
+
+~~~html
+    <script>
+        let itemFir = document.querySelector(".itemFirst");
+        itemFir.innerHTML = "<a href='http://www.baidu.com'></a>";
+        console.log(itemFir.innerHTML); // 结果： <a href="http://www.baidu.com"></a>
+    </script>
+~~~
+
+
+
+2 innerText 不识别html标签，会去除空格，换行，不是标准
+
+3 修改表单元素： 
+
+如：
+
+~~~html
+<input type="text">
+<script>
+        let input = document.querySelector("input");
+        input.value = "123"; // 使用value属性进行修改
+</script>
+~~~
+
+
+
+
+
 ### 4. 4DOM节点分类
 
-1、元素节点（获取元素节点：querySelector;querySelectorAll)
-2、文本节点(innerHTML)
-3、属性节点(element.src;element.id)
+1、元素节点（获取元素节点：querySelector;querySelectorAll) nodeType为 1
+2、文本节点(innerHTML) nodeType为 3（文本节点包含文字、空格、换行等）
+3、属性节点(element.src;element.id)  nodeType为 2
 
 #### 4.4.1 dom节点的属性
 
@@ -907,10 +1118,140 @@ domObject.offsetTop:获取dom节点距离上面的偏移量为多少px
 
 1. 创建元素节点：document.createElement("li")
 2. 创建文本节点：document.createTextNode("111")
-3. 添加节点：domObject.appendChild()
-4. 删除节点：domObject.removeChild()
+3. 追加节点：domObject.appendChild()
+4. 在某个节点之前添加节点：obj.insertBefore(child, 指定插入到哪一个元素的前面)
+5. 删除节点：domObject.removeChild(node)
 
-##### 4.4.2.1 例子(添加水果，点击可以删除)：
+如：
+
+创建、添加节点
+
+~~~html
+<script>
+        // 1. 创建节点元素节点
+        var li = document.createElement('li');
+        // 2. 添加节点 node.appendChild(child)
+        var ul = document.querySelector('ul');
+        ul.appendChild(li);
+        // 3. 添加节点 node.insertBefore(child, 指定插入到哪一个元素的前面);
+        var lili = document.createElement('li');
+        ul.insertBefore(lili, ul.children[0]);
+    </script>
+~~~
+
+##### 父子节点：
+
+1 parentNode 
+
+~~~html
+	<div data-index="1" id="index"></div>
+
+    <script>
+        let index = document.querySelector("#index");
+        // 获取最近的父节点(返回元素节点：标签)，找不到则返回null
+        console.log(index.parentNode);
+    </script>
+~~~
+
+2 childNodes 获取所有的子节点存放到集合中进行返回，包括文本节点 
+
+~~~html
+    <script>
+        
+        var ul = document. querySelector('ul');
+        for(var i = 0; i < ul.childNodes.length;i++) {
+            if (ul.childNodes[i].nodeType == 1) {
+            // 筛选出元素节点
+            console.log(ul.childNodes[i]);
+            }
+        }
+    </script>
+~~~
+
+3 children 获取所有的子元素节点存放到集合中进行返回，不包括文本节点 
+
+~~~
+1 如果想要第一个子元素节点，可以使用 parentNode.chilren[0] 
+2 如果想要最后一个子元素节点，可以使用 parentNode.chilren[parentNode.chilren.length - 1]
+~~~
+
+##### 兄弟节点：
+
+4  获取兄弟节点
+
+node.nextElementSibling 获取下一个兄弟元素节点
+
+node.previousElementSibling 返回当前元素上一个兄弟元素节点，找不到则返回null。
+
+##### 增删改查节点：
+
+5 创建、添加节点
+
+~~~html
+<script>
+        // 1. 创建节点元素节点
+        var li = document.createElement('li');
+        // 2. 添加节点 node.appendChild(child)
+        var ul = document.querySelector('ul');
+        ul.appendChild(li);
+        // 3. 添加节点 node.insertBefore(child, 指定插入到哪一个元素的前面);
+        var lili = document.createElement('li');
+        ul.insertBefore(lili, ul.children[0]);
+    </script>
+~~~
+
+案例：添加评论、删除评论
+
+~~~html
+<body>
+    <textarea name="" id="text" cols="30" rows="10"></textarea>
+    <button>发布</button>
+    <ul>
+
+    </ul>
+    <script>
+        let btn = document.querySelector("button");
+        let ul = document.querySelector("ul");
+        let text = document.querySelector("textarea");
+        btn.onclick = function (){
+            console.log(text.value);
+            if(text.value != ''){
+                // 创建li元素
+                let li = document.createElement("li");
+                // 填充内容
+                li.innerHTML = text.value + "<a href='javascript:;'>删除</a>";
+                // 添加元素
+                ul.insertBefore(li,ul.children[0]);
+                
+            }else{
+                alert("输入不能为空！");
+                return;
+            }
+            let aList = document.querySelectorAll("a");
+            for(let i = 0;i<aList.length;i++){
+                aList[i].onclick = function() {
+                    ul.removeChild(this.parentNode);
+                }
+            }
+
+        }
+    </script>
+</body>
+~~~
+
+
+
+6 克隆节点
+
+node.cloneNode() 方法返回调用该方法的节点的一个副本。 也称为克隆节点/拷贝节点
+
+参数：fasle,true
+
+1如果括号参数为空或者为 false ，则是浅拷贝，即只克隆复制节点本身，不克隆里面的子节点。 
+
+2如果括号参数为 true ，则是深度拷贝，会复制节点本身以及里面所有的子节点
+
+#####  例子(添加水果，点击可以删除)：
 
 ~~~html
 <!DOCTYPE html>
@@ -963,6 +1304,72 @@ domObject.offsetTop:获取dom节点距离上面的偏移量为多少px
     </script>
 </body>
 </html>
+~~~
+
+##### 例子：动态表格，点击可删除
+
+~~~html
+<body>
+    <table cellspacing="0" border="1">
+        <thead>
+            <th>姓名</th>
+            <th>科目</th>
+            <th>成绩</th>
+            <th>操作</th>
+        </thead>
+        <tbody>
+
+        </tbody>
+    </table>
+    <script>
+        // 1.模拟从数据库中查询出来的数据,使用集合中的对象进行存储
+        var datas = [{
+            name: '魏璎珞',
+            subject: 'JavaScript',
+            score: 100
+        }, {
+            name: '弘历',
+            subject: 'JavaScript',
+            score: 98
+        }, {
+            name: '傅恒',
+            subject: 'JavaScript',
+            score: 99
+        }, {
+            name: '明玉',
+            subject: 'JavaScript',
+            score: 88
+        }, {
+            name: '大猪蹄子',
+            subject: 'JavaScript',
+            score: 0
+        }];
+        // 展示数据
+        let tBody =  document.querySelector("tbody");
+        // 添加每一行tr
+        for(let i = 0;i<datas.length;i++){
+            let tr = document.createElement("tr");
+            // 遍历每一个对象,给每一行的每个单元格td填充对象中的内容
+            for(let name in datas[i]){
+                let td = document.createElement("td");
+                td.innerHTML = datas[i][name];
+                tr.appendChild(td);
+            }
+            // 添加删除单元格
+            let del = document.createElement("td");
+            del.innerHTML = "<a href='javascript:;'>删除</a>"
+            tr.appendChild(del);
+            tBody.appendChild(tr);
+        }
+        // 给删除添加点击事件
+        let aList = document.querySelectorAll("a");
+        for(let i = 0;i<aList.length;i++){
+            aList[i].onclick = function(){
+                tBody.removeChild(this.parentNode.parentNode);
+            }
+        }
+    </script>
+</body>
 ~~~
 
 
@@ -1219,11 +1626,11 @@ windowx对象是全局对象，所有在浏览器可以直接使用的方法，�
 4. null  **typeof(null),返回object,typeof(对象)，也是返回object,但是null是原始数据类型**
 5. undefined
 
-使用 typeof(1),返回number
+使用 **typeof**(1),返回number
 
 
 
-二、引用数据类型检测：值 instanceof 类型，返回boolean
+二、引用数据类型检测：值 **instanceof** 类型，返回boolean
 
 原始类型 instanceof Object,返回false
 
@@ -1290,3 +1697,79 @@ windowx对象是全局对象，所有在浏览器可以直接使用的方法，�
 </body>
 ~~~
 
+
+
+
+
+## 待定
+
+### 1 节点操作
+
+
+
+元素节点 nodeType为 1
+属性节点 nodeType为 2
+文本节点 nodeType为 3（文本节点包含文字、空格、换行等）
+
+##### 获取节点：
+
+1 parentNode 
+
+~~~html
+	<div data-index="1" id="index"></div>
+
+    <script>
+        let index = document.querySelector("#index");
+        // 获取最近的父节点(返回元素节点：标签)，找不到则返回null
+        console.log(index.parentNode);
+    </script>
+~~~
+
+2 childNodes 获取所有的子节点存放到集合中进行返回，包括文本节点 
+
+~~~html
+    <script>
+        
+        var ul = document. querySelector('ul');
+        for(var i = 0; i < ul.childNodes.length;i++) {
+            if (ul.childNodes[i].nodeType == 1) {
+            // 筛选出元素节点
+            console.log(ul.childNodes[i]);
+            }
+        }
+    </script>
+~~~
+
+3 children 获取所有的子元素节点存放到集合中进行返回，不包括文本节点 
+
+~~~
+1 如果想要第一个子元素节点，可以使用 parentNode.chilren[0] 
+2 如果想要最后一个子元素节点，可以使用 parentNode.chilren[parentNode.chilren.length - 1]
+~~~
+
+4  获取兄弟节点
+
+node.nextElementSibling 获取下一个兄弟元素节点
+
+node.previousElementSibling 返回当前元素上一个兄弟元素节点，找不到则返回null。
+
+5 创建、添加节点
+
+~~~html
+<script>
+        // 1. 创建节点元素节点
+        var li = document.createElement('li');
+        // 2. 添加节点 node.appendChild(child)
+        var ul = document.querySelector('ul');
+        ul.appendChild(li);
+        // 3. 添加节点 node.insertBefore(child, 指定插入到哪一个元素的前面);
+        var lili = document.createElement('li');
+        ul.insertBefore(lili, ul.children[0]);
+    </script>
+~~~
+
+
+
+### 2 小知识
+
+1 阻止链接跳转需要添加 javascript:void(0); 或者 javascript:;
