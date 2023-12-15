@@ -13,9 +13,123 @@ sb.setCharAt(0,'Q');//把第一个字符修改为Q
 board.set(row,sb.toString());//使用修改后的字符串来替换原来的字符串
 ~~~
 
+#### api汇总
+
+- void = sb.append(char c)
+
+- void  = sb.setCharAt(索引，新的char)
+- String = sb.toString()
+
+##  StringBuffer常用方法
+
+StringBuffer 是一个容器，长度可变，可以直接操作字符串，用toString方法变为字符串 
+1.存储
+    1)append(); //将指定数据加在容器末尾,返回值也是StringBuffer
+
+```java
+    StringBuffer sb = new StringBuffer(//可以加str);
+    StringBuffer sb1=ab.append(数据） //数据可以任何基本数据类型
+```
+
+  注：此时sb == sb1他们是同一对象，意思是可以不用新建sb1直接 sb.append(数据) 使用之后直接返回自己
+2)insert();// 插入
+
+```java
+  sb.insert(index ,数据);
+```
+
+2.删除
+
+```java
+    sb.delete(start ,end);  //删除start到end的字符内容
+	//注意：这里的所有包含index的操作都是含头不含尾的
+    sb.deleteCharAt(index);//删除指定位置的字符
+	//清空StringBuffer缓冲区
+    sb=new StringBuffer();
+    sb.delete(0,sb.length());
+```
+
+3.获取
+
+```java
+  char c = sb.charAt(index);//获取index上的字符
+  int i = sb.indexOf(char)://获取char字符出现的第一次位置
+```
+
+  //与 String 中的获取方法一致参考前面
+
+4.修改          String类中无次操作方法
+
+```java
+  sb =sb.replace(start,end,string)//将从start开始到end的字符串替换为string；
+  sb.setCharAt(index ,char);//将index位置的字符变为新的char
+```
+
+5.反转  
+
+```java
+ sb.reverse();//将sb倒序
+```
 
 
-## 2 字符串的api
+
+6. getChars(int srcBegin,int srcEnd,char[] ch,int chBegin)
+   //将StringBuffer缓冲区中的指定数据存储到指定数组中
+
+## StringBuilder 常用方法
+
+StringBuilder 和 StringBuffer 方法和功能完全一致只是一个是早期版本（StringBuffer)是线程安全的，由于发现利用多线程堆同一String数据操作的情况是很少的，为了提高效率idk1.5以后有StringBuilder 类。意思是多线程操作同一字符串的时候用StringBuffer 安全，现在一般用StringBuilder
+
+例如：https://leetcode.cn/problems/reverse-words-in-a-string/description/
+
+~~~java
+class Solution {
+    public String reverseWords(String s) {
+        if(" ".equals(s)){
+            return "";
+        }else if(s.length() == 1){
+            return s;
+        }
+        // 去除前后多余的空格
+        s = s.trim();
+        //去除中间多余的空格
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0;i < s.length();i++){
+            char c = s.charAt(i);
+            if(c != ' '){
+                sb.append(c);
+            }else if(sb.charAt(sb.length() - 1) != ' '){
+                sb.append(c);
+            }
+        }
+        // 把整个字符串反转
+        reverse(sb,0,sb.length() - 1);
+        // 快慢指针：把每一个单词单独反转
+        int slow = 0;
+        for(int fast = 1;fast <= sb.length();fast++){
+            if(fast == sb.length() || sb.charAt(fast) == ' '){
+                reverse(sb,slow,fast-1);
+                slow = fast + 1;
+            }
+        }
+        return sb.toString();
+    }
+    // 反转索引 left-right的字符串
+    public void reverse(StringBuilder sb,int left,int right){
+        while(left < right){
+            char temp = sb.charAt(left);
+            sb.setCharAt(left,sb.charAt(right));
+            sb.setCharAt(right,temp);
+            left++;
+            right--;
+        }
+    }
+}
+~~~
+
+
+
+## 2 String的api
 
 ### api汇总
 
@@ -47,6 +161,74 @@ int month = Integer.parseInt(date[1]);
 int day = Integer.parseInt(date[2]);
 
 ~~~
+
+## String类的常用方法
+
+1.获取：
+    1）获取字符串str长度
+        int i = str.length();
+    2)根据位置（index)获取字符
+        char  c = str.charAt(index);
+    3)获取字符在字符串中的位置
+        int i =str.indexOf(char ch);  //获取的是第一次出现的位置
+        int i =str.indexOf(char ch ,int index);  //从位置index后获取ch出现的第一次的位置
+        int  i =str.indexOf(str1) ;// 获取str1 在str 第一次出现的位置
+        int i=str.indexOf(str1, index0);//获取从index位置后str第一次出现的位置
+        int i = str.lastIndexOf(ch或者 str1)  //获取ch或者str1最后出现的位置
+
+2.判断
+    1)判断是否以指定字符串str1开头、结尾
+        boolean b = str.startWith(str1)  //开头
+        boolean b = str.endsWith(str1) //结尾
+    2)判断是否包含某一子串
+        boolean b = str.contains(str1)
+    3)判断字符串是否有内容
+        boolean b = str.isEmpty();
+    4)忽略大小写判断字符串是否相同
+        boolean b = str.equalsIgnoreCase(str1);
+
+3.转换
+    1)将字符数组 -char[] ch- 转化成字符串
+      i.  String str =new String(ch); //将整个数组变成字符串
+      ii. String str =new String(ch,offset,count)
+  //将字符数组中的offset位置之后的count个元素转换成字符串  
+      \1. String str =String.valueOf(ch);
+      \2. String str =String.copyValueOf(ch,offset,count);
+      \3. String str =String.copyValueOf(ch);
+    2)将字符串转化为字符数组
+      char[] ch = str.toCharAarray();
+    3)将字节数组转换为字符串
+      同上1) 传入类型变为Byte[];
+    4)将字符串转换为字节数组
+      Byte[] b = str.toByteArray();
+    5)将基本数据类型装换成字符串
+      String str = String.valueOf(基本数据类型数据)；
+      若是整形数据可以用 字符串连接符 + "" 
+      eg :  String  str = 5+"";
+      得到字符串 “5”  
+
+4.替换  replace();
+    str.replace(oldchar,newchar)//将str里oldchar变为newchar
+    str.replace(str1,str2)//将str中str1，变为str2
+
+5.切割  split();
+    String[]  str1 = str.split(","); //将str用 ","分割成String数组
+
+6.子串
+    String s = str.substring(begin);
+    // s 为 str 从begin位置到最后的字符串
+    String s = str.substring(begin,end)
+    //s 是 str 从begin 位置到end 位置的字符串
+
+7.转换大小写：
+    String s1 = str. toUpperCase(); //将str变成大写字母
+    String s2 = str. toLowerCase(); //将str变成小写字母
+  除去空格：
+    String s =str.trim();
+  比较：
+    int i = str.compareTo(str1);
+
+
 
 # (2) Scanner类的使用
 
@@ -190,7 +372,7 @@ int ii = Integer.parseInt(String.valueOf(ll));
 - add(obj) 增
 - get(0) 查
 - contains(obj) 找
-- set(0,obj) 替换
+- set(索引,obj) 替换
 - remove(0) 删
 
 ## 4 对集合进行排序 Collections.sort
@@ -220,8 +402,28 @@ Collections.sort(list, new Comparator<Integer>() {
 ### api汇总：
 
 - Arrays.fill(int[],-666) 初始化
+
 - Arrays.sort() 排序
+
 - Arrays.toString() 快速打印数组
+
+- List list = Arrays.asList(数组)  把数组快速转换为集合
+
+  注意该方法的返回值是java.util.Arrays类中一个私有静态内部类java.util.Arrays.ArrayList，
+   它并非java.util.ArrayList类。
+   java.util.Arrays.ArrayList类具有set()，get()，contains()等方法，
+   但是不支持添加add()或删除remove()方法,调用这些方法会报错。
+
+  推荐使用：Collections.addAll()方法
+
+  ~~~java
+  String[] strArray = { "array-a", "array-b" };
+  List<String> strList = new ArrayList<>(strArray.length);
+  Collections.addAll(strList, strArray); // 把数组快速转换为集合
+  strListNew.add("array-c");
+  ~~~
+
+  
 
 
 ### Arrays.fill(dp[],-666); 
