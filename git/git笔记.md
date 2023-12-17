@@ -73,17 +73,17 @@ plaintextCopy code# 忽略所有 .log 文件
 
 ### 提交记录
 
-**提交记录**是一个快照，除了第一个提交，其他提交都有父节点，提交记录是在当前父节点的基础上，记录变化的部分，相比普通的复制粘贴，更加轻量级，能够在多个提交记录之间来回穿梭。
+提交记录是一个**快照**，除了第一个提交，其他提交都有父节点，提交记录是在当前父节点的基础上，**记录变化的部分**，相比普通的复制粘贴，更加**轻量级**，能够在多个提交记录之间来回穿梭。
 
 ### 1.2 HEAD与分支的移动
 
-head指向分支（如：master），master指向具体的提交记录
+head一般指向分支（如：master），master指向具体的提交记录
 
-HEAD总是指向当前分支上最近一次提交记录。
+HEAD总是指向当前分支上最近一次提交记录（提交一个记录后HEAD与分支一起移动）。
 
 **git checkout 移动HEAD的指向**
 
-**分离的HEAD**就是让其**指向某个具体的提交记录**而不是分支名。
+**分离的HEAD状态**就是指让其**指向某个具体的提交记录**而不是分支名。
 
 如：
 
@@ -93,7 +93,7 @@ HEAD总是指向当前分支上最近一次提交记录。
 git checkout c1 # 不仅仅可以切换到分支，还可以切换到具体的提交记录
 ~~~
 
-结果：HEAD -> main -> c1
+结果：HEAD ->  c1，main -> c1
 
 #### 直接引用：使用哈希值 
 
@@ -106,7 +106,9 @@ git checkout c1
 移动分支：
 
 ~~~sh
-git branch -f main c2
+git branch -f main c2 # 把main分支移动到指向c2提交
+git reset ...
+git rebase bugFix main # 相当于git checkout main + git rebase bugFix(把当前分支main的提交移动到bugFix分支，main也移动)
 ~~~
 
 
@@ -139,15 +141,17 @@ Git 默认选择合并提交的“第一个” parent 提交(即：合并提交c
 ### 其他注意事项
 
 1. 空文件夹(一个工作空间、工作区)不会被git追踪，必须要有文件才可以
-2. 一个github仓库只要有一个.git文件夹即可，其他文件夹的.git文件夹会导致在github上有.git的文件夹不能查看里面的内容
+2. 一个github仓库**只能有一个.git文件夹**，其他文件夹的.git文件夹会导致在github上有.git的文件夹不能查看里面的内容
 
 ## 2.常用命令：
 
 ### tag标签相关命令
 
-有没有什么可以***永远*指向某个提交记录的标识**呢，比如软件发布新的大版本，或者是修正一些重要的 Bug 或是增加了某些新特性，有没有比分支更好的可以永远指向这些提交的方法呢？
+有没有什么可以**永远指向某个提交记录的标识**呢，比如软件发布新的大版本，或者是修正一些重要的 Bug 或是增加了某些新特性，有没有比分支更好的可以永远指向这些提交的方法呢？
 
 标签可以永久地将某个特定的提交命名为里程碑，然后就**可以像分支一样引用**了。更难得的是，它们并**不会随着新的提交而移动**。你**也不能切换到某个标签上面进行修改提交**，它就像是提交树上的一个锚点，标识了某个特定的位置。
+
+#### git tag命令
 
 指定提交c1进行打标签，如果你不指定提交记录，Git 会用 `HEAD` 所指向的位置。
 
@@ -159,7 +163,7 @@ git tag v1 c1 # 给c1提交打上名为v1的标签
 
 切换到 `v1` 上面，要注意你会进到分离 `HEAD` 的状态 —— 这是因为不能直接在`v1` 上面做 commit。
 
-
+#### git describe命令
 
 **描述**离你最近的锚点（也就是标签），它就是 `git describe`！
 
@@ -203,7 +207,7 @@ v2_1_gC4
 
 ### 撤销变更命令 reset...
 
-1 reset
+#### git reset命令
 
 ```sh
 git reset c1 # 把当前分支指向的提交改为c1
@@ -223,7 +227,7 @@ git reset --hard <commit-hash>
 - `git reset --mixed` 是默认行为，如果不指定模式，默认就是 `--mixed`。
 - 这个选项将会重置当前分支的指针和暂存区，但是工作目录不会被修改。未提交的更改会保留在工作目录，但是不会被暂存区追踪。
 
-2 revert 
+#### git revert拷贝命令
 
 原理：
 
@@ -295,7 +299,7 @@ git clone -b 远分支 远链接
 git log
 ~~~
 
-用一行、图像显示所有分支的提交情况
+显示所有分支的所有提交情况（窗口足够大才容易看），使用图像、一行的方式
 
 ```sh
 git log --all --graph --oneline 
@@ -374,7 +378,7 @@ git commit -a -m '注释'
 git commit -m '提交了一个文件' hello.txt
 ~~~
 
-提交使用文件到本地仓库:
+提交暂存区的所有文件到本地仓库:
 
 ~~~sh
 git commit -m '注释'
@@ -388,13 +392,7 @@ Gt的分支也非常轻量。它们只是简单地指向某个提交纪录。
 
 使用分支其实就相当于在说：“我想基于这个提交以及它所有的parent提交进行新的工作。”
 
-移动分支：
 
-~~~sh
-git branch -f main HEAD~3 # 会将main分支强制指向HEAD的第3级parent提交。
-git reset ...
-git rebase bugFix main # 相当于git checkout main + git rebase bugFix(把当前分支main的提交移动到bugFix分支，main也移动)
-~~~
 
 #### 2.6.1 git branch,checkout基本命令
 
@@ -404,29 +402,26 @@ git branch 分支名
 git branch 分支名 main^ # 表示在main分支的上一个提交处创建一个分支
 # 查看分支:
 git branch -v 
-
-# 切换分支:
-git checkout 分支名 #老版本
-git switch 分支名 # 新版本
-
-# 创建并切换到创建的分支上
-git checkout -b 分支名
-git checkout -b 分支名 提交记录的hash # 表示创建分支指向这个提交并且切换到这个分支上
-
 # 删除分支：
 git branch -d 分支名
-
 # 更改分支名称 把当前的master分支名称更改为main
 git branch -m master main
 # 强制重命名当前分支为main。即使main分支已经存在
 git branch -M main 
+
+# 切换分支:
+git checkout 分支名 #老版本
+git switch 分支名 # 新版本
+# 创建并切换到创建的分支上
+git checkout -b 分支名
+git checkout -b 分支名 提交记录的hash # 表示创建分支指向这个提交并且切换到这个分支上
 ```
 
 ### 合并命令
 
 #### git merge 合并1(两个父节点)
 
-在Git中合并两个分支成功后会产生一个特殊的提交记录，它有**两个parent节点**。翻译成自然语言相当于：“我要把这两个parent节点本身及它们所有的祖先都合并进来。”
+在Git中合并两个分支成功后会产生一个特殊的提交记录，它有**两个parent节点**。翻译成自然语言相当于：“我要把这两个parent节点本身及它们所有的祖先都合并进来。”合并后**移动的分支是当前HEAD指向的分支**。
 
 merge命令：把两个分支当前指向的两个提交记录作为两个parent节点，合并出一个新的提交记录，比如下面命令的执行结果为：main分支上合并出了一个新的提交记录，里面包含了bugFix分支与main分支的全部信息。
 
@@ -466,7 +461,7 @@ Rebase修改了提交树的历史。
 比如，提交C1可以被rebase到c3之后。这看起来C1中的工作是在C3之后进行的，但实际上是在C3之前。
 一些开发人员喜欢保留提交历史，因此更偏爱merge。而其他人（比如我自己）可能更喜欢干净的提交树，于是偏爱rebase。
 
-
+**变基后当前分支会移动！**
 
 第二种合并分支的方法是git rebase,Rebase实际上就是取出一系列的提交记录，“复制”它们，然后在另外一个地方逐个的放下去。
 
@@ -516,6 +511,15 @@ git rebase bugFix main # 把main分支的提交变基到bugFix上,因为两个�
 
 ##### rebase -i参数 对提交进行排序与筛选 :
 
+两种选择提交的方式，将对这些提交进行排序与筛选：
+
+~~~sh
+git rebase -i main # 当前在bugFix分支，命令表示对[bugFix,main)的提交进行图形化界面选择，只选择保留c4
+git rebase -i HEAD~4 # HEAD~4表示选择包括HEAD在内的4个提交
+~~~
+
+
+
 可以使用图形界面对提交记录进行排序与筛选
 
 例如：**移动多个提交**
@@ -542,7 +546,7 @@ git rebase -i HEAD~4 # -i表示打开图形界面，HEAD~4表示选择包括HEAD
 
 ~~~sh
 git rebase -i main # 表示对[bugFix,main)的提交进行图形化界面选择，只选择保留c4
-git rebase main bugFix # 更新main的位置,获取main分支的记录放在bugFix上 相当于：git checkout main;git rebase bugFix
+git rebase bugFix main # 会更新main的位置,获取main分支的记录放在bugFix上 相当于：git checkout main;git rebase bugFix
 ~~~
 
 结果：
@@ -557,7 +561,7 @@ git rebase main bugFix # 更新main的位置,获取main分支的记录放在bugF
 
 把对应的提交拷贝过来作为新的提交提交到本分支中。
 
-要在心里牢记cherry-pick可以将提交树上任何地方的提交记录取过来追加到HEAD上（只要不是HEAD上游的提交就没问题)
+要在心里牢记cherry-pick可以将提交树上**任何地方的提交记录**取过来**追加到HEAD上**（只要不是HEAD上游的提交就没问题)
 
 初始状态：
 
@@ -576,21 +580,29 @@ git cherry-pick c3 c4 c7 # 优选c3,c4,c7这三个提交记录到当前分支指
 **冲突产生的原因：**
 合并分支时，两个分支对同一个文件都有修改记录时。Gt无法替我们决定使用哪一个。必须人为决定新代码内容。
 
-**如何解决冲突：**1.git status找到发生冲突的文件 ,自己进行选择，保留那部分代码 2. 删除这些字符：<<<<< HEAD                      =============               >>>>>>3.git add和git commit(注意：不能够这样提交：git commit -m ' ' 冲突文件)到本地仓库
+##### 如何解决冲突：
 
-(1.)merge合并：并不合并分支，merge只把两个分支不冲突的提交进行合并，两个分支仍然可以提交新的文件
-(2).git merge test 把test分支中不冲突的提交合并到master中(test分支不变，只把test分支中与master分支不冲突的提交给拷贝到master分支，然后再连线。)
-(3.)发生冲突时：直接在本分支解决冲突(修改文件，因为在master进行合并，只有master分支被修改)后提交
+1 git status找到发生冲突的文件 ,自己进行选择保留哪部分代码
+
+2 删除这些字符：<<<<< HEAD          HEAD指向的分支中冲突的内容           =============       bugFix分支中冲突的内容        >>>>>>bugFix
+
+3 `git add .`和`git commit -m '注释'` 提交所有暂存区的文件。(**注意**：不能够这样只提交发生冲突的文件：`git commit -m ' ' 冲突文件)`
+
+合并发生冲突时（进入merge-ing状态）：直接在本分支解决冲突后提交(修改文件，因为在master进行合并，只有master分支被修改)
 
 
 
-### 2.7 基本命令
+### 2.7 最常用的命令
 
 - git init 初始化本地库
 
 - git satus 查看本地库的状态 
 
-- git remote add 远程仓库名字 https链接
+- git remote add 远程仓库别名 远程仓库链接
+- git clone 链接
+- git reflog
+- git log --all --graph
+- git remote -v  查看远程仓库的别名与对应的链接
 - git add 文件
 - git commit -m '注释'
 - git pull 远仓名 远分支
@@ -603,7 +615,7 @@ git cherry-pick c3 c4 c7 # 优选c3,c4,c7这三个提交记录到当前分支指
 
 远程分支反映了远程仓库在你最后一次与它通信时的状态。
 
-远程分支与本地分支的不同：git checkout切换到远程分支o/main时，HEAD不会指向o/main,而是处于分离HEAD状态，指向o/main指向的那个提交。
+远程分支与本地分支的不同：git checkout切换到远程分支o/main时，HEAD不会指向o/main,而是**处于分离HEAD状态**，指向o/main指向的那个提交。
 
 如图：
 
@@ -622,8 +634,7 @@ git cherry-pick c3 c4 c7 # 优选c3,c4,c7这三个提交记录到当前分支指
 
 **git fetch做了些什么？**
 git fetch完成了仅有的但是很重要的两步：
-1 从远程仓库下载本地仓库中缺失的提交记录
-2 更新远程分支指针（如o/main)
+1 从远程仓库下载本地仓库中缺失的提交记录来**更新本地的远程分支**指针（如o/main)
 
 git fetch就是你与远程仓库通信的方式！
 git fetch通常通过互联网（使用http:/或git://协议)与远程仓库通信。
@@ -651,15 +662,17 @@ git fetch 远程仓库
 
 ![](img/fetch2.png)
 
-**git fetch的参数**：
+##### git fetch的参数：
+
+从远程下载到本地：
 
 ~~~sh
 git fetch origin 远程分支：本地分支
 ~~~
 
+这里有一点是需要**注意**的 ：左边现在指的是远程仓库中的位置，而 右边才是要放置提交的本地仓库的位置。
 
-
-这里有一点是需要注意的 ：左边现在指的是远程仓库中的位置，而 右边才是要放置提交的本地仓库的位置。
+从本地推送到远程：
 
 ~~~sh
 git push origin 本地分支：远程分支
@@ -667,7 +680,7 @@ git push origin 本地分支：远程分支
 
 
 
-它与 git push 刚好相反，这是可以讲的通的，因为我们在往相反的方向传送数据。但是**fetch与push的参数都符合从左到右传输数据**，无论是push的从左边参数的本地分支推送到右边参数的远程分支，还是fetch的从左边参数的远程分支下载提交到右边参数的本地分支。
+git fetch与 git push 刚好相反，这是可以讲的通的，因为我们在往相反的方向传送数据。但是**fetch与push的参数都符合从左到右传输数据**，无论是push的从左边参数的本地分支推送到右边参数的远程分支，还是fetch的从左边参数的远程分支下载提交到右边参数的本地分支。
 
 例子：
 
@@ -703,17 +716,7 @@ git fetch origin :bar # 表示下载空的东西到bar分支中，会在本地�
 
 ### 3.1 push、pull详细操作
 
-查看远仓名
 
-```sh
-git remote -v 
-```
-
-添加远程仓库别名
-
-~~~sh
-git remote add 远程仓库名字 https链接
-~~~
 
 #### push操作
 
@@ -729,7 +732,7 @@ git push (https/ssh)链接 本分支：远分支
 git push (https/ssh)链接 本分支
 ~~~
 
-**参数**：
+##### push命令的参数：
 
 1 没有指定参数时，默认push的结果是 push当前**HEAD指向的**分支(如main)到HEAD指向的分支追踪的远程分支(如：o/main)的远程仓库的对应分支上。 如果HEAD执行的位置没有追踪远程分支，则命令失败。
 
@@ -737,7 +740,7 @@ git push (https/ssh)链接 本分支
 git push
 ~~~
 
-2 默认命令
+2 **默认命令**
 
 ```
 git push origin main
@@ -745,7 +748,7 @@ git push origin main
 
 把这个命令翻译过来就是：
 
-**切换**到本地仓库中的“main”分支，获取所有的提交，再到远程仓库“origin”中找到“main”分支，将远程仓库中没有的提交记录都添加上去。
+**切换**到本地仓库中的“main”分支，获取所有的提交，再到远程仓库“origin”中找到“main”分支(没有的话就新建)，将远程仓库中没有的提交记录都添加上去,最后更新o/main分支。
 
 
 
@@ -767,11 +770,18 @@ git pull
 
 4 使用:号指定推送的本地分支与远程分支
 
+**(1)还可以指定推送到foo分支前的一个提交为止**：
+
 ~~~sh
-git push (https/ssh)链接 foo~1：main # 从foo分支指向的前一个提交开始，推送到远程仓库的main分支，因为推送到的是远程仓库的main分支，所以本地的o/main分支会在推送后进行更新，哪怕像这样把foo分支的推送到远程的main分支
+git push origin foo~1：main # 从foo分支指向的前一个提交开始，推送到远程仓库的main分支，因为推送到的是远程仓库的main分支，所以本地的o/main分支会在推送后进行更新，哪怕推送的是main分支
 ~~~
 
-使用:号删除远程分支
+意思：**切换到本地仓库中的“foo”分支，获取foo~1及之前的提交，再到远程仓库“origin”中找到“main”分支(没有的话就新建)，将远程仓库中没有的提交记录都添加上去,最后更新o/main分支。**
+
+
+
+(2)使用:号删除远程分支
+
 ~~~sh
 git push origin :foo # 表示推送空的内容给远程仓库的foo分支，这会删除foo分支
 ~~~
@@ -780,7 +790,7 @@ git push origin :foo # 表示推送空的内容给远程仓库的foo分支，这
 
 
 
-#### (重要)如果push推送前远程仓库的提交已经发送了变更怎么办？
+##### (重要)如果push推送前远程仓库的提交已经发送了变更怎么办？
 
 如图：
 
@@ -789,7 +799,7 @@ git push origin :foo # 表示推送空的内容给远程仓库的foo分支，这
 **解法1**：
 
 ~~~sh
-git fetch 远程仓库 #更新本地的远程分支
+git fetch origin main # 下载远程仓库的main分支的提交给更新本地的o/main远程分支
 ~~~
 
 结果：
@@ -799,7 +809,7 @@ git fetch 远程仓库 #更新本地的远程分支
 然后
 
 ~~~sh
-git rebase 远程分支 # 把当前分支的提交变基到本地的远程分支上，保证比远程仓库的提交多且线性
+git rebase o/main # 把当前分支的提交变基到本地的远程分支上，保证比远程仓库的提交多且线性
 ~~~
 
 结果：
@@ -809,25 +819,28 @@ git rebase 远程分支 # 把当前分支的提交变基到本地的远程分支
 最后
 
 ~~~sh
-git push (https/ssh)链接 本分支：远分支 #推送到远程仓库进行合并
+git push origin main：main # 推送到远程仓库的main分支进行合并
 ~~~
 
 结果：
 
-![](img/pullRebase2.png)
+![](img/pullRebase3.png)
+
+#### git pull --rebase命令
 
 简写版本：
 
 先
 
 ```sh
-git pull --rebase # 就是fetch和rebase两个命令的简写！
+git pull --rebase origin main # 就是fetch和rebase两个命令的简写！
+# 相当于：git fetch origin main;git renase o/main(main绑定的远程分支)
 ```
 
 再
 
 ~~~sh
-git push (https/ssh)链接 本分支：远分支
+git push origin main：main
 ~~~
 
 
@@ -872,9 +885,21 @@ git pull origin main
 
 ![](/img/pull2.png)
 
+##### git pull命令的参数
+
+其实就是git fetch命令的参数：
+
+从远程下载到本地：
+
+~~~sh
+git fetch origin 远程分支：本地分支
+~~~
+
 
 
 `git pull origin foo` 相当于：`git pull origin foo:o/foo`
+
+相当于：
 
 ```shell
 git fetch origin foo; git merge o/foo
@@ -885,12 +910,13 @@ git fetch origin foo; git merge o/foo
 `git pull origin bar~1:bugFix` 相当于：
 
 ```sh
-git fetch origin bar~1:bugFix; git merge bugFix
+git fetch origin bar~1:bugFix # 表示下载到远程仓库bar分支的前一个的提交为止，下载到本地的bugFix分支
+git merge bugFix
 ```
 
 #### clone操作
 
-clone会做如下操作。1、pull操作 拉取代码。2、初始化本地仓库。3、创建远仓别名(origin)
+clone会做如下操作。1、pull操作 拉取代码。2、初始化本地仓库(创建main分支与本地的远程分支)。3、创建远仓别名(origin)
 
 当你克隆时，Gt会为远程仓库中的每个分支在本地仓库中创建一个远程分支（比如o/main)。然后再创建一个跟踪远程仓库中活动分支的本地分支，默认情况下这个本地分支会被命名为main
 
@@ -917,7 +943,7 @@ ssh-keygen -t rsa -C 邮箱
 
 a与b先后从中央仓库拉取(或者clone)代码到本地，a修改了test.java后提交到了本地，然后push到了远程仓库，b在a提交后也修改了test.java文件，提交到本地仓库后，b也进行push操作，但是在b修改test.java的时间里，a已经给远程仓库添加了新的提交，所以b需要从远程仓库pull拉取最新的分支(多个提交)到本地，记为分支1，b原来本地的分支(多个提交）记为分支2，然后执行pull操作包含的合并分支操作，合并分支1与分支2，但是因为两个分支都对test.java文件（同一行？）进行了修改，git无法判断保留哪一些，所以发生了冲突，b与a进行讨论后修改了代码，重新提交到本地后冲突解决，分支1与分支2成功合并，b再把合并好的分支push到远程仓库，b本地的分支提交数量比远程仓库的分支（即分支1）多一个提交（即：解决冲突的那个提交），所以可以成功push到远程仓库，覆盖原来的提交。
 
-### 3.4 设置分支的远程追踪分支的两种方法
+### 3.4 给分支绑定远程追踪分支的两种方法
 
 1 分支不存在
 
@@ -938,7 +964,7 @@ git pull origin main
 
 
 
-结果：我们使用了o/main来合并foo分支。需要注意的是main并未被合并！
+结果：我们使用了o/main来合并foo分支。需要**注意**的是main并未被合并！
 
 ![](img/trackBranch.png)
 
@@ -988,17 +1014,17 @@ git config --global https.sslVerify "false"
 git push ssh链接 本地分支:远程分支
 ~~~
 
-### 4.2 远程服务器拒绝！(Remote Rejected)
+### 4.2 远程服务器拒绝！(Remote Rejected) 不能够使用main分支进行推送
 
 如果你是在一个大的合作团队中工作，很可能是**main被锁定了**，需要一些Pull Request流程来合并修改。如果你直接提交(commit)到本地main,然后试图推送(push)修改，你将会收到这样类似的信息：
 ！[远程服务器拒绝]main->main(TF402455：不允许推送(push)这个分支；你必须使用pull request来更新这个分支)
 
 **为什么会被拒绝？**
-远程服务器拒绝直接推送(push)提交到main,因为策略配置要求pull requests来提交更新.
+**远程服务器拒绝直接推送(push)提交到main**,因为策略配置要求pull requests来提交更新.
 你应该按照流程，新建一个分支，推送(push)这个分支并申请pull request,但是你忘记并直接提交给了main,所以现在你卡住并且无法推送你的更新.
 
 **解决办法**
-reset你的main分支和远程服务器保持一致，然后新建一个分支feature,推送到远程服务器。
+reset你的main分支和远程服务器保持一致，然后在最新的提交上新建一个分支feature,推送到远程服务器。
 
 否则下次你pull并且他人的提交和你冲突的时候就会有问题。
 
@@ -1044,11 +1070,11 @@ git push origin feature
 
 ## 5 git的实际使用
 
-### 5.1 获取多提交的github仓库到本地并且进行推送
+### 5.1 my：获取多提交的github仓库到本地并且进行推送
 
-1.在gitHub中新建一个仓库origin
+1.在gitHub中新建一个仓库origin，进行了多个提交。
 
-2.1 在本地的test文件夹中使用git clone命令把整个仓库文件夹origin克隆下来,会自动生成名称为origin的远程仓库别名**（重要的是把远程仓库的提交记录也克隆了下来，这是后面成功push到远程仓库的关键）**
+2.1 在本地的test文件夹中使用git clone命令把整个仓库文件夹（文件名为仓库名,假设为origin）克隆下来,会自动生成名称为origin的远程仓库别名**（重要的是把远程仓库的提交记录也克隆了下来，这是后面成功push到远程仓库的关键）**
 
 ~~~sh
 git clone 链接
@@ -1090,7 +1116,7 @@ git push origin 本分支：远分支
 
 
 
-### 5.2 把多提交仓库推送到github的空仓库
+### 5.2 b站：推送文件到github的空仓库
 
 
 
@@ -1113,7 +1139,7 @@ git branch -M main
 3 添加远程仓库地址，起别名
 
 ~~~sh
-git remote add origin git@github.com:gloom2003/website.git
+git remote add origin 链接
 ~~~
 
 4 推送（把本地的提交记录也推送给了远程仓库）

@@ -1,6 +1,6 @@
 # sql的使用
 
-## 1 关键字的使用
+## 1 关键字的使用5
 
 
 ### 1.1 limit和offset的用法 从哪一个索引开始获取？取几条数据?
@@ -40,6 +40,10 @@ select * from article LIMIT 1,3
 
 
 ### 1.2 groub by ... having的使用
+
+大致功能：**group by 字段的含义：把字段值相同的归类为一组，使用Having 对每一组进行遍历然后过滤，留下符合条件的，使用聚合函数对每一组进行相应的计算。**
+
+注意：
 
 group by**会把组变成一行，**前提是group by后面的字段的**值有多个相同，而不是全部不同**，否则group by相当于没写。
 
@@ -380,7 +384,7 @@ WHERE st.s_id NOT IN(
 p9: 视频中的题目老师理解为：查询学过张三”老师所教的任意一门课的同学的学号、姓名了，下面是我认为的正确理解：
 
 ~~~sql
-# 查询学过张三”老师所教的全部课的同学的学号、姓名（重点）
+# 查询学过张三老师所教的全部课的同学的学号、姓名（重点）
 
 # 子1：查询张三教的课程的id
 SELECT c.`c_id`
@@ -425,21 +429,21 @@ GROUP BY sc.`s_id` HAVING COUNT(sc.`c_id`) = (
 SELECT *
 FROM student st
 WHERE st.`s_id` IN(
-	SELECT sc.`s_id`
-	FROM score sc
-	WHERE sc.`c_id` IN (
-		SELECT c.`c_id`
-		FROM teacher t INNER JOIN course c
-		ON t.`t_id` = c.`t_id`
-		WHERE t.`t_name` = '张三'
-	)
-	GROUP BY sc.`s_id` HAVING COUNT(sc.`c_id`) = (
-		SELECT COUNT(c.`c_id`)
-		FROM teacher t INNER JOIN course c
-		ON t.`t_id` = c.`t_id`
-		WHERE t.`t_name` = '张三'
-	)
-)
+                    SELECT sc.`s_id`
+                    FROM score sc
+                    WHERE sc.`c_id` IN (
+                                        SELECT c.`c_id`
+                                        FROM teacher t INNER JOIN course c
+                                        ON t.`t_id` = c.`t_id`
+                                        WHERE t.`t_name` = '张三'
+									)
+                    GROUP BY sc.`s_id` HAVING COUNT(sc.`c_id`) = (
+                                                                    SELECT COUNT(c.`c_id`)
+                                                                    FROM teacher t INNER JOIN course c
+                                                                    ON t.`t_id` = c.`t_id`
+                                                                    WHERE t.`t_name` = '张三'
+															)
+				)
 
 
 
@@ -1242,6 +1246,109 @@ from student st right join (
 	)
 ) a on st.s_id = a.s_id
 ~~~
+
+#### 01笔试题:
+
+1 有一张会员表（mebmers），表中数据字段如下:`id,name,mobile,score`
+
+解法1：
+
+~~~mysql
+-- (1) 查询score第二高的会员
+
+-- 1 查询第二高的分数
+select m.score
+from mebmers m
+where m.score != ( select max(score) from mebmers )
+limit 1
+
+-- 2 查询分数等于第二高分数的会员
+--       Table字段不能使用MySQL关键字；【如果非要使用这些关键字，则需要在关键前后添加 		 `keyword` 反引号以示区分】
+select id,`name`,mobile,score 
+from mebmers m
+where m.score = (
+		select m.score
+		from mebmers m
+		where m.score != ( select max(score) from mebmers )
+		limit 1
+)
+
+-- (2) 查询名字包含ben（无论大小写都需要查询出来）的会员信息
+
+select id,`name`,mobile,score
+from mebmers m
+where UPPER(m.`name`) like '%BEN%' -- 使用 =号 会去寻找 %BEN%这个名字,而不是去模糊匹配
+
+~~~
+
+2 
+
+解法1：
+
+~~~mysql
+-- 获取每个部门中当前员工薪水最高的相关信息，给出dept_no,emp_no以及其对应的salary,按照部门编
+-- 号dept_no升序排列
+
+-- 结果：在有员工id的表中，通过连表过滤出需要的结果
+select t1.dept_no,t2.emp_no,t1.max_salary
+from (
+			select dept_no,max(salary) max_salary -- 1 查询每个部门中当前员工薪水最高的部门与薪水信息
+			from dept_emp d 
+			inner join salaries s on d.emp_no = s.emp_no 
+			and d.to_date = '9999-01-01' 
+			and s.to_date = '9999-01-01'
+			GROUP BY d.dept_no
+		 ) t1 
+		 inner join (
+								 select d.emp_no,d.dept_no,s.salary
+								 from dept_emp d
+								 inner join salaries s on d.emp_no = s.emp_no
+								 and d.to_date = '9999-01-01' 
+								 and s.to_date = '9999-01-01'
+								) t2
+		 on t1.dept_no = t2.dept_no and t1.max_salary = t2.salary
+ order by t1.dept_no -- dept_no数据为d001 也能够进行排序
+~~~
+
+3
+
+解法1：
+
+~~~mysql
+-- 请你查找在职员工自入职以来的薪水涨幅情况，给出在职员工编号emp_no以及其对应的薪水涨幅
+-- growth，并按照growth进行升序，
+
+-- 思路：查询 在职员工入职时的薪资表 与 在职员工现在的薪资表进行 相减即可
+		 
+-- 结果：
+select a.emp_no,b.salary - a.salary growth
+from (
+            select t1.emp_no,t1.hire_date,es.salary
+            from (
+                    select *
+                    from employees e
+                    where e.emp_no = (
+                                        select emp_no
+                                        from emp_salary es 
+                                        where es.to_date = '9999-01-01' -- 1 查询在职员工
+                    				)
+          		) t1
+		 inner join emp_salary es 
+		 on t1.emp_no = es.emp_no 
+		 and t1.hire_date = es.from_date
+	) a -- 在职员工入职时的薪资表
+inner join (
+            select emp_no,salary
+            from emp_salary es
+            where es.to_date = '9999-01-01'
+		  ) b -- 在职员工现在的薪资表
+on a.emp_no = b.emp_no
+order by growth
+~~~
+
+
+
+
 
 ### 3.7 日期时间相关的sql题
 
