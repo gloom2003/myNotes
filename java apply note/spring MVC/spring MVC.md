@@ -410,7 +410,7 @@ public class TestController {
 
 
 
-​	我们期望让请求的资源路径为**/test/testConsumes**的POST请求,并且请求头中的Content-Type头**必须为 multipart/from-data** 的请求能够被testConsumes方法处理。则可以写如下代码
+​	我们期望让请求的资源路径为**/test/testConsumes**的POST请求,并且请求头中的Content-Type头**必须为 multipart/from-data** 的请求才能够被testConsumes方法处理。则可以写如下代码
 
 ~~~~java
     @RequestMapping(value = "/testConsumes",method = RequestMethod.POST,consumes = "multipart/from-data")

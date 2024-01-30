@@ -159,9 +159,14 @@ sudo chgrp root test 表示把test文件的所属组改为root
 
 ### cp 拷贝文件
 
-cp ../study newStudy 表示拷贝上一级目录下的study文件到当前目录中并重命名为 newStudy
+```sh
+cp ../study newStudy # 表示拷贝上一级目录下的study文件到当前目录中并重命名为 newStudy
 
-cp -r study test 表示递归复制当前study文件夹的所有文件到test中
+cp -r study test # 表示递归复制当前study文件夹的所有文件到test中
+cp -r vue/dist/* /usr/share/nginx/html # 表示递归复制当前vue/dist文件夹的所有文件到/usr/share/nginx/html中
+```
+
+
 
 ### mv移动文件或重命名
 
@@ -171,7 +176,28 @@ mv test yyds 表示重命名
 
 ### find 查找文件
 
-sudo find /etc -name passwd* 表示查找/etc路径下面所有passwd开头的文件
+-name:指定查找的文件名称
+
+```sh
+sudo find /etc -name passwd* # 表示查找/etc路径下面所有passwd开头的文件
+```
+
+-atime:指定根据文件的创建时间来进行查找
+
+~~~sh
+find /etc -atime +10 -name t* # 表示查找10天前的t开头的文件
+~~~
+
+-exec:对查找到的文件进行处理
+
+~~~sh
+find /etc -atime +10 -name t* -exec rm -rf {} \; # 表示查找10天前的t开头的文件 并且 删除查找到的文件
+~~~
+
+- **`{}`：** 是一个占位符，`find`命令会将匹配的文件名替换到这个位置。在这个例子中，`{}`将被替换为`find`命令找到的每个文件或目录的名称。
+- **`\`：** 用于转义最后的分号`;`，确保`find`命令正确解释`-exec`选项的结束。
+
+
 
 ### top监控界面，类似任务管理器
 
@@ -229,12 +255,30 @@ sudo shutdown now 马上关机
 
 ### tar压缩命令
 
-压缩命令：
+tar命令可以将多个文件和目录打包成一个单一的归档文件，而不进行压缩。
+
+这个归档文件可以包含文件的权限、所有者信息以及目录结构等元数据。
+
+ 虽然 `tar` 本身并不压缩，但通常与压缩工具（如 `gzip`、`bzip2`）一起使用，以便在创建归档文件的同时进行压缩，减小文件大小。
+
+压缩命令：	
 
 ```sh
 tar -zcvf test.tar.gz *.txt  # 表示使用gzip格式压缩当前目录下面所有的txt文件，变成一个压缩文件命名为test.tar.gz
 tar -zcvf test.tar.gz test/ # 压缩test目录下面的所有文件
 ```
+
+**注意**：tar命令压缩哪一个目录呢？
+
+~~~sh
+BASE_PATH=/data/backup/db
+DB_NAME=test
+# 先切换到BASE_PATH目录再压缩整个DB_NAME目录为tar.gz文件,这样备份的就是test文件夹应该目录和里面的文件
+cd ${BASE_PATH}
+tar -zcvf ${BASE_PATH}/${FILE_NAME}.tar.gz ${DB_NAME} # 如果把DB_NAME替换为/data/backup/db/test,则会备份/data/backup/db/test中的每一个文件夹。而不是test文件夹！
+~~~
+
+
 
 解压命令：
 
@@ -242,14 +286,82 @@ tar -zcvf test.tar.gz test/ # 压缩test目录下面的所有文件
 tar -zxvf test.tar.gz # 表示解压压缩文件test.tar.gz
 ```
 
+-C参数：
+
+~~~sh
+tar -zxvf test.tar.gz -C /test # 表示解压test.tar.gz文件到/test目录下
+~~~
+
+
+
 参数含义：
 
+- -z表示以gzip格式进行压缩
 - -c表示对文件进行压缩，创建新的压缩文件
-- -x表示进行解压操作，-z表示以gzip格式进行操作
+- -x表示进行解压操作
 - -v可以在处理过程中输出一些日志信息
-- -f表示对普通文件进行操作
+- -f指定压缩后的文件名
+- -C 指定解压到哪一个目录
 
+### gzip 压缩命令
 
+只能压缩文件？文件夹不行？
+
+压缩：
+
+```sh
+gzip /home/hello.txt # 生成hello.txt.gz压缩文件
+```
+
+**注意**：压缩后原文件hello.txt会被删除
+
+例如：
+
+~~~sh
+# 备份数据库
+# mysqldump命令登录数据库获取一个数据库文件，使用|给到gzip命令进行压缩，重定向到xxx.sql文件
+mysqldump -u${DB_USER} -p${DB_PW} --host=${HOST} -q -R --databases ${DATABASE} | gzip > ${BACKUP}/S{DATETIME}/S{DATETIME}.sql.gz
+~~~
+
+1. **`mysqldump`：** 这是一个用于备份MySQL数据库的命令行工具。
+2. **`--host=${HOST}`：** 指定连接的MySQL主机。
+3. **`-q`：** 减少输出中的冗余信息，以提高可读性。
+4. **`-R`：** 包含存储过程和触发器的定义在内，以便在备份时也备份这些数据库对象。
+5. **`--databases ${DATABASE}`：** 指定要备份的数据库名称。
+6. **`|`：** 管道操作符，将`mysqldump`的输出传递给下一个命令。
+7. **`gzip > ${BACKUP}/S{DATETIME}/S{DATETIME}.sql.gz`：** 这部分用于将`mysqldump`的输出通过`gzip`进行压缩，并将压缩后的内容保存到指定的目录和文件名中。
+
+解压：
+
+~~~sj
+gunzip xxx.gz
+~~~
+
+**注意**：gunzip解压后.gz压缩包会被删除
+
+### zip压缩命令
+
+可以压缩文件夹
+
+压缩：
+
+```sh
+zip -r myHome.zip /home/ # 表示压缩home目录的所有文件与文件夹为myHome.zip(注意：包括home目录本身，哪怕写的是/home/*也是包括home目录的)
+```
+
+常用参数：
+
+-r:递归压缩，即压缩目录
+
+解压：
+
+```sh
+mkdir /opt/emp
+unzip -d /opt/emp /home/myHome.zip # 表示解压/home/myHome.zip文件并且把解压后的文件存放到/opt/emp目录中
+```
+
+unzip的常用参数：
+-d<目录>：指定解压后文件的存放目录
 
 ### vim编辑器
 
@@ -313,6 +425,10 @@ vim hello.txt  表示使用vim编辑hello.txt文件，不存在则会自动创�
 
 3.1`/`或是`?`在末行模式中使用搜索功能
 
+1. 输入你需要查找的关键字，回车键 如：/it 表示搜索it
+2. 如果要继续查找下一个关键字，输入n.
+3. 查找上一个关键字，输入N（大写）
+
 3.2 替换功能
 
 :s/it/he/g 表示要将当前行中的`it`全部(global)替换为`he`
@@ -322,7 +438,7 @@ vim hello.txt  表示使用vim编辑hello.txt文件，不存在则会自动创�
 - p: 表示替代结果逐行显示(Ctrl + L恢复屏幕)
 - i: ignore,不区分大小写
 
-4:输入v进入可视化模式,以进入可视化模式时的位置作为基本位置，通过移动另一端来进行选取。
+4:**输入v进入可视化模式**,以进入可视化模式时的位置作为基本位置，通过移动另一端来进行选取。
 
 我们可以使用以下命令来对选中区域进行各种操作：
 
@@ -339,7 +455,7 @@ sudo apt update 表示更新apt，服务器第一次使用时需要执行
 
 sudo apt install gcc 表示下载gcc编译器
 
-### | grep 使用管道进行搜索
+### | grep 使用管道传递信息
 
 管道符号“|”,表示将前一个命令你个处理结果交给后面命令处理。
 
@@ -386,6 +502,26 @@ curl [选项] [URL]
 - `-d`：设置请求体，用于发送POST请求的数据。
 - `-o`：指定输出文件的名称，用于下载文件。
 - `-v`：显示详细的输出信息，包括请求头和响应信息。
+
+如：
+
+~~~sh
+curl http://www.baidu.com
+curl 127.0.0.1
+~~~
+
+发送一个JSON格式的POST请求
+
+~~~sh
+curl --location --request POST 'http://localhost:7777/login' \
+--header 'Content-Type:application/json' \
+--data '{
+"userName":"kana",
+"password":"1234"
+}'
+~~~
+
+
 
 ### wget命令 指定url下载文件
 
@@ -460,6 +596,7 @@ systemctl restart nginx.service 表示重启nginx
 date # 显示当前日期
 date +%s # 显示当前时间的时间戳
 date +%y%m%d # 显示当前日期并且转换为231126的格式
+date +%Y-%m-%d_%H%M%S #  显示当前日期并且转换为20 23-11-26_120910的格式
 ~~~
 
 ### crontab 定时任务命令
@@ -481,9 +618,83 @@ crontab -e
 每天2点开始执行
 
 ~~~sh
+# 格式： cron表达式 要执行脚本的路径 参数
 # 分别表示 分钟、小时、一个月的第几天、第几个月、星期几
 0 2 * * * /root/jb/bf.sh /root/my_bf # 表示执行/root/jb/bf.sh这个脚本，脚本需要的参数为/root/my_bf
 
+~~~
+
+删除定时任务：
+ 方法一：使用`crontab -r`命令
+
+```sh
+crontab -r
+```
+
+这会删除当前用户的所有定时任务。系统将提示你确认删除操作。
+
+方法二：使用`crontab -l`和`crontab -r`命令
+
+1. 使用`crontab -l`命令列出当前用户的定时任务。
+
+```sh
+crontab -l
+```
+
+1. 找到要删除的定时任务的行号。
+2. 使用`crontab -r [行号]`删除指定行的定时任务。
+
+```sh
+crontab -r [行号]
+```
+
+方法三：编辑定时任务文件
+
+1. 使用下面的命令编辑当前用户的定时任务文件：
+
+```sh
+crontab -e
+```
+
+1. 找到并删除你想要删除的定时任务的行。
+2. 保存文件并退出编辑器。
+
+### mkdir 创建目录
+
+-p 表示一次创建多级目录
+
+~~~sh
+mkdir -p /data/backup/db
+~~~
+
+### > 重定向命令
+
+`>` 是一个用于重定向输出的命令。它将命令的标准输出重定向到指定的文件。
+
+举个例子：
+
+```sh
+echo "Hello, World!" > output.txt
+```
+
+在这个例子中，`echo "Hello, World!"` 是一个简单的命令，它会输出文本 "Hello, World!"。而 `> output.txt` 部分将这个输出重定向到名为 `output.txt` 的文件中。如果 `output.txt` 文件不存在，它会被创建；如果存在，它会被覆盖。
+
+例如：
+
+~~~sh
+# 备份数据库
+# mysqldump命令登录数据库获取一个数据库文件，使用|给到gzip命令进行压缩，重定向到xxx.sql.gz文件
+mysqldump -u{DB_USER} -p${DB_PW} --host=${HOST} -q -R --databases ${DATABASE} | gzip > ${BACKUP}/S{DATETIME}/S{DATETIME}.sql.gz
+~~~
+
+### whereis 命令
+
+如：
+
+**将和nginx文件相关的文件都查找出来**
+
+~~~sh
+whereis nginx # 返回nginx: 表示没有找到
 ~~~
 
 

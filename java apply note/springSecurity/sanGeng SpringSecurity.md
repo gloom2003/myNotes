@@ -95,7 +95,11 @@ public class HelloController {
 
 ​	必须登陆之后才能对接口进行访问。
 
+**SpringSecurity默认进行权限校验的原理**，服务器是如何判定一个请求是来自哪个用户的呢？
 
+- 首先浏览器会向服务端发送请求，访问我们的网站。
+- 服务端收到请求后，会创建一个SESSION ID，并暂时存储在服务端，然后会发送给浏览器作为Cookie保存。
+- 之后浏览器会一直携带此Cookie访问服务器，这样在服务器收到请求后，就能根据携带的Cookie中的SESSION ID判断是哪个用户了。
 
 ## 2. 认证
 
@@ -117,7 +121,7 @@ public class HelloController {
 
 ​	图中只展示了核心过滤器，其它的非核心过滤器并没有在图中展示。
 
-**UsernamePasswordAuthenticationFilter**:负责处理我们在登陆页面填写了用户名密码后的登陆请求。入门案例的认证工作主要有它负责。
+**UsernamePasswordAuthenticationFilter**:负责处理我们在登陆页面填写了用户名密码后的登陆请求。入门案例的认证工作主要由它负责。
 
 **ExceptionTranslationFilter：**处理过滤器链中抛出的任何AccessDeniedException和AuthenticationException 。
 
@@ -127,7 +131,13 @@ public class HelloController {
 
 ​	我们可以通过Debug查看当前系统中SpringSecurity过滤器链中有哪些过滤器及它们的顺序。
 
-![image-20211214145824903](img/image-20211214145824903.png)
+1 获取spring容器
+
+![](img/获取spring容器.png)
+
+2 计算器查看容器中的Bean
+
+![](img/计算器查看容器中的Bean.png)
 
 
 
@@ -167,6 +177,10 @@ UserDetails接口：提供核心用户信息。通过UserDetailsService根据用
 
 ​				在这个实现类中去查询数据库
 
+获取token的流程:
+
+![](img/获取token的流程.png)
+
 校验：
 
 ​	①定义Jwt认证过滤器
@@ -178,6 +192,12 @@ UserDetails接口：提供核心用户信息。通过UserDetailsService根据用
 ​				从redis中获取用户信息
 
 ​				存入SecurityContextHolder
+
+用户使用token登录的流程:
+
+![](img/用户使用token登录的流程.png)
+
+
 
 #### 2.3.2 准备工作
 
@@ -956,7 +976,7 @@ public class MapperTest {
 /**
  * @Author 三更  B站： https://space.bilibili.com/663528522
  */
-@Service
+@Service // 注入spring容器后，就会默认使用我们的实现类来覆盖原来Spring Security框架默认的实现类，达到类似修改源代码的效果
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Autowired
@@ -1400,7 +1420,7 @@ public class LoginUser implements UserDetails {
     }
 
 
-    //存储SpringSecurity所需要的权限信息的集合
+    // 存储SpringSecurity所需要的权限信息的集合，设置对象序列化为JSON时忽略这个字段
     @JSONField(serialize = false)
     private List<GrantedAuthority> authorities;
 
@@ -1409,7 +1429,7 @@ public class LoginUser implements UserDetails {
         if(authorities!=null){
             return authorities;
         }
-        //把permissions中字符串类型的权限信息转换成GrantedAuthority对象存入authorities中
+        //把permissions中字符串类型的权限信息转换成GrantedAuthority实现类对象存入authorities中
         authorities = permissions.stream().
                 map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
@@ -1758,7 +1778,7 @@ mybatis-plus:
 
 ~~~~
 
-
+mark1
 
 ​	然后我们可以在UserDetailsServiceImpl中去调用该mapper的方法查询权限信息封装到LoginUser对象中即可。
 
@@ -2008,7 +2028,7 @@ public class SGExpressionRoot {
 }
 ~~~~
 
-​	 在SPEL表达式中使用 @ex相当于获取容器中bean的名字未ex的对象。然后再调用这个对象的hasAuthority方法
+​	 在SPEL表达式中使用 @ex相当于获取容器中bean的名字为ex的对象。然后再调用这个对象的hasAuthority方法
 
 ~~~~java
     @RequestMapping("/hello")
@@ -2036,7 +2056,7 @@ public class SGExpressionRoot {
                 .authorizeRequests()
                 // 对于登录接口 允许匿名访问
                 .antMatchers("/user/login").anonymous()
-                .antMatchers("/testCors").hasAuthority("system:dept:list222")
+                .antMatchers("/testCors").hasAuthority("system:dept:list222") // 使用默认的hasAuthority方法进行验证
                 // 除上面外的所有请求全部需要鉴权认证
                 .anyRequest().authenticated();
 
@@ -2064,6 +2084,8 @@ public class SGExpressionRoot {
 
 ​	CSRF是指跨站请求伪造（Cross-site request forgery），是web常见的攻击之一。
 
+![](img/csrf攻击.png)
+
 ​	https://blog.csdn.net/freeking101/article/details/86537087
 
 ​	SpringSecurity去防止CSRF攻击的方式就是通过csrf_token。后端会生成一个csrf_token，前端发起请求的时候需要携带这个csrf_token,后端会有过滤器进行校验，如果没有携带或者是伪造的就不允许访问。
@@ -2076,7 +2098,13 @@ public class SGExpressionRoot {
 
 ### 认证成功处理器
 
-​	实际上在UsernamePasswordAuthenticationFilter进行登录认证的时候，如果登录成功了是会调用AuthenticationSuccessHandler的方法进行认证成功后的处理的。AuthenticationSuccessHandler就是登录成功处理器。
+​	
+
+​	实际上在UsernamePasswordAuthenticationFilter进行登录认证的时候
+
+​	**注意**：(前提是使用了UsernamePasswordAuthenticationFilter进行验证，过滤器链中有UsernamePasswordAuthenticationFilter，即：SpringSecurity配置类中有配置UsernamePasswordAuthenticationFilter类)，
+
+​	如果登录成功了是会调用AuthenticationSuccessHandler的方法进行认证成功后的处理的。AuthenticationSuccessHandler就是登录成功处理器。
 
 ​	我们也可以自己去自定义成功处理器进行成功后的相应处理。
 
@@ -2098,7 +2126,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private AuthenticationSuccessHandler successHandler;
-
+	// 重写配置方法，配置自定义的认证成功处理器 与 访问哪些接口需要认证
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.formLogin().successHandler(successHandler);
@@ -2204,7 +2232,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 ### 其他认证方案畅想
 
+如：
 
+- 自定义UsernamePasswordAuthenticationFilter，实现其接口
+- 使用默认的UsernamePasswordAuthenticationFilter，配合认证成功处理器，在日志成功后生成token给前端。
 
 
 

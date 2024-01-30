@@ -4,6 +4,11 @@ objective
 
 ## 1.提交文件到远程仓库
 
+## 项目中的git分支演变
+
+如图：红色箭头表示基于当前的分支创建一个新的分支来进行工作，绿色箭头表示把分支合并起来。
+
+![](img/项目中的git分支演变.png)
 
 
 
@@ -13,13 +18,16 @@ objective
 
 
 
+### 其他注意事项
+
+1. 空文件夹(一个工作空间、工作区)不会被git追踪，必须要有文件才可以
+2. 一个github仓库**只能有一个.git文件夹（存放在最外面）**，如果Github仓库的其他文件夹中里面有.git文件夹，那么在GitHub上面就不能查看这个文件夹里面的内容。
 
 
 
 
 
-
-### 1.1 `.gitignore` 的文件
+### 3级 1.1 `.gitignore` 的文件
 
 创建一个名为 `.gitignore` 的文件，用来指定 Git 忽略哪些文件和文件夹，这些被忽略的文件将不会被纳入版本控制。
 
@@ -117,6 +125,8 @@ git rebase bugFix main # 相当于git checkout main + git rebase bugFix(把当�
 
 移动HEAD:
 
+在分支或者HEAD的基础上使用~与^
+
 ~~~sh
 git checkout Head^ # 使用Head^来向上面移动
 # 或者	
@@ -126,24 +136,23 @@ git checkout main~2 # 单个~相当于^,使用~2表示从main分支向上移动2
 
 
 
-操作符 `^` 与 `~` 符一样，后面也可以跟一个数字。指定合并提交记录的某个 parent 提交。
+操作符 `^` 与 `~` 符一样，后面也可以跟一个数字。指定“合并提交”的某个 parent 提交。
 
-Git 默认选择合并提交的“第一个” parent 提交(即：合并提交c6正上方的c2提交)，在操作符 `^` 后跟一个数字可以改变这一默认行为。
+Git 默认选择“合并提交”的“第一个” parent 提交(即：合并提交c6正上方的c2提交)，在操作符 `^` 后跟一个数字可以改变这一默认行为。
 
 例如：
+
+~~~sh
+git checkout HEAD^2 # 表示移动到HEAD上面的第二个父提交(默认从左到右开始数)
+~~~
+
+
 
 ![](img/链式操作1.png)
 
 结果：
 
 ![](img/链式操作2.png)
-
-### 其他注意事项
-
-1. 空文件夹(一个工作空间、工作区)不会被git追踪，必须要有文件才可以
-2. 一个github仓库**只能有一个.git文件夹**，其他文件夹的.git文件夹会导致在github上有.git的文件夹不能查看里面的内容
-
-## 2.常用命令：
 
 ### tag标签相关命令
 
@@ -227,13 +236,29 @@ git reset --hard <commit-hash>
 - `git reset --mixed` 是默认行为，如果不指定模式，默认就是 `--mixed`。
 - 这个选项将会重置当前分支的指针和暂存区，但是工作目录不会被修改。未提交的更改会保留在工作目录，但是不会被暂存区追踪。
 
+可使用于**撤消Git中的最新本地提交**，当你不小心将错误的文件提交给[Git](https://en.wikipedia.org/wiki/Git)，但是还没有将提交推送到服务器时。
+
+用法如下：
+
+```sh
+$ git commit -m "do Something"             # (1) 含有错误的提交
+$ git reset HEAD~                                          # (2) 分支指向上一个提交，但是当前提交的错误内容不会被修改
+<< edit files as necessary >>                              # (3) 修改错误的提交
+$ git add ...                                              # (4) 修改完毕后，再次提交到暂存区
+$ git commit -c ORIG_HEAD                                  # (5)  把修改正确的提交进行提交
+```
+
+
+
+
+
 #### git revert拷贝命令
 
 原理：
 
 初始状态：
 
-![](/img/revert1.png)
+![](img/revert1.png)
 
 命令：
 
@@ -245,35 +270,60 @@ git revert HEAD # 表示把HEAD指向的提交复制一份，创建一个新的�
 
 结果：
 
-![](/img/revert2.png)
+![](img/revert2.png)
+
+### 3级 2.1 配置类:
+
+#### 1.添加
 
 ```sh
-git checkout pushed
-
-git revert pushed # 表示把pushed分支指向的提交复制一份，创建一个新的提交，放在当前分支中
+$ git config --global user.name "yourName"
+$ git config --global user.email "your@email.com"
 ```
 
+#### 2.修改
 
+###### （1）覆盖的形式：
 
-### 2.1 配置类:
+```sh
+$ git config --global user.name "yourName"
+$ git config --global user.email "your@email.com"
+```
 
-查看当前配置的用户名与邮箱
+###### （2）替换的形式：
 
-~~~sh
-git config --global --list
-~~~
+```sh
+$  git config --global --replace-all user.name "yourName" 
+$  git config --global --replace-all user.email "your@email.com"
+```
 
-配置用户名：
+#### 3.删除
 
-~~~sh
-git config --global user.name '五月的夏天'
-~~~
+无效？
 
-配置邮箱：
+```sh
+$ git config --global --unset user.name "yourName"
+$ git config --global --unset user.email "your@email.com"
+```
 
-~~~sh
-git config --global user.email '11111111@163.com'
-~~~
+#### 4.查看
+
+###### （1）查看所有：
+
+```sh
+$ git config --list
+```
+
+###### （2）查看指定信息：
+
+```sh
+$ git config user.name
+$ git config user.email
+```
+
+#### 直接修改配置文件
+
+直接访问`C:\Users\GLOOM\.gitconfig`文件，修改相应的配置即可。
 
 ### 2.2 clone类：
 
@@ -348,7 +398,7 @@ git rm -r --cached 文件夹
 
 要**清空 Git 暂存区**中的所有文件，你可以使用以下命令：
 
-1.
+1.测试成功
 
 ~~~sh
 git rm -r --cached *
@@ -356,7 +406,7 @@ git rm -r --cached *
 
 使用后再次git add就能够忽略.gitignore中的文件
 
-2.
+2. **测试失败**
 
 ```shell
 git reset
@@ -400,10 +450,15 @@ Gt的分支也非常轻量。它们只是简单地指向某个提交纪录。
 # 创建分支:
 git branch 分支名 
 git branch 分支名 main^ # 表示在main分支的上一个提交处创建一个分支
+# 创建并切换到创建的分支上
+git checkout -b 分支名
+git checkout -b 分支名 提交记录的hash # 表示创建分支指向这个提交并且切换到这个分支上
+
 # 查看分支:
 git branch -v 
 # 删除分支：
 git branch -d 分支名
+
 # 更改分支名称 把当前的master分支名称更改为main
 git branch -m master main
 # 强制重命名当前分支为main。即使main分支已经存在
@@ -412,9 +467,7 @@ git branch -M main
 # 切换分支:
 git checkout 分支名 #老版本
 git switch 分支名 # 新版本
-# 创建并切换到创建的分支上
-git checkout -b 分支名
-git checkout -b 分支名 提交记录的hash # 表示创建分支指向这个提交并且切换到这个分支上
+
 ```
 
 ### 合并命令
@@ -509,7 +562,7 @@ git rebase bugFix main # 把main分支的提交变基到bugFix上,因为两个�
 
 
 
-##### rebase -i参数 对提交进行排序与筛选 :
+##### -i参数 使用**图形界面**对指定的提交进行排序与筛选 :
 
 两种选择提交的方式，将对这些提交进行排序与筛选：
 
@@ -526,7 +579,7 @@ git rebase -i HEAD~4 # HEAD~4表示选择包括HEAD在内的4个提交
 
 初始状态：
 
-![](/img/rebase-i1.png)
+![](img/rebase-i1.png)
 
 ~~~sh
 git rebase -i HEAD~4 # -i表示打开图形界面，HEAD~4表示选择包括HEAD在内的4个提交即：c2-c5，对这些提交进行选择后的结果存放在另一个分支(头部与原来的分支相同)存储起来，并且当前分支的执行也会移动过去
@@ -536,13 +589,13 @@ git rebase -i HEAD~4 # -i表示打开图形界面，HEAD~4表示选择包括HEAD
 
 结果：
 
-![](/img/rebase-i2.png)
+![](img/rebase-i2.png)
 
 其他：单分支变多分支
 
 初始状态：
 
-![](/img/rebaseA.png)
+![](img/rebaseA.png)
 
 ~~~sh
 git rebase -i main # 表示对[bugFix,main)的提交进行图形化界面选择，只选择保留c4
@@ -551,7 +604,7 @@ git rebase bugFix main # 会更新main的位置,获取main分支的记录放在b
 
 结果：
 
-![](/img/rebaseB.png)
+![](img/rebaseB.png)
 
 
 
@@ -790,7 +843,7 @@ git push origin :foo # 表示推送空的内容给远程仓库的foo分支，这
 
 
 
-##### (重要)如果push推送前远程仓库的提交已经发送了变更怎么办？
+##### (重要)如果push推送前远程仓库的提交已经发生了变更怎么办？
 
 如图：
 
@@ -883,7 +936,7 @@ git pull origin main
 
 结果：
 
-![](/img/pull2.png)
+![](img/pull2.png)
 
 ##### git pull命令的参数
 

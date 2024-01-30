@@ -214,7 +214,7 @@ public class HelloController {
 
 
 
-### 2.3 以打包的方式运行
+### 2.3 打包为jar包后运行
 
 ​	我们可以把springboot的项目打成jar包直接去运行。
 
@@ -242,15 +242,36 @@ public class HelloController {
 
 在jar包所在目录执行命令 
 
-~~~~
+~~~~sh
 java -jar jar包名称
 ~~~~
 
 即可运行。
 
+另外，可以**在运行时指定参数**，并且优先级是高于application.yml配置文件的：
+
+如：application.yml中为：
+
+~~~yaml
+server:
+	port: 8080
+~~~
+
+终端中为：
+
+~~~sh
+java -jar jar包名称 --server.port=7777
+~~~
+
+则应用程序会运行在7777端口上。
+
+
+
 ### 2.4 直接创建springBoot项目
 
 创建一个空项目，在idea左上角File中选择Project Structure,点击+号创建一个新的模块，选择Spring Initializr填写相关的信息。
+
+url:`start.aliyun.com`
 
 选择springBoot的版本，选择相关的依赖。
 
@@ -519,6 +540,7 @@ student:
 public class TestController {
     @Value("${student.lastName}")
     private String lastName;
+    
     @RequestMapping("/test")
     public String test(){
         System.out.println(lastName);
@@ -530,7 +552,9 @@ public class TestController {
 
 **注意：加了@Value的类必须是交由Spring容器管理的**
 
-#### 5.3.2 @ConfigurationProperties
+#### 5.3.2 @ConfigurationProperties注解
+
+**使用前缀与变量名称拼接形成的结果再从配置文件中进行获取。**
 
 作用：把配置文件中对应前缀的属性**映射**到类中的属性上来
 
@@ -546,6 +570,8 @@ student2:
 ~~~~
 
 ​    在类上添加注解@Component  和@ConfigurationProperties(prefix = "配置前缀")
+
+**新创建一个类，用来专门读取配置**：**注意**：这个类要交由Spring容器管理
 
 ~~~~java
 @Data
@@ -567,6 +593,7 @@ public class TestController {
 
     @Autowired
     private Student student;
+    
     @RequestMapping("/test")
     public String test(){
         System.out.println(student);
@@ -708,15 +735,9 @@ class Dog {
 
 ## 6 多模块项目相关
 
-### 6.1 多模块项目的创建
+### 6.1 多模块springBoot项目的例子(三更博客)
 
-1.创建一个父工程（一个project），只需要父工程的pom.xml文件，不需要src文件夹（直接删除即可）
-
-2.以创建工程时自带的模块作为父模块，在这个父模块下面创建多个子模块
-
-
-
-
+关于多模块项目，多模块下父项目存在一个`packing`打包类型标签，**所有的父级项目的packing都为pom**，**packing默认是jar类型**，如果不作配置，maven会将该项目打成jar包。作为父级项目，还有一个重要的属性，那就是modules，通过modules标签将项目的所有子项目引用进来，在build父级项目时，会根据子模块的相互依赖关系整理一个build顺序，然后依次build。
 
 配置父工程的pom.xml文件：
 
@@ -749,7 +770,7 @@ class Dog {
     
         <!-- 此标签可以进行所有子模块的依赖版本控制-->
     <dependencyManagement>
-
+	<!-- 作用：在父工程中进行非springBoot官方提供的依赖的锁定，从而使使用子模块都不需要指定依赖的版本-->
 	<!-- 在dependencyManagement标签下面的dependencies标签并没有真正的导入依赖，只是对子模块的依赖版本进行了锁定-->
     <dependencies>
         <!-- SpringBoot的依赖配置-->
@@ -757,7 +778,7 @@ class Dog {
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-dependencies</artifactId>
             <version>2.5.0</version>
-            <!-- 这里指定了很多其他依赖的版本，ctrl进入spring-boot-dependencies.xml即可查看-->
+            <!-- 这里进行了很多其他依赖的版本锁定，ctrl进入spring-boot-dependencies.xml即可查看-->
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -808,10 +829,12 @@ class Dog {
 
 
     </dependencyManagement>
-
+    
+	<!--这段配置的目的是在构建（编译）过程中使用 maven-compiler-plugin 插件，以 Java 8 版本来编译源代码，同时确保编译过程使用的源代码编码与项目定义的编码一致。这样可以确保构建的一致性和跨平台的便携性。-->
     <build>
         <plugins>
             <plugin>
+                 <!--这个插件的功能是编译项目的源代码。-->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>
@@ -953,13 +976,261 @@ class Dog {
 
 
 
+### 6.2 多模块springBoot项目的模版
+
+1. 以创建工程时自带的模块作为父模块，在这个父模块下面创建多个子模块
+
+2. 只需要父工程的pom.xml文件，不需要src文件夹（直接删除即可）
+
+父工程的pom.xml文件：
+
+~~~xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   
+	<!-- 项目默认的-->
+    <groupId>com.sangeng</groupId>
+    <artifactId>SGBlog</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <modelVersion>4.0.0</modelVersion>
+    <!--确保父工程是用pom方式打包的-->
+    <packaging>pom</packaging>
+    
+	<!--把子模块聚合起来，方便进行统一管理(root) （插件：install,clean...），添加子模块时会自动添加-->
+    <modules>
+        <module>sangeng-framework</module>
+        <module>sangeng-admin</module>
+        <module>sangeng-blog</module>
+    </modules>
+
+    <!-- 统一项目的jdk版本与编码方式-->
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>1.8</java.version>
+    </properties>
+    
+        <!-- 此标签可以进行所有子模块的依赖版本控制-->
+    <dependencyManagement>
+
+	<!-- 在dependencyManagement标签下面的dependencies标签并没有真正的导入依赖，只是对子模块的依赖版本进行了锁定-->
+    <dependencies>
+        <!-- 1 SpringBoot的依赖配置-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-dependencies</artifactId>
+            <version>2.5.0</version>
+            <!-- 这里进行了很多其他依赖的版本锁定，ctrl进入spring-boot-dependencies.xml即可查看-->
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+         <!--2 其他依赖 官方springBoot没有的依赖 按需导入即可-->
+        <!--mybatisPlus依赖-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.4.3</version>
+        </dependency>
+
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                compile命令可以将项目编译为.class文件。
+                <!--compile命令可以将项目编译为.class文件,编译插件？-->
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <!--引入上面设置好的变量，设置jdk版本与编码方式-->
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+~~~
+
+公共子模块：
+
+~~~xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <!--展示了父工程中pom.xml文件的信息，表示属于哪一个父工程，并且子模块继承了父工程的相关配置，包括（版本锁定、jdk版本、编码格式的统一）-->
+    <parent>
+        <artifactId>SGBlog</artifactId>
+        <groupId>com.sangeng</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <!--默认信息-->
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>sangeng-framework</artifactId>
+    
+<!--公共子模块中的依赖：存放其他模块中都会使用到的依赖-->
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--lombk-->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!--junit-->
+        <dependency>
+             <!--继承了父工程中spring-boot-dependencies依赖的相关配置，在spring-boot-dependencies中进行了spring-boot-starter-test版本的配置，所以这就是即使在父工程中找不到版本锁定也可以不指定版本的原因-->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+
+    </dependencies>
+</project>
+
+~~~
+
+其他子模块（非公共模块）的创建，直接导入公共子模块作为依赖：
+
+~~~xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>SGBlog</artifactId>
+        <groupId>com.sangeng</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>sangeng-admin</artifactId>
+
+    <dependencies>
+        <!--直接导入公共子模块的依赖，就能够继承公共子模块中导入的依赖了-->
+        <dependency>
+            <groupId>com.sangeng</groupId>
+            <artifactId>sangeng-framework</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+</project>
+
+~~~
 
 
 
+### 6.3 多模块项目打包
 
-### 6.2 多模块项目打包
+#### 例子1：三更博客(有公共子项目的打包)
 
-参考kana-blog模块(依赖了kana-framework模块)，配置好pom.xml文件后(如kana-blog的):
+**项目结构**：
+
+父项目：kanaBlog
+
+子项目：
+
+ - 公共子项目：kana-framework
+ - 其他项目（导入了公共子项目作为依赖）kana-admin,kana-blog 
+
+1 父项目与公共子项目都不需要配置打包模块（配置了反而不行）。
+
+父项目pom.xml:
+
+~~~xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.kana</groupId>
+    <artifactId>kanaBlog</artifactId>
+    <!--确保父工程是用pom方式打包的-->
+    <packaging>pom</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <!--父工程自动把子工程聚合起来，方便进行统一管理 （插件：install,clean...）-->
+    <modules>
+        <module>kana-framework</module>
+        <module>kana-admin</module>
+        <module>kana-blog</module>
+    </modules>
+
+
+    <!--创建父工程，进行多模块开发，提高代码复用性-->
+
+    <properties>
+        <!--统一版本、字符编码-->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>1.8</java.version>
+    </properties>
+    <dependencyManagement>
+        <!--进行版本锁定-->
+    <dependencies>
+        <!-- SpringBoot的依赖配置-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-dependencies</artifactId>
+            <version>2.5.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencyManagement>
+	<!-- 编译插件,打包的话可以不添加-->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+~~~
+
+公共子项目pom.xml文件：没有打包插件，继承的父项目也没有
+
+~~~xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>kanaBlog</artifactId>
+        <groupId>com.kana</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>kana-framework</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
+~~~
+
+
+
+2 要打包的模块：kana-blog模块(依赖了kana-framework模块)，配置好的pom.xml文件如下：有打包插件
 
 ~~~xml
 <!-- 继承本项目的父工程 -->
@@ -975,6 +1246,14 @@ class Dog {
     <artifactId>kana-blog</artifactId>
 
 
+    <dependencies>
+        <!--导入了kana-framework，依赖于kana-framework-->
+        <dependency>
+            <groupId>com.kana</groupId>
+            <artifactId>kana-framework</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
 
 <!--修改每一个有启动类的子模块。加入下面这段配置-->
     <build>
@@ -1021,13 +1300,50 @@ class Dog {
 
 
 
-最开始在root模块中进行clean，先在kana-framework模块的LifeCycle中打包(packge)kana-framework模块(因为kana-blog模块依赖于kana-framework模块),然后在kana-blog的LifeCycle中打包kana-blog模块，最后使用kana-blog中的jar包上传到服务器即可。
+其他博客的做法：最开始在root模块中进行clean + install 先在kana-framework模块的LifeCycle中打包(packge)kana-framework模块(因为kana-blog模块依赖于kana-framework模块),然后在kana-blog的LifeCycle中打包kana-blog模块，最后使用kana-blog中的jar包上传到服务器即可。
+
+我测试了一下，直接在root模块中进行clean + install ，公共子模块与其他子模块就已经都有打包好的jar包了，直接使用其他子模块的jar包在cmd中运行也是能够正常返回响应的。甚至不需要配置这么多其他的配置，直接配置一个打包插件即可（否则报错找不到主类）。
+
+##### 总结：
+
+在**有启动类的模块中配置好打包插件**后(其他模块配置了会出问题找不到主类)，**直接在root模块中进行clean + install即可**得到所有子模块(公共+其他)的jar包，并且有启动类的模块的jar包可以正常运行。
+
+最合理的思路：在root模块中clean ,在公共子模块中install,然后在有启动类的模块中packge，然后把有启动类的模块的jar包进行运行。
+
+~~~xml
+    <build>
+        <plugins>
+            <!--springboot打包插件-->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+~~~
 
 
 
-## 7 常用的maven插件：
+**容易错的地方**：
 
-- install:重新编译
-- packge:打包
-- clean:清除target中的字节码文件
+1. 父项目与公共子项目中也配置了打包插件，公共子项目默认packing标签为jar,就会去打包,因为公共子模块中没有设置主类，结果报错：找不到主类。
+2. 主类的全路径写错，没有idea提示时，就应该检查是否写错了
+
+#### 例子2：没有公共子项目的打包
+
+导入springBoot打包插件到需要打包的子模块后，直接在maven的子项目模块packge即可。
+
+只有一个子模块时使用root模块的packge也可以（springBoot打包插件导入到root模块中）。
+
+~~~xml
+    <build>
+        <plugins>
+            <!--springboot打包插件-->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+~~~
 

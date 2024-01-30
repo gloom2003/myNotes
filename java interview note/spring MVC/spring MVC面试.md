@@ -25,11 +25,11 @@
 
 ​	一种是类似JSP的开发流程:
 
-​					 把数据放入域对象中，然后进行页面跳转。
+​					 把数据放入域对象中，把jsp页面进行渲染后，写入响应体返回给前端进行页面跳转。
 
 ​	另外一种是前后端分离的开发模式，这也是目前市场上主流的模式：
 
-​					 把数据转化为json放入响应体中。
+​					 把数据转化为json放入响应体中返回给前端。
 
 ​	完整流程图如下：
 
@@ -39,7 +39,7 @@
 
 ​	1.用户发起请求被DispatchServlet所处理
 
-​	2.DispatchServlet通过HandlerMapping根据具体的请求查找能处理这个请求的Handler。**（HandlerMapping主要是处理请求和Handler方法的映射关系的）**
+​	2.DispatchServlet通过HandlerMapping根据具体的请求查找能处理这个请求的Handler(controller层中的方法)。**（HandlerMapping主要是处理请求和Handler方法的映射关系的）**
 
 ​	3.HandlerMapping返回一个能够处理请求的执行链给DispatchServlet，这个链中除了包含Handler方法也包含拦截器。
 
@@ -47,13 +47,13 @@
 
 ​	5.HandlerAdater会去执行对应的Handler方法，把数据处理转换成合适的类型然后作为方法参数传入 
 
-​	6.Handler方法执行完后的返回值会被HandlerAdapter转换成ModelAndView类型。**（HandlerAdater主要进行Handler方法的参数和返回值的处理。）**
+​	6.Handler方法执行完后的返回值会被HandlerAdapter转换成ModelAndView类型。如果使用了@ResponseBody的话返回的ModelAndView为null。会把Handler方法的返回值放入响应体中**（HandlerAdater主要进行Handler方法的参数和返回值的处理。）**
 
 ​	7.返回ModelAndView给DispatchServlet.
 
 ​	8.如果收到的ModelAndView对象不为null，则DispatchServlet把ModelAndView交给 ViewResolver 也就是视图解析器解析。
 
-​	9.ViewResolver 也就是视图解析器把ModelAndView中的viewName转换成对应的View对象返回给DispatchServlet。**（ViewResolver 主要负责把String类型的viewName转换成对应的View对象）**
+​	9.ViewResolver把ModelAndView中的viewName字符串转换成对应的View对象返回给DispatchServlet。**（ViewResolver 主要负责把String类型的viewName转换成对应的View对象）**
 
 ​	10.DispatchServlet使用View对象进行页面的展示(从域中获取数据渲染到jsp页面上，再把jsp页面的标签写入响应体中进行返回)。
 
@@ -79,5 +79,5 @@
 
 ​	7.返回ModelAndView给DispatchServlet。
 
-​	8.因为返回的ModelAndView为null,所以不用去解析视图解析和其后面的操作。
+​	8.因为返回的ModelAndView为null,所以不用去解析视图解析和其后面的操作，直接把方法的返回值写入响应体中进行返回。
 
