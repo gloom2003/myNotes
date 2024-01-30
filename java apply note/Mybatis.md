@@ -152,7 +152,7 @@ public interface CourseDao {
 
 ## 2 高效编程
 
-### 3.9.1 配置文件的代码模板
+### 3.9.1 配置mybatis配置文件的代码模板
 
 设置以后，当想要创建文件时，可以直接点击mybatis-cfg.xml文件，会自动生成含有模板的文件，达到快速创建文件的目的
 
@@ -501,11 +501,11 @@ public interface UserDao {
 
 ### 10.2 trim标签
 
-​	可以使用该标签动态的添加前缀或后缀，也可以使用该标签动态的消除前缀。
+​	可以使用该标签动态的添加前缀或后缀，也可以使用该标签动态的消除前缀或者后缀。
 
 
 
-#### 10.2.1 prefixOverrides属性
+#### 10.2.1 prefixOverrides属性 删除前缀
 
 ​	用来设置需要被清除的前缀,多个值可以用|分隔，注意|前后不要有空格，否则空格也会被匹配。例如： and|or
 
@@ -522,7 +522,7 @@ public interface UserDao {
 
 最终执行的sql为： select * from user
 
-#### 10.2.2 suffixOverrides属性
+#### 10.2.2 suffixOverrides属性 删除后缀
 
 ​	用来设置需要被清除的后缀,多个值可以用|分隔，注意|前后不要有空格。例如： and|or
 
@@ -537,7 +537,7 @@ public interface UserDao {
     </select>
 ~~~~
 
-最终执行的sql为： select * from user  去掉了后缀like
+最终执行的sql为： select * from user where 1=1 去掉了后缀like
 
 #### 10.2.3 prefix属性 添加前缀
 
@@ -943,7 +943,7 @@ mybatis是根据sql语句中的结果集的**列名**与实体类的**属性名*
     Order findById(Integer id);
 ~~~~
 
-因为期望Order中还能包含下单用户的数据，所以可以再Order中增加一个属性，用来映射查询出来的用户结果集
+因为期望Order中还能包含下单用户的数据，所以可以**在Order中增加一个属性，用来映射查询出来的用户结果集**
 
 ~~~~java
 private User user;
@@ -967,7 +967,7 @@ WHERE
 
 
 
-##### 15.1.1.1 使用ResultMap对所有字段进行映射
+##### 15.1.1.1 使用ResultMap对User user属性进行映射1
 
 ​	可以使用ResultMap设置user对象的属性的映射规则。
 
@@ -987,7 +987,7 @@ WHERE
 
     <!--Order和User关联的映射-->
     <resultMap id="orderUserMap" type="com.sangeng.pojo.Order" autoMapping="false" extends="orderMap">
-        <!--对user对象中的属性进行映射-->
+        <!--对User user对象中的属性进行映射-->
         <result property="user.id" column="uid"></result>
         <result property="user.username" column="username"></result>
         <result property="user.age" column="age"></result>
@@ -1010,9 +1010,9 @@ WHERE
     </select>
 ~~~~
 
-##### 15.1.1.2 使用ResultMap中的association进行映射
+##### 15.1.1.2 使用ResultMap中的association对User user属性进行映射2(常用)
 
-​	可以使用ResultMap中的子标签association 来设置关联实体类的映射规则.(常用)
+​	可以使用ResultMap中的子标签association 来设置关联实体类的映射规则.**(常用)**
 
 ①定义resultMap
 
@@ -1031,6 +1031,7 @@ WHERE
     <!--Order和User关联的映射（使用association）-->
     <resultMap id="orderUserMapUseAssociation" type="com.sangeng.pojo.Order" autoMapping="false" extends="orderMap">
         <!--property指定对user属性进行映射，javaType类型为com.sangeng.pojo.User-->
+        <!--对User user属性进行映射-->
         <association property="user" javaType="com.sangeng.pojo.User">
             <id property="id" column="uid"></id>
             <result property="username" column="username"></result>
@@ -1101,9 +1102,9 @@ WHERE
 
 
 
-##### 15.1.2.1 使用ResultMap中的collection
+##### 15.1.2.1 使用ResultMap中的collection对`List<Role> roles` 属性进行映射
 
-​	可以使用ResultMap中的子标签association 来设置关联实体类的映射规则.
+​	可以使用ResultMap中的子标签collection来设置关`List<Role>`集合的映射规则.
 
 
 
@@ -1120,6 +1121,7 @@ WHERE
 	
     <resultMap id="userRoleMap" type="com.sangeng.pojo.User"  extends="userMap">
         <!--ofType属性指定需要映射的集合中的泛型-->
+        <!--在这里相当于：对List<Role> roles 属性进行映射-->
         <collection property="roles" ofType="com.sangeng.pojo.Role" >
             <id property="id" column="rid"></id>
             <result property="name" column="name"></result>
@@ -1160,7 +1162,19 @@ WHERE
 
 ##### ①定义查询方法
 
-​	因为我们要分两步查询: 1.查询User 2.根据用户的id查询Role  所以我们需要定义下面两个方法，并且把对应的标签也先写好
+​	因为我们要分两步查询: 1.根据用户名查询User 2.根据用户的id查询Role  所以我们需要定义下面两个方法，并且把对应的标签也先写好
+
+User实体类：
+
+~~~java
+public class User{
+    Integer id;
+    String username;
+    Integer age;
+    String address;
+    List<Role> roles;
+}
+~~~
 
 
 
@@ -1217,6 +1231,7 @@ public interface RoleDao {
            column属性：设置当前结果集中哪列的数据作为select属性指定的查询方法中需要的参数
        -->
 	<resultMap id="userRoleMapBySelect" type="com.sangeng.pojo.User" extends="userMap">
+        <!--调用id=findRoleByUserId标签中的sql查询数据库，返回值作为List<Role> roles属性的映射数据-->
         <collection property="roles"
                     ofType="com.sangeng.pojo.Role"
                     select="com.sangeng.dao.RoleDao.findRoleByUserId"
@@ -1396,11 +1411,11 @@ public class User implements Serializable
 
 #### 17.2.2 触发案例
 
-​	注意：只在sqlsession调用了**close()或者commit()**后的数据才会进入二级缓存。
+​	注意：只有在sqlsession调用了**close()或者commit()**后的一级缓存中数据才会进入二级缓存。
 
 ![https://image.itbaima.net/images/173/image-20231024165155728.png](https://image.itbaima.net/images/173/image-20231024165155728.png)
 
-代码解释：当UserDao接口开启二级缓存后，执行session.close()方法关闭session连接后，会把一级缓存中的数据（即findById(2)的查询结果）存放到二级缓存中(即UserDao字节码对象创建出来的mapper)，即使下面新建了一个新的session连接，但是只要使用的是UserDao字节码对象创建出来的mapper，就会走二级缓存，不执行sql语句。
+代码解释：第一次执行userDao.findById(2)后会把查询到的数据存储到当前session的一级缓存中，当UserDao接口开启二级缓存的配置后，执行session.close()方法关闭session连接后，会把当前sess一级缓存中的数据（即findById(2)的查询结果）存放到二级缓存中(即UserDao字节码对象创建出来的mapper)，即使下面新建了一个新的session连接，但是只要使用的是UserDao字节码对象创建出来的mapper，就会走二级缓存，不执行sql语句。
 
 
 

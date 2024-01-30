@@ -170,7 +170,7 @@ public class MPTest {
 
 ## 3.常用设置
 
-### 汇总：
+### 配置文件汇总：
 
 ~~~yml
 spring:
@@ -640,7 +640,7 @@ MP写法如下：
 
 #### 示例二
 
-> select(Class<T> entityClass, Predicate<TableFieldInfo> predicate)
+> `select(Class<T> entityClass, Predicate<TableFieldInfo> predicate)`
 
 方法的第一个参数为实体类的字节码对象，第二个参数为Predicate类型，可以使用lambda的写法，过滤要查询的字段 (**主键除外**) 。
 
@@ -901,7 +901,7 @@ public class Orders  {
 
 ~~~~java
 public interface UserMapper extends BaseMapper<User> {
-
+	// 自定义方法
     User findMyUser(Long id);
 }
 
@@ -1118,6 +1118,7 @@ public interface OrdersMapper extends BaseMapper<Orders> {
         page.setSize(2);
         //设置当前页码
         page.setCurrent(2);
+        // 查询到的数据在page对象中，不需要接收返回值
         ordersMapper.findAllOrders(page);
         System.out.println(page.getRecords());
         System.out.println(page.getTotal());
@@ -1243,7 +1244,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
 
 
 
-## 9.代码生成器
+## 2级 9. 代码生成器
+
+### 3级 使用代码生成器 方法1
 
 ​	原理：连接到我们的数据库，找到对应的表，根据字段名等自动生成实体类。
 
@@ -1315,7 +1318,7 @@ public class GeneratorTest {
 		strategyConfig.setColumnNaming(NamingStrategy.underline_to_camel);
 		// 是否开启lombok，开启则实体类上有@Data注解
 		strategyConfig.setEntityLombokModel(true);
-		// 开启RestController
+		// 开启RestController，开启则controller层上有@RestController注解
 		strategyConfig.setRestControllerStyle(true);
 		generator.setStrategy(strategyConfig);
 		generator.setTemplateEngine(new FreemarkerTemplateEngine());
@@ -1325,6 +1328,435 @@ public class GeneratorTest {
 	}
 }
 ~~~~
+
+
+
+### 使用代码生成器 方法2
+
+#### ①添加依赖
+
+~~~xml
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-generator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.velocity</groupId>
+            <artifactId>velocity-engine-core</artifactId>
+        </dependency>
+~~~
+
+
+
+#### ②生成
+
+~~~java
+/**
+ * mp代码生成工具类
+ * 可以选择安装MyBatisX插件生成
+ * 或者执行该类工具方法生成
+ */
+public class CodeGenerator {
+
+    /**
+     * <p>
+     * 读取控制台内容
+     * </p>
+     */
+    public static String scanner(String tip) {
+        Scanner scanner = new Scanner(System.in);
+        StringBuilder help = new StringBuilder();
+        help.append("请输入" + tip + "：");
+        System.out.println(help);
+        if (scanner.hasNext()) {
+            String ipt = scanner.next();
+            if (StringUtils.isNotBlank(ipt)) {
+                return ipt;
+            }
+        }
+        throw new MybatisPlusException("请输入正确的" + tip + "！");
+    }
+
+    public static void generate() {
+        // 代码生成器
+        AutoGenerator mpg = new AutoGenerator();
+
+        String username = scanner("用户名"),
+                password = scanner("密码"),
+                moduleName = scanner("模块名"),
+                outputDir = scanner("输出目录");
+        String[] tableNameArray = scanner("表名，多个英文逗号分割").split(",");
+
+        // 全局配置
+        GlobalConfig gc = new GlobalConfig();
+        gc.setOutputDir(outputDir);
+        gc.setAuthor("RubinChu");
+        gc.setOpen(false);
+        gc.setSwagger2(false);
+        gc.setMapperName("%sMapper");
+        gc.setXmlName("%sMapper");
+        gc.setServiceName("I%sService");
+        gc.setServiceImplName("%sServiceImpl");
+        gc.setIdType(IdType.INPUT);
+        gc.setBaseColumnList(true);
+        gc.setBaseResultMap(true);
+        gc.setDateType(DateType.ONLY_DATE);
+        gc.setFileOverride(true);
+        mpg.setGlobalConfig(gc);
+
+        // 数据源配置
+        DataSourceConfig dsc = new DataSourceConfig();
+        dsc.setUrl("jdbc:mysql://127.0.0.1:3306/r_pan?characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true");
+        dsc.setDbType(DbType.MYSQL);
+        dsc.setDriverName("com.mysql.cj.jdbc.Driver");
+        dsc.setUsername(username);
+        dsc.setPassword(password);
+        mpg.setDataSource(dsc);
+
+        // 包配置
+        PackageConfig pc = new PackageConfig();
+        pc.setModuleName(moduleName);
+        pc.setParent("");
+        mpg.setPackageInfo(pc);
+
+        // 自定义配置
+        InjectionConfig cfg = new InjectionConfig() {
+            @Override
+            public void initMap() {
+                // to do nothing
+            }
+        };
+
+        // 如果模板引擎是 freemarker
+//        String templatePath = "/templates/mapper.xml.ftl";
+        // 如果模板引擎是 velocity
+        String templatePath = "/templates/mapper.xml.vm";
+
+        // 自定义输出配置
+        List<FileOutConfig> focList = new ArrayList<>();
+        // 自定义配置会被优先输出
+        focList.add(new FileOutConfig(templatePath) {
+            @Override
+            public String outputFile(TableInfo tableInfo) {
+                // 自定义输出文件名 ， 如果你 Entity 设置了前后缀、此处注意 xml 的名称会跟着发生变化！！
+                return outputDir + File.separator + pc.getParent().replace(".", File.separator) + File.separator + "mapper" + File.separator + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
+            }
+        });
+        /*
+        cfg.setFileCreate(new IFileCreate() {
+            @Override
+            public boolean isCreate(ConfigBuilder configBuilder, FileType fileType, String filePath) {
+                // 判断自定义文件夹是否需要创建
+                checkDir("调用默认方法创建的目录，自定义目录用");
+                if (fileType == FileType.MAPPER) {
+                    // 已经生成 mapper 文件判断存在，不想重新生成返回 false
+                    return !new File(filePath).exists();
+                }
+                // 允许生成模板文件
+                return true;
+            }
+        });
+        */
+        cfg.setFileOutConfigList(focList);
+        mpg.setCfg(cfg);
+
+        // 配置模板
+        TemplateConfig templateConfig = new TemplateConfig();
+
+        // 配置自定义输出模板
+        //指定自定义模板路径，注意不要带上.ftl/.vm, 会根据使用的模板引擎自动识别
+        // templateConfig.setEntity("templates/entity2.java");
+        // templateConfig.setService();
+        // templateConfig.setController();
+
+        templateConfig.setXml(null);
+        mpg.setTemplate(templateConfig);
+
+        // 策略配置
+        StrategyConfig strategy = new StrategyConfig();
+        strategy.setNaming(NamingStrategy.underline_to_camel);
+        strategy.setColumnNaming(NamingStrategy.underline_to_camel);
+//        strategy.setSuperEntityClass("你自己的父类实体,没有就不用设置!");
+        strategy.setEntityLombokModel(false);
+        strategy.setRestControllerStyle(true);
+        strategy.setEntityTableFieldAnnotationEnable(true);
+        // 公共父类
+//        strategy.setSuperControllerClass("你自己的父类控制器,没有就不用设置!");
+        // 写于父类中的公共字段
+//        strategy.setSuperEntityColumns("id");
+        strategy.setInclude(tableNameArray);
+        strategy.setControllerMappingHyphenStyle(true);
+        strategy.setTablePrefix(pc.getModuleName() + "_");
+        mpg.setStrategy(strategy);
+        mpg.setTemplateEngine(new VelocityTemplateEngine());
+        mpg.execute();
+    }
+
+}
+
+~~~
+
+
+
+### Mybatis-X 插件生成代码
+
+idea连接数据库，在数据库面板中选择需要生成的表，右键生成，填写相关的信息即可：
+
+选择表
+
+![](img/选择表.png)
+
+参考配置：
+
+配置信息1
+
+![](img/配置信息1.png)
+
+配置信息2.png
+
+![](img/配置信息2.png)
+
+
+
+## EasyCode生成代码
+
+也能够让我们一键生成实体类，Mapper接口，Service，Controller等全套代码 。
+
+使用方法：
+
+1. 在idea的数据库模块选择对应的表，右键相应的表，选择EasyCode - > Generate Code ![](img/easycode.png)
+2. RemovePre配置要删除的数据库表名称的前缀，如：表名：sg_article,删除sg_后为article,easyCode会找到sg_article表来生成代码。再选择生成到哪一个模块、生成到哪一个路径、生成什么文件，最后点击ok即可。
+
+#### EasyCode代码模板
+
+##### 生成实体类
+
+~~~~java
+##导入宏定义
+$!{define.vm}
+
+##保存文件（宏定义）
+#save("/entity", ".java")
+
+##包路径（宏定义）
+#setPackageSuffix("entity")
+
+##自动导入包（全局变量）
+$!{autoImport.vm}
+
+import java.io.Serializable;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+##表注释（宏定义）
+#tableComment("表实体类")
+@SuppressWarnings("serial")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@TableName("$!{tableInfo.obj.name}")
+public class $!{tableInfo.name}  {
+#foreach($column in $tableInfo.pkColumn)
+    #if(${column.comment})//${column.comment}#end
+@TableId
+    private $!{tool.getClsNameByFullName($column.type)} $!{column.name};
+#end
+
+#foreach($column in $tableInfo.otherColumn)
+    #if(${column.comment})//${column.comment}#end
+
+    private $!{tool.getClsNameByFullName($column.type)} $!{column.name};
+#end
+
+
+
+}
+
+~~~~
+
+##### 生成mapper
+~~~~java
+##导入宏定义
+$!{define.vm}
+
+##设置表后缀（宏定义）
+#setTableSuffix("Mapper")
+
+##保存文件（宏定义）
+#save("/mapper", "Mapper.java")
+
+##包路径（宏定义）
+#setPackageSuffix("mapper")
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+
+
+##表注释（宏定义）
+#tableComment("表数据库访问层")
+public interface $!{tableName} extends BaseMapper<$!tableInfo.name> {
+
+}
+
+~~~~
+
+##### 生成Service接口
+~~~~java
+##导入宏定义
+$!{define.vm}
+
+##设置表后缀（宏定义）
+#setTableSuffix("Service")
+
+##保存文件（宏定义）
+#save("/service", "Service.java")
+
+##包路径（宏定义）
+#setPackageSuffix("service")
+
+import com.baomidou.mybatisplus.extension.service.IService;
+
+
+##表注释（宏定义）
+#tableComment("表服务接口")
+public interface $!{tableName} extends IService<$!tableInfo.name> {
+
+}
+
+~~~~
+
+
+##### 生成Service实现类
+~~~~java
+##导入宏定义
+$!{define.vm}
+
+##设置表后缀（宏定义）
+#setTableSuffix("ServiceImpl")
+
+##保存文件（宏定义）
+#save("/service/impl", "ServiceImpl.java")
+
+##包路径（宏定义）
+#setPackageSuffix("service.impl")
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+
+##表注释（宏定义）
+#tableComment("表服务实现类")
+@Service("$!tool.firstLowerCase($tableInfo.name)Service")
+public class $!{tableName} extends ServiceImpl<$!{tableInfo.name}Mapper, $!{tableInfo.name}> implements $!{tableInfo.name}Service {
+
+}
+
+~~~~
+
+##### 生成Controller层
+
+一般不使用，controller层的变化太多了
+
+~~~java
+##导入宏定义
+$!{define.vm}
+
+##设置表后缀（宏定义）
+#setTableSuffix("Controller")
+
+##保存文件（宏定义）
+#save("/controller", "Controller.java")
+
+##包路径（宏定义）
+#setPackageSuffix("controller")
+
+##定义服务名
+#set($serviceName = $!tool.append($!tool.firstLowerCase($!tableInfo.name), "Service"))
+
+##定义实体对象名
+#set($entityName = $!tool.firstLowerCase($!tableInfo.name))
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.api.ApiController;
+import com.baomidou.mybatisplus.extension.api.R;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import $!{tableInfo.savePackageName}.entity.$!tableInfo.name;
+import $!{tableInfo.savePackageName}.service.$!{tableInfo.name}Service;
+import org.springframework.web.bind.annotation.*;
+
+import javax.annotation.Resource;
+import java.io.Serializable;
+import java.util.List;
+
+##表注释（宏定义）
+#tableComment("表控制层")
+@RestController
+@RequestMapping("$!tool.firstLowerCase($!tableInfo.name)")
+public class $!{tableName} extends ApiController {
+    /**
+     * 服务对象
+     */
+    @Resource
+    private $!{tableInfo.name}Service $!{serviceName};
+
+    /**
+     * 分页查询所有数据
+     *
+     * @param page 分页对象
+     * @param $!entityName 查询实体
+     * @return 所有数据
+     */
+    @GetMapping
+    public R selectAll(Page<$!tableInfo.name> page, $!tableInfo.name $!entityName) {
+        return success(this.$!{serviceName}.page(page, new QueryWrapper<>($!entityName)));
+    }
+
+    /**
+     * 通过主键查询单条数据
+     *
+     * @param id 主键
+     * @return 单条数据
+     */
+    @GetMapping("{id}")
+    public R selectOne(@PathVariable Serializable id) {
+        return success(this.$!{serviceName}.getById(id));
+    }
+
+    /**
+     * 新增数据
+     *
+     * @param $!entityName 实体对象
+     * @return 新增结果
+     */
+    @PostMapping
+    public R insert(@RequestBody $!tableInfo.name $!entityName) {
+        return success(this.$!{serviceName}.save($!entityName));
+    }
+
+    /**
+     * 修改数据
+     *
+     * @param $!entityName 实体对象
+     * @return 修改结果
+     */
+    @PutMapping
+    public R update(@RequestBody $!tableInfo.name $!entityName) {
+        return success(this.$!{serviceName}.updateById($!entityName));
+    }
+
+    /**
+     * 删除数据
+     *
+     * @param idList 主键结合
+     * @return 删除结果
+     */
+    @DeleteMapping
+    public R delete(@RequestParam("idList") List<Long> idList) {
+        return success(this.$!{serviceName}.removeByIds(idList));
+    }
+}
+
+~~~
 
 
 
@@ -1427,7 +1859,7 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
 
 ​	MP也支持逻辑删除的处理。我们只需要配置好逻辑删除的实体字段名，代表删除的字段值和代表未删除的字段值后即可。
 
-​	注意：如果3.3.0版本之前还需要在对应的字段上加上`@TableLogic`注解
+​	**注意**：如果3.3.0版本之前还需要在对应的字段上加上`@TableLogic`注解
 
 ~~~~yaml
 mybatis-plus:
@@ -1438,21 +1870,28 @@ mybatis-plus:
       logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
 ~~~~
 
+**注意**：
 
+1 使用mp执行select语句时也会在sql中自动加上delFlog字段，如： ... where ... and delFlog = 0
+
+2 配置后，使用删除方法如：removeById(obj)时:
+
+- 如果obj没有delFlag属性时，执行的sql为:`delete from 表 where id = id`，
+- 如果有，执行的sql语句为:`wherr del_flag = 1`
 
 ## 3.乐观锁
 
 ​	作用：解决**并发操作时数据冲突问题**的一种方式。**如**：对price字段 值为0，第一个线程想要加10，在执行的过程中，另一个线程执行完了加20的操作，此时price的值为20，第一个线程执行完毕后，把结果10覆盖price的20，造成了数据的错误,把结果从30变成了10。
 
-​	并发操作时,我们需要保证对数据的操作不发生冲突。乐观锁就是其中一种方式。乐观锁就是先加上不存在并发冲突问题，在进行实际数据操作的时候再检查是否冲突。
+​	并发操作时,我们需要保证对数据的操作不发生冲突。乐观锁就是其中一种方式。乐观锁就是先假设不存在并发冲突问题，在进行实际数据操作的时候再检查是否冲突。
 
 ​	我们在使用乐观锁时一般在表中**增加一个version列**。用来记录我们对每天记录操作的版本。**每次对某条记录进行操作时，对应的版本也需要+1。**
 
-​	然后我们在每次要进行更新操作时，会先查询对应数据的version值。在执行更新时， where子句**会添加上 where version = 老版本 来对老版本进行修改。**
+​	然后我们在每次要进行更新操作时，会先查询对应数据的version值。在执行更新时， where子句**为 where ... and version = 老版本 来对老版本进行修改。**
 
 ​	如果在查询老版本号到更新操作的中间时刻有其他人更新了这条数据，**version发生了改变**，那么这次更新语句就会**更新失败**。
 
-​	这里在更新时对version的操作如果有我们自己做就会显的有点麻烦。所以MP提供了乐观锁插件。
+​	这里在更新时对version的操作如果有我们自己做就会显的有点麻烦。所以**MP提供了乐观锁插件**。
 
 ​	使用后我们就可以非常方便的实现对version的操作。
 
@@ -1496,7 +1935,7 @@ private Integer version;
 
 ③更新
 
-**注意：在更新前我们一定要先执行查询语句查询到version值后再设置到实体类上再进行更新才能生效**
+**注意：在更新前我们一定要先执行查询语句查询到包含version值的实体类后,再对实体类进行更新才能生效**
 
 ~~~~java
     @Test
@@ -1504,8 +1943,9 @@ private Integer version;
         //查询id为3的数据
         QueryWrapper<Orders> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("id",3);
+        // 实体类中包含version
         Orders orders = ordersMapper.selectOne(queryWrapper);
-
+		// new Orders()对象后，手动设置version值后进行更新是否能够生效呢？
 
         //对id为3的数据进行更新  把price修改为88
         orders.setPrice(88);
@@ -1527,6 +1967,8 @@ private Integer version;
 
 
 ### 3.2 多插件配置问题(注意顺序)
+
+​	其他顺序具体参考mp的官方文档。
 
 ​	我们在使用3.4.0版本以后的MP时，如果需要用到多个插件的话要注意。在配置的时候只需要注入一个MybatisPlusInterceptor 对象，把插件对象添加到MybatisPlusInterceptor 对象中即可。
 
@@ -1551,12 +1993,6 @@ private Integer version;
 
 
 ## 4:SGBlog中与MP相关的bug
-
-### (1)update（obj）方法
-
-​	设置obj的del_flag属性后sql语句中并没有del_flag，即不会更新，想要删除只能使用removeById方法或自定义
-
-### (2)removeById(obj)方法，obj没有del_flag属性时，执行的sql为delete语句
 
 ### (3)updateById()与updateBatchById()方法
 

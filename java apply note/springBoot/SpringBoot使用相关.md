@@ -6,7 +6,28 @@
 
 ​	 原理是**使用了两个ClassLoder(类加载器)**,一个ClassLoader加载哪些不会改变的类(第三方jar包),另一个ClassLoader加载会更改的类.称之为Restart ClassLoader,这样在有代码更改的时候,原来的Restart Classloader被丢弃,重新创建一个Restart ClassLoader,由于需要加载的类相比较少,所以实现了较快的重启。
 
-​	
+​	查看方式：
+
+~~~java
+    @GetMapping("/test")
+    public R test(@NotBlank(message = "注意：name不能为空哦") String name){
+        // 查看当前线程的类加载器
+        System.out.println(Thread.currentThread().getContextClassLoader());
+        return R.success(name);
+    }
+~~~
+
+使用热部署后会打印出：
+
+~~~java
+TomcatEmbeddedWebappClassLoader
+  context: ROOT
+  delegate: true
+----------> Parent Classloader:
+org.springframework.boot.devtools.restart.classloader.RestartClassLoader@1f79e5d8
+~~~
+
+
 
 ### 1.1 准备工作
 
@@ -250,7 +271,7 @@ public class User {
         <dependency>
             <groupId>org.mybatis.spring.boot</groupId>
             <artifactId>mybatis-spring-boot-starter</artifactId>
-            <version>2.2.0</version>
+            <version>2.2.0</version><!--非官方的，需要指定版本，springBoot父工程中没有-->
         </dependency>
         <!--mysql驱动-->
         <dependency>
@@ -277,7 +298,11 @@ spring:
 mybatis:
   mapper-locations: classpath:mapper/*Mapper.xml # mapper映射文件路径
   type-aliases-package: com.sangeng.domain   # 配置哪个包下的类有默认的别名
-
+  configuration:
+    map-underscore-to-camel-case: true # 开启驼峰命名映射
+logging:
+  level:
+    com.mvcDemo.mapper: DEBUG # 打印mybatis的日志
 ~~~~
 
 #### ④编写Mapper接口   
@@ -435,7 +460,13 @@ public class ResponseController {
 
 #### 4.5.1 什么是跨域
 
-​	浏览器出于安全的考虑（移动端发起请求并不会发生这种错误），使用 XMLHttpRequest对象(AJAX)发起 HTTP请求时必须遵守同源策略，否则就是跨域的HTTP请求，默认情况下是被禁止的。 同源策略要求源相同才能正常进行通信，即**协议、域名、端口号都完全一致(主要是端口不同导致的)**。 
+​	浏览器**出于安全**的考虑（移动端发起请求并不会发生这种错误），**使用 XMLHttpRequest对象(AJAX)发起 HTTP请求时必须遵守同源策略，否则就是跨域的HTTP请求**，默认情况下是被禁止的。 同源策略要求源相同才能正常进行通信，即**协议、域名、端口号都完全一致(通常是端口不同导致的)**。 
+
+跨域触发条件：ajax请求的发起者与服务者的协议、域名、端口任意一个不一致时。
+
+例如：使用前端程序在loaclhost的8090端口上发起一个ajax请求，请求的url为http:localhost:10010,此时ajax请求的发起者与服务者的端口不同，于是出现跨域问题。
+
+跨域问题: 浏览器禁止请求的发起者与服务端发生跨域ajax请求，如果发起的请求是跨域的，就会被浏览器拦截。
 
 为什么移动端发起请求并不会发生这种错误？
 
@@ -1374,6 +1405,8 @@ spring:
 
 ### 9.1开跑自启：启动项目时自动执行一些操作：
 
+① 实现 CommandLineRunner接口后注入容器中即可：
+
 ~~~java
 /**
  * 自定义一个类implements CommandLineRunner接口来指示springBoot程序启动时要做的一些事情
@@ -1409,13 +1442,96 @@ public class ViewCountRunner implements CommandLineRunner {
 
 ~~~
 
+② 容器启动成功后会向它的Lintener发送很多事件，这里只监听其中的ApplicationReadyEvent事件
+
+~~~java
+/**
+ * 项目启动成功日志打印监听器
+ */
+@Component
+@Slf4j
+public class StartedListener implements ApplicationListener<ApplicationReadyEvent> {
+
+    /**
+     * 项目启动成功将会在日志中输出对应的启动信息
+     * 
+     * @param applicationReadyEvent
+     */
+    @Override
+    public void onApplicationEvent(ApplicationReadyEvent applicationReadyEvent) {
+        // 获取配置文件的端口信息
+        String serverPort = applicationReadyEvent.getApplicationContext().getEnvironment().getProperty("server.port");
+        String serverUrl = String.format("http://%s:%s", "127.0.0.1", serverPort);
+        // 使用AnsiOutput输出带颜色的日志
+        log.info(AnsiOutput.toString(AnsiColor.BRIGHT_BLUE, "r pan server started at: ", serverUrl));
+        if (checkShowServerDoc(applicationReadyEvent.getApplicationContext())) {
+            log.info(AnsiOutput.toString(AnsiColor.BRIGHT_BLUE, "r pan server's doc started at:", serverUrl + "/doc.html"));
+        }
+        log.info(AnsiOutput.toString(AnsiColor.BRIGHT_YELLOW, "r pan server has started successfully!"));
+    }
+
+    /**
+     * 校验是否开启了接口文档
+     *
+     * @param applicationContext
+     * @return
+     */
+    private boolean checkShowServerDoc(ConfigurableApplicationContext applicationContext) {
+        // 检查配置文件中swagger2.show的值是否为true，返回Boolean类型 和 检查容器中是否有名为swagger2Config的Bean
+        return applicationContext.getEnvironment().getProperty("swagger2.show", Boolean.class, true) && applicationContext.containsBean("swagger2Config");
+    }
+
+}
+
+~~~
+
+
+
+
+
 ### 9.2 定时任务：使用cron表达式实现定时任务
 
- 在线Cron表达式生成器：
+定时任务的实现方式有很多，比如XXL-Job等。但是其实核心功能和概念都是类似的，很多情况下只是调用的API不同而已。
 
-[https://www.bejson.com/ot](https://www.bejson.com/ot)
+这里就用SpringBoot为我们提供的定时任务的API来实现一个定时任务:
 
+#### 具体实现
 
+① 使用@EnableScheduling注解开启定时任务功能
+
+​	我们可以在配置类上加上@EnableScheduling
+
+~~~~java
+@SpringBootApplication
+@MapperScan("com.sangeng.mapper")
+@EnableScheduling
+public class SanGengBlogApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(SanGengBlogApplication.class,args);
+    }
+}
+~~~~
+
+② 确定定时任务执行代码，并配置任务执行时间
+
+​	使用@Scheduled注解标识需要定时执行的代码。注解的cron属性相当于是任务的执行时间。目前可以使用 0/5 * * * * ? 进行测试，代表从0秒开始，每隔5秒执行一次。 
+
+​	注意：对应的bean要注入容器，否则不会生效。
+
+~~~~java
+@Component
+public class TestJob {
+
+    @Scheduled(cron = "0/5 * * * * ?")
+    public void testJob(){
+        //要执行的代码
+        System.out.println("定时任务执行了");
+    }
+}
+
+~~~~
+
+#### 例子
 
 ~~~java
 @Component
@@ -1427,20 +1543,7 @@ public class UpdateViewCountJob {
     @Autowired
     private RedisCache redisCache;
 
-    /**
-     * 
-     * cron表达式的使用  详细版本可参考sanGeng blog.md
-     * 1.允许的特殊字符：, - * /    四个字符
-     * 2.日期和星期两个部分如果其中一个部分设置了值，则另一个必须设置为 “ ? ”。 即：
-     * * 例如：
-     *      *
-     *      *        日期  星期
-     *      * 0\* * * 2 * ?
-     *      *  和
-     *      * 0\* * * ? * 2
-     *      *
-     * 3.cron表达式由七部分组成（一般只写6部分），中间由空格分隔，其中最后一个部分(年)一般该项不设置，直接忽略掉，即可为空值
-
+    /*
      每隔5分钟的第1秒把Redis中的访问量数据写入数据库中
      */
     @Scheduled(cron = "1 0/5 * * * ?")
@@ -1463,6 +1566,221 @@ public class UpdateViewCountJob {
 }
 
 ~~~
+
+####  cron 表达式语法
+
+​	 在线Cron表达式生成器：
+
+​	https://www.bejson.com/ot
+
+​	cron表达式是用来设置定时任务执行时间的表达式。
+
+​	很多情况下我们可以用 ： [在线Cron表达式生成器](https://www.bejson.com/othertools/cron/) 来帮助我们理解cron表达式和书写cron表达式。
+
+​	但是我们还是有需要学习对应的Cron语法的，这样可以更有利于我们书写Cron表达式。
+
+#### 常用表达式例子
+
+~~~
+
+
+  （1）0/2 * * * * ?   表示每2秒 执行任务
+
+  （1）0 0/2 * * * ?    表示每2分钟 执行任务
+
+  （1）0 0 2 1 * ?   表示在每月的1日的凌晨2点调整任务
+
+  （2）0 15 10 ? * MON-FRI   表示周一到周五每天上午10:15执行作业
+
+  （3）0 15 10 ? 6L 2002-2006   表示2002-2006年的每个月的最后一个星期五上午10:15执行作
+
+  （4）0 0 10,14,16 * * ?   每天上午10点，下午2点，4点 
+
+  （5）0 0/30 9-17 * * ?   朝九晚五工作时间内每半小时 
+
+  （6）0 0 12 ? * WED    表示每个星期三中午12点 
+
+  （7）0 0 12 * * ?   每天中午12点触发 
+
+  （8）0 15 10 ? * *    每天上午10:15触发 
+
+  （9）0 15 10 * * ?     每天上午10:15触发 
+
+  （10）0 15 10 * * ?    每天上午10:15触发 
+
+  （11）0 15 10 * * ? 2005    2005年的每天上午10:15触发 
+
+  （12）0 * 14 * * ?     在每天下午2点到下午2:59期间的每1分钟触发 
+
+  （13）0 0/5 14 * * ?    在每天下午2点到下午2:55期间的每5分钟触发 
+
+  （14）0 0/5 14,18 * * ?     在每天下午2点到2:55期间和下午6点到6:55期间的每5分钟触发 
+
+  （15）0 0-5 14 * * ?    在每天下午2点到下午2:05期间的每1分钟触发 
+
+  （16）0 10,44 14 ? 3 WED    每年三月的星期三的下午2:10和2:44触发 
+
+  （17）0 15 10 ? * MON-FRI    周一至周五的上午10:15触发 
+
+  （18）0 15 10 15 * ?    每月15日上午10:15触发 
+
+  （19）0 15 10 L * ?    每月最后一日的上午10:15触发 
+
+  （20）0 15 10 ? * 6L    每月的最后一个星期五上午10:15触发 
+
+  （21）0 15 10 ? * 6L 2002-2005   2002年至2005年的每月的最后一个星期五上午10:15触发 
+
+  （22）0 15 10 ? * 6#3   每月的第三个星期五上午10:15触发
+~~~
+
+
+
+如上我们用到的 0/5 * * * * ? *，cron表达式由七部分组成，中间由空格分隔，这七部分从左往右依次是：
+
+秒（0~59），分钟（0~59），小时（0~23），日期（1-月最后一天），月份（1-12），星期几（1-7,1表示星期日），年份（一般该项不设置，直接忽略掉，即可为空值）
+
+
+
+通用特殊字符：, - * /  (可以在任意部分使用)
+
+> *
+
+星号表示任意值，例如：
+
+```
+* * * * * ?
+```
+
+表示 “ 每年每月每天每时每分每秒 ” 。
+
+,可以用来定义列表，例如 ：  
+
+```
+1,2,3 * * * * ?
+```
+
+表示 “ 每年每月每天每时每分的每个第1秒，第2秒，第3秒 ” 。
+
+
+
+> -
+
+定义范围，例如：
+
+```
+1-3 * * * * ?
+```
+
+表示 “ 每年每月每天每时每分的第1秒至第3秒 ”。
+
+
+
+> /
+
+每隔多少，例如
+
+```
+5/10 * * * * ?
+```
+
+表示 “ 每年每月每天每时每分，从第5秒开始，每10秒一次 ” 。即 “ / ” 的左侧是开始值，右侧是间隔。如果是从 “ 0 ” 开始的话，也可以简写成 “ /10 ” 
+
+~~~
+     cron = "0 0/10 * * * ?" 的执行时机有：
+     2023-12-24 16:40:00
+     2023-12-24 16:50:00
+     2023-12-24 17:00:00 
+~~~
+
+
+
+日期部分还可允许特殊字符： ? L W
+
+星期部分还可允许的特殊字符: ? L # 
+
+
+
+> ?
+
+只可用在日期和星期部分。表示没有具体的值，**使用?要注意冲突**。日期和星期两个部分如果其中一个部分设置了值，则另一个必须设置为 “ ? ”。
+
+例如：
+
+~~~~
+0\* * * 2 * ?
+ 和
+0\* * * ? * 2
+~~~~
+
+同时使用?和同时不使用?都是不对的
+
+例如下面写法就是错的
+
+~~~~
+* * * 2 * 2
+ 和
+* * * ? * ?
+
+~~~~
+
+
+
+
+
+> W
+
+只能用在日期中，表示当月中最接近某天的工作日(Work)
+
+```
+0 0 0 31W * ?
+```
+
+表示最接近31号的工作日，如果31号是星期六，则表示30号，即星期五，如果31号是星期天，则表示29号，即星期五。如果31号是星期三，则表示31号本身，即星期三。
+
+
+
+> L
+
+表示最后（Last）,**只能用在日期和星期中**
+
+
+
+(1)在日期中表示每月最后一天，在一月份中表示31号，在六月份中表示30号
+
+也可以表示每月倒是第N天。例如： L-2表示每个月的倒数第2天
+
+
+
+ 0 0 0 LW * ?
+ LW可以连起来用，表示每月最后一个工作日，即每月最后一个星期五
+
+
+
+(2)在星期中表示7即星期六
+
+
+~~~~
+0 0 0 ? * L
+表示每个星期六的0点整
+0 0 0 ? * 6L
+若前面有其他值的话，则表示最后一个星期几，即每月的最后一个星期五
+~~~~
+
+
+
+
+
+
+> # 
+
+`#`号只能用在星期中，表示第几个星期几
+
+~~~~
+0 0 0 ? * 6#3
+表示每个月的第三个星期五。
+~~~~
+
+
 
 
 

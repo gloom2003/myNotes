@@ -12,7 +12,7 @@ Shell的两种主要语法类型有Bourne和C,这两种语法彼此
 不兼容。Bourne家族主要包括sh、ksh、Bash(Linux的标准)、psh、
 zsh;C家族主要包括：csh、tcsh
 
-### 1.1 echo 相当于打印命令 
+### 1.1 echo 相当于println()命令 
 
 #### 1.1.1 $的使用 调用环境变量
 
@@ -22,7 +22,7 @@ zsh;C家族主要包括：csh、tcsh
 echo $SHELL
 ~~~
 
-打印的内容中**有空格时需要使用双引号包裹**起来,**注意：不能打印！号**
+打印的内容中**有空格时需要使用双引号包裹**起来
 
 ~~~sh
 echo "hello world"
@@ -106,7 +106,8 @@ echo -e "\e[1;31m error \e[0m"
 
 ```sh
 # 在hello.sh目录下时：
-chmod 755 hello.sh
+# chmod 755 hello.sh
+chmod u+x hello.sh
 ./hello.sh # 注意：不能使用省略 ./ ,否则不能执行这个脚本，而是会去/bin目录下面寻找命令
 ```
 
@@ -171,7 +172,9 @@ a=1
 export a # 把a提升为全局变量
 ~~~
 
-**注意**:在子shell中能够看到全局变量，也可以进行修改，但是，**在子shell中修改后的结果只作用于这个子shell中**，其他的子shell或父shell无法看到修改后的结果，在他们看来，修改后的全局变量的值仍然不变。
+**注意**:在子shell中能够看到全局变量，也可以进行修改，但是，**在子shell中修改后的结果只作用于这个子shell中**，其他的子shell或父shell无法看到修改后的结果，在他们看来，修改后的全局变量的值仍然不变
+
+（相当于：在子shell中的全局变量其实是一个局部变量但是被赋值为全局变量的值，所以在子shell中能够看到全局变量，也可以进行修改，其他的子shell或父shell无法看到修改后的结果）。
 
 #### 撤销变量
 
@@ -227,11 +230,11 @@ echo "$0  $1  $2"
 
 （功能描述：获取所有输入参数个数，常用于循环）。
 
-#### $*、$@ 获取参数整体
+#### $*、$@ 获取传入的所有参数
 
-**不被双引号“”包含时**，都以$1 $2 …$n的形式输出所有参数。
+1 当$*与$@ **不被双引号“”包含时**，$*与$@都一样，是一个存储着所有参数的数组，使用增强for循环遍历，都以$1 $2 …$n的形式输出所有参数。
 
-当它们**被双引号“”包含时**，“$*”会将所有的参数作为一个整体，以“$1 $2 …$n”的形式输出所有参数；
+2 当它们**被双引号“”包含时**，“$*”会将所有的参数作为一个整体，以“$1 $2 …$n”的形式输出所有参数；
 
 “$@”会将各个参数分开，以“$1” “$2”…”$n”的形式输出所有参数。
 
@@ -242,8 +245,9 @@ echo "$0  $1  $2"
 echo '=======$*========'
 for param in "$*" # 必须使用""包裹起来才能够看出$*与$@的区别，否则两个的作用都可以遍历到每一个参数
 do
-	echo param # 结果 a b c d
+	echo param # 输入: a b c d 结果: a b c d
 done
+
 echo '=======$@========'
 for param in "$@"
 do
@@ -258,17 +262,17 @@ d
 
 
 
-#### $? 获取上一次命令的返回值
+#### $? 获取上一次命令的返回状态
 
-$？ （功能描述：最后一次执行的命令的返回状态。如果这个变量的值为0，证明上一个命令正确执行；如果这个变量的值为非0（具体是哪个数，由命令自己来决定），则证明上一个命令执行不正确了。）
+$？ （功能描述：获取最后一次执行的命令的返回状态。如果这个变量的值为0，证明上一个命令正确执行；如果这个变量的值为非0（具体是哪个数，由命令自己来决定），则证明上一个命令执行不正确了。）
 
-
+**注意**：获取的不是返回值而是状态，0表示正常，其他表示异常。
 
 运算符
 
 ## 3 数值运算
 
-在bash中，变量默认类型都是字符串类型，无法直接进行数值运算。
+在bash中，**变量默认类型都是字符串类型**，无法直接进行数值运算。
 
 要想进行数值运算的两种方式：
 
@@ -317,6 +321,8 @@ a=`expr 1 + 2`
 
 -ge 大于等于（greater equal）  -ne 不等于（Not equal）
 
+**规律**：都是-符号开头，都是两个字母，除了equal外都是两个单词的缩写
+
 如：
 
 ~~~sh
@@ -330,6 +336,8 @@ echo $? # 结果：1 表示false
 -r 有读的权限（read）         -w 有写的权限（write）
 
 -x 有执行的权限（execute）
+
+**注意**： 判断符号-r是写在前面的
 
 例如：在当前目录下面有test.sh文件时：
 
@@ -352,6 +360,16 @@ echo $? # 结果： 0 true
 [ -e /home/test/1.txt ]
 echo $? # 结果： 1 false
 ~~~
+
+例如：save_path不是一个目录时
+
+~~~sh
+if [ ! -d ${save_path} ];then
+	echo "输入的不是一个目录"
+fi
+~~~
+
+
 
 (4)字符串运算符：=、！=、**-z 判断字符串是否为空**
 
@@ -441,6 +459,10 @@ fi
 
 #### 多条件判断：
 
+-a : and
+
+-o : or
+
 ~~~sh
 if [ $a -gt 18 ] && [ $a -lt 35 ];then
 	echo Ok
@@ -474,10 +496,10 @@ esac # case反写
 
 ### 5.3 for循环
 
-#### 形式1:
+#### 形式1 普通for循环:
 
 ~~~sh
-for (( 初始值;循环控制条件;变量变化 )) 
+for (( i=0;i<=100;i++ )) 
 do 
     程序 
 done
@@ -497,7 +519,7 @@ echo $s
 
 ~~~
 
-#### 形式2：
+#### 形式2 增强for循环：
 
 ~~~sh
 for 变量 in 值1 值2 值3… 
@@ -595,6 +617,14 @@ echo $name
 basename /root/test/hello.sh .sh # 结果：hello
 ~~~
 
+**注意**：如果路径的最后为/,则会查找倒数第二个/并且返回值不包含第一个/
+
+如：
+
+~~~sh
+basename /root/下载/ # 结果： 下载
+~~~
+
 
 
 dirname 文件绝对路径 
@@ -632,8 +662,8 @@ dirname /root/test/hello.sh # 结果:/root/test
 ~~~sh
 #!/bin/bash
 function add(){
-	res=$[$1 + $1]
-	echo $res # 不使用return而是使用echo来返回结果
+	res=$[ $1 + $1 ]
+	echo $res # 不使用return而是使用echo来 返回结果
 }
 read -p "请输入第一个数字" a
 read -p "请输入第二个数字" b
@@ -647,7 +677,11 @@ echo "结果："$num
 
 ## 8 编写好的脚本
 
-备份脚本，传入需要备份的目录(路径的最后没有/),能够自动把这个命令下面的文件压缩然后备份到/root/bf这个路径下面
+#### 根据输入的路径进行备份：
+
+传入需要备份的目录的路径（相对路径与绝对路径都可以）,能够自动把这个路径下面的文件压缩然后备份到/root/bf这个路径下面，/root/bf这个路径不存在则自动创建。
+
+老师版本：
 
 ~~~sh
 #!/bin/bash
@@ -667,12 +701,18 @@ else
 fi
 # 无论传入的是相对路径还是绝对路径都统一转换为绝对路径
 absolute_path=$(cd $1;pwd)
+# 确定备份后的压缩文件名：
+# 使用${}引用变量
 start_dir_name=$(basename ${absolute_path}) 
-time=$(date +%y%m%d)
-end_file_name=${start_dir_name}_${time}.tar.gz # 使用${}选择变量名称
+# 显示当前日期并且转换为231126的格式
+time=$(date +%y%m%d) 
+end_file_name=${start_dir_name}_${time}.tar.gz 
 save_path=/root/bf/${end_file_name}
+# 如果保存处的目录不存在则创建
+[ ! -d ${save_path} ] && mkdir -p ${save_path}
+
 echo "开始备份..."
-tar -zcvf $save_path $absolute_path
+tar -zcvf $save_path $absolute_path # 注意：调用 ./bf.sh /root/test时，压缩包中的目录结构也为/root/test/xx.xx文件而不是单独一个test目录
 if [ $? -eq 0 ]
 then
 	echo "备份成功！"
@@ -680,8 +720,168 @@ then
 else
 	echo "备份失败!"
 fi
-exit
 ~~~
+
+my版本：
+
+~~~sh
+#!/bin/bash
+
+# 备份脚本
+
+# 判断传入的参数数量是否为一个
+if [ $# -ne 1 ];then
+        echo "需要一个参数，请输入要备份的路径!"
+        exit
+fi
+
+# 判断输入的路径是否是一个目录
+if [ -d $1 ];then
+        echo "路径校验成功。"
+else
+        echo "路径校验失败，你输入的不是一个目录!";
+        exit
+fi
+
+# 转换路径，处理传入的路径为相对路径的情况
+abs_path=$(cd $1;pwd)
+
+# 设置生成的压缩备份的文件名
+dir_name=$(basename $abs_path)
+time=$(date +%Y-%m-%d_%H%M%S)
+file_name=${dir_name}_${time}.tar.gz
+
+# 备份
+echo "开始备份..."
+# 把目录打包压缩到/root/bf目录下
+tar -zcvf /root/bf/${file_name} ${abs_path} # 注意：调用 ./bf.sh /root/test时，压缩包中的目录结构也为/root/test/xx.xx文件
+# over提示
+if [ $? -eq 0 ];then
+        echo "备份成功！"
+        echo "已经备份至/root/bf/${file_name}"
+else
+        echo "出现错误，备份失败！"
+fi
+
+~~~
+
+**设置定时任务**：
+
+查看当前所有的定时任务
+
+~~~sh
+crontab -l
+~~~
+
+创建一个定时任务
+
+~~~sh
+crontab -e
+~~~
+
+设置定时任务的内容：
+
+每天2点开始执行
+
+~~~sh
+# 格式： cron表达式 要执行脚本的路径 参数
+# 分别表示 分钟、小时、一个月的第几天、第几个月、星期几  注意：这个cron表达式没有对秒的控制,也没有?的限制
+0 2 * * * /root/bf.sh /root/图片 # 表示执行/root/bf.sh这个脚本，脚本需要的参数为/root/图片
+~~~
+
+删除定时任务：
+ 方法一：使用`crontab -r`命令
+
+```sh
+crontab -r
+```
+
+这会删除当前用户的所有定时任务。系统将提示你确认删除操作。
+
+方法二：使用`crontab -l`和`crontab -r`命令
+
+1. 使用`crontab -l`命令列出当前用户的定时任务。
+
+```sh
+crontab -l
+```
+
+1. 找到要删除的定时任务的行号。
+2. 使用`crontab -r [行号]`删除指定行的定时任务。
+
+```sh
+crontab -r [行号]
+```
+
+方法三：编辑定时任务文件
+
+1. 使用下面的命令编辑当前用户的定时任务文件：
+
+```sh
+crontab -e
+```
+
+1. 找到并删除你想要删除的定时任务的行。
+2. 保存文件并退出编辑器。
+
+#### 备份数据库中的文件
+
+1 如果备份目录不存在，则自动生成备份目录
+
+2 使用mysqldump命令获取数据库文件进行压缩 为sql.gz文件并且存放到目录中
+
+3 把单个目录打包为tar.gz后缀的文件,解压出来后只带一个文件夹,文件夹里面的压缩包才是要数据库文件
+
+4 删除10天前的备份文件,防止占空间
+
+~~~sh
+#!/bin/bash
+# 专门备份数据库的脚本
+
+# 获取备份的时间 
+DATE_TIME=$(date +%Y-%m-%d_%H%M%S) # 不能使用 冒号:,不然解压会失败
+BASE_PATH=/data/backup/db
+# 数据库相关的配置信息
+DB_NAME=test
+FILE_NAME=${DB_NAME}${DATE_TIME}
+BACKUP_PATH=${BASE_PATH}/${DB_NAME}
+# echo "备份后的数据库文件全名为：${FILE_NAME}.sql.gz"
+echo "备份文件的存储路径为：${BASE_PATH}"
+DB_USER=root
+DB_PASSWORD=123456
+HOST=localhost
+# 如果备份目录不存在则创建
+[ ! -d ${BACKUP_PATH} ] && mkdir -p ${BACKUP_PATH} # 创建/data/backup/db/test目录
+
+# mysqldump命令登录数据库获取一个数据库文件，使用|给到gzip命令进行压缩，重定向到xxx.sql.gz文件
+# mysqldump -u${DB_USER} -p${DB_PASSWORD} --host=${HOST} -q -R -databases ${DB_NAME} | gzip > ${BACKUP_PATH}/${FILE_NAME}.sql.gz 
+# 因为没有安装数据库，所以模拟备份数据库文件
+cd ${BACKUP_PATH}
+touch 1.txt # /data/backup/db/test/1.txt
+gzip 1.txt # /data/backup/db/test/1.txt.gz
+# 先切换到BASE_PATH目录再压缩整个DB_NAME目录为tar.gz文件
+cd ${BASE_PATH} # /data/backup/db
+tar -zcvf ${BASE_PATH}/${FILE_NAME}.tar.gz ${DB_NAME} # 只压缩了test目录,生成/data/backup/db/${FILE_NAME.tar.gz}文件
+echo "备份好的压缩文件名为${FILE_NAME}"
+# 查找并删除10天前备份的数据库文件
+cd $BASE_PATH # /data/backup/db
+find -atime +10 -name '*.tar.gz' -exec rm -rf {} \; # 还没有测试通过
+# 删除已经压缩好的目录
+rm -rf ${BACKUP_PATH}
+echo "备份${DB_NAME}数据库成功！"
+
+~~~
+
+
+
+### 各种容易忘的xshell符号
+
+- 条件判断：[  ], (( ))
+- 命令替换：$() 
+- 引用变量：${ num }
+- 运算方法：s=$[ $s + $i ]  使用$[  ]进行运算
+
+
 
 ## 9 Shell工具
 

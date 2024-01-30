@@ -316,11 +316,17 @@ parse?方法与valueOf方法：
 // String -> Integer
 int num = Integer.parseInt(String str);
 
-// String -> Long
+// String -> long
 long a = Long.parseLong(String str);
+
+// String -> Long
+Long num = Long.valueOf(String str);
 
 // String -> Integer
 Integer num = Integer.valueOf(String str);
+
+// Integer -> Long
+Long num = entry.getValue().longValue();
 ```
 
 long类型转换为int类型：
@@ -375,6 +381,33 @@ int ii = Integer.parseInt(String.valueOf(ll));
 - set(索引,obj) 替换
 - remove(0) 删
 
+## List
+
+### Lis转为数组 toArray()
+
+采用集合的toArray()方法直接把List集合转换成数组，这里需要注意，不能这样写：
+
+```java
+List<String> mlist = new ArrayList<>();
+String[] array = (String[]) mlist.toArray();
+```
+
+这样写的话，编译运行时会报类型无法转换java.lang.ClassCastException的错误，这是为何呢，这样写看起来没有问题啊
+因为**java中的强制类型转换是针对单个对象才有效果**的，而List是多对象的集合，所以将整个List强制转换是不行的
+正确的写法应该是这样的
+
+```java
+String[] array = mlist.toArray(new String[0]);
+```
+
+其他重载形式：
+
+~~~java
+Integer[] arr = list.toArray(new Integer[0]);
+~~~
+
+注意：没有new int[0]的重载形式。
+
 ## 4 对集合进行排序 Collections.sort
 
 默认排序：
@@ -397,7 +430,7 @@ Collections.sort(list, new Comparator<Integer>() {
 });
 ~~~
 
-## 5 Arrays类
+## 5 2级 Arrays类
 
 ### api汇总：
 
@@ -491,19 +524,95 @@ public int test(int[][] envelopes){
     }
 ~~~
 
-### 6 Stack
+## 6 Stack
 
 - stack.**push**()把元素压入堆栈顶部。
 - Object obj = stack.**pop**()移除堆栈顶部的对象，并返回该对象。
 - stack.**peek**()查看堆栈顶部的对象，但不从堆栈中移除它
 - Boolean res = stack.**empty**()测试堆栈是否为空
 - int stack.**search**(obj)返回对象在堆栈中的位置，以 1 为基数。
+-  isEmpty ()、isFull ()、size ()
 
-### 7 Queue
+## 7 Queue,PriorityQueue
 
-offer()
+- offer() 增
+- poll() 查与删：返回第一个元素，并在队列中删除
+- element()、peek() 查:返回第一个元素
+- add()和remove()方法在失败的时候会抛出异常(不推荐)
+
+PriorityQueue的使用：
+
+https://leetcode.cn/problems/merge-k-sorted-lists/
+
+~~~java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode mergeKLists(ListNode[] lists) {
+        //处理特殊情况
+        int len = lists.length;
+        if(lists==null || len==0){
+            return null;
+        }
+        //如何快速找到k个有序链表的最小值?
+        //使用数据结构：优先级队列,指定存储元素的对象以及排序方式（按照头结点升序）
+        PriorityQueue<ListNode> queue = new PriorityQueue<>(len,(n1,n2)-> n1.val-n2.val);
+        //添加元素进入优先级队列
+        for(ListNode list: lists){
+            if(list!=null){
+                queue.offer(list);
+            }
+        }
+        //使用虚拟头结点进行记录
+        ListNode dummy = new ListNode(-1);
+        ListNode p = dummy;
+        //开始合并链表
+        while(!queue.isEmpty()){
+            //升排的优先级队列中poll出来的就是含有最小value的结点
+            ListNode minNode = queue.poll();
+            p.next = minNode;
+            //更新queue中的值
+            if(minNode.next!=null){
+                queue.offer(minNode.next);
+            }
+            p = p.next;
+        }
+        return dummy.next;
+
+    }
+}
+~~~
 
 
+
+**offer，add 区别：**
+
+一些队列有大小限制，因此如果想在一个满的队列中加入一个新项，多出的项就会被拒绝。
+
+这时新的 offer 方法就可以起作用了。它不是对调用 add() 方法抛出一个 unchecked 异常，而只是得到由 offer() 返回的 false。
+
+**poll，remove 区别：**
+
+remove() 和 poll() 方法都是从队列中删除第一个元素。remove() 的行为与 Collection 接口的版本相似， 但是新的 poll() 方法在用空集合调用时不是抛出异常，只是返回 null。因此新的方法更适合容易出现异常条件的情况。
+
+**peek，element区别：**
+
+element() 和 peek() 用于在队列的头部查询元素。与 remove() 方法类似，在队列为空时， element() 抛出一个异常，而 peek() 返回 null。
+
+## LinkedList
+
+有Queue、Stack、ArrayList的api
+
+- add()
+- addAll(List list) 把参数list集合中的所有元素添加到调用的LinkedList中
 
 # (4) 大数与日期相关的api
 
