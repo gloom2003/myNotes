@@ -613,6 +613,7 @@ element() 和 peek() 用于在队列的头部查询元素。与 remove() 方法�
 
 - add()
 - addAll(List list) 把参数list集合中的所有元素添加到调用的LinkedList中
+- addLast(Object obj)、removeLast()、getLast()
 
 # (4) 大数与日期相关的api
 

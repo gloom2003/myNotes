@@ -216,7 +216,7 @@ v2_1_gC4
 
 ### 撤销变更命令 reset...
 
-#### git reset命令
+#### git reset 重置命令
 
 ```sh
 git reset c1 # 把当前分支指向的提交改为c1
@@ -236,23 +236,25 @@ git reset --hard <commit-hash>
 - `git reset --mixed` 是默认行为，如果不指定模式，默认就是 `--mixed`。
 - 这个选项将会重置当前分支的指针和暂存区，但是工作目录不会被修改。未提交的更改会保留在工作目录，但是不会被暂存区追踪。
 
-可使用于**撤消Git中的最新本地提交**，当你不小心将错误的文件提交给[Git](https://en.wikipedia.org/wiki/Git)，但是还没有将提交推送到服务器时。
+可使用于**撤消Git中的本地提交**，当你不小心将错误的文件提交给[Git](https://en.wikipedia.org/wiki/Git)，但是还没有将提交推送到服务器时。
 
 用法如下：
 
 ```sh
-$ git commit -m "do Something"             # (1) 含有错误的提交
-$ git reset HEAD~                                          # (2) 分支指向上一个提交，但是当前提交的错误内容不会被修改
+$ git commit -m "do Something"             				  # (1) 含有错误的提交
+$ git reset HEAD~                                          # (2) 令分支指向上一个提交，但是当前提交的错误内容不会被修改
 << edit files as necessary >>                              # (3) 修改错误的提交
 $ git add ...                                              # (4) 修改完毕后，再次提交到暂存区
-$ git commit -c ORIG_HEAD                                  # (5)  把修改正确的提交进行提交
+$ git commit -m '提交信息'                                  # (5)  把修改正确的提交进行提交
 ```
 
+结果：会在reset到的提交处(这张图表示：reset到了“git完结”处，修改后再提交的情况)建立一个新的main分支，如图：
+
+![](img/git reset的使用.png)
 
 
 
-
-#### git revert拷贝命令
+#### git revert 拷贝命令
 
 原理：
 
