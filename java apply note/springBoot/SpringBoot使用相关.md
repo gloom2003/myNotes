@@ -138,7 +138,7 @@ public class ApplicationTest {
 
 
 
-### 2.2 兼容老版本
+### 3级 2.2 兼容老版本
 
 ​	如果是对老项目中的SpringBoot进行了版本升级会发现之前的单元测试代码出现了一些问题。
 
@@ -202,6 +202,58 @@ public class ApplicationTest {
     }
 }
 ~~~~
+
+### Junit4的写法
+
+​	**Spring Boot 2.2.0 版本开始引入 JUnit 5 作为单元测试默认库**。之前都是Junit4
+
+导入依赖：见上
+
+新建包，包结构要与开发的包结构保存一致。
+
+①编写配置类：
+
+~~~java
+/**
+ * 单元测试配置类
+ */
+@SpringBootConfiguration
+@ComponentScan("com.kana.pan.schedule") // 配置组件扫描：test包下的包
+public class ScheduleTestConfig {
+}
+
+~~~
+
+
+
+②编写测试类，进行测试
+
+~~~java
+/**
+ * 定时任务模块单元测试
+ */
+@RunWith(SpringJUnit4ClassRunner.class)// Junit4
+@ContextConfiguration(classes = ScheduleTestConfig.class) // 指定配置类
+public class ScheduleTaskTest {
+
+    @Autowired
+    private ScheduleManager manager;
+
+    @Autowired
+    private SimpleScheduleTask scheduleTask;
+
+    @Test // 进行测试
+    public void testRunScheduleTask() {
+
+    }
+
+}
+
+~~~
+
+
+
+
 
 
 
@@ -1493,9 +1545,9 @@ public class StartedListener implements ApplicationListener<ApplicationReadyEven
 
 定时任务的实现方式有很多，比如XXL-Job等。但是其实核心功能和概念都是类似的，很多情况下只是调用的API不同而已。
 
-这里就用SpringBoot为我们提供的定时任务的API来实现一个定时任务:
+#### 4级 实现方式1 @EnableScheduling注解
 
-#### 具体实现
+这里就用SpringBoot为我们提供的定时任务的API来实现一个定时任务:
 
 ① 使用@EnableScheduling注解开启定时任务功能
 
@@ -1531,7 +1583,7 @@ public class TestJob {
 
 ~~~~
 
-#### 例子
+#### 例子（博客项目）
 
 ~~~java
 @Component
@@ -1567,6 +1619,167 @@ public class UpdateViewCountJob {
 
 ~~~
 
+#### 实现方式2 ThreadPoolTaskScheduler
+
+实现零重启，自由编排任务的定时管理器，可以更改定时任务的执行时间，网盘项目例子:
+
+①编写配置类
+
+~~~java
+/**
+ * 定时模块配置类
+ * 配置定时器执行器
+ */
+@SpringBootConfiguration
+public class ScheduleConfig {
+    @Bean
+    public ThreadPoolTaskScheduler taskScheduler(){
+        return new ThreadPoolTaskScheduler();
+    }
+}
+
+~~~
+
+②编写定时任务的任务接口
+
+~~~java
+/**
+ * 定时任务的任务接口
+ */
+public interface ScheduleTask extends Runnable {
+
+    /**
+     * 获取定时任务的名称
+     *
+     * @return
+     */
+    String getName();
+
+}
+
+~~~
+
+③编写缓存对象
+
+~~~java
+/**
+ * 定时任务和定时任务结果的缓存对象
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ScheduleTaskHolder implements Serializable {
+
+    /**
+     * 执行任务实体
+     */
+    private ScheduleTask scheduleTask;
+
+    /**
+     * 执行任务的结果实体
+     */
+    private ScheduledFuture scheduledFuture;
+
+}
+~~~
+
+④编写定时任务管理器
+
+~~~java
+/**
+ * 定时任务管理器: 实现零重启自由编排任务的定时管理器
+ * 对外提供的api：
+ * 1、创建并启动一个定时任务
+ * 2、停止一个定时任务
+ * 3、更新一个定时任务
+ */
+@Component
+@Slf4j
+public class ScheduleManager {
+
+    @Autowired
+    private ThreadPoolTaskScheduler taskScheduler;
+
+    /**
+     * 内部正在执行的定时任务缓存
+     */
+    private Map<String, ScheduleTaskHolder> cache = new ConcurrentHashMap<>();
+
+    /**
+     * 启动一个定时任务
+     *
+     * @param scheduleTask 定时任务实现类
+     * @param cron         定时任务的cron表达式
+     * @return 唯一标识
+     */
+    public String startTask(ScheduleTask scheduleTask, String cron) {
+        // 启动定时任务
+        // 传入 定时任务实现类 与 corn表达式 返回： 任务结果实体
+        ScheduledFuture<?> scheduledFuture = taskScheduler.schedule(scheduleTask, new CronTrigger(cron));
+        String key = UUIDUtil.getUUID();
+        // 把定时任务实现类与任务结果实体 封装为 ScheduleTaskHolder缓存对象来进行缓存
+        ScheduleTaskHolder holder = new ScheduleTaskHolder(scheduleTask, scheduledFuture);
+        // 以UUID作为key，缓存对象作为value存储到Map中
+        cache.put(key, holder);
+        log.info("{} 启动成功！唯一标识为：{}", scheduleTask.getName(), key);
+        return key;
+    }
+
+    /**
+     * 停止一个定时任务
+     *
+     * @param key 定时任务的唯一标识
+     */
+    public void stopTask(String key) {
+        if (StringUtils.isBlank(key)) {
+            return;
+        }
+        // 从Map中获取缓存对象
+        ScheduleTaskHolder holder = cache.get(key);
+        if (Objects.isNull(holder)) {
+            return;
+        }
+        // 获取任务的结果实体
+        ScheduledFuture scheduledFuture = holder.getScheduledFuture();
+        // 停止任务
+        boolean cancel = scheduledFuture.cancel(true);
+        if (cancel) {
+            log.info("{} 停止成功！唯一标识为：{}", holder.getScheduleTask().getName(), key);
+        } else {
+            log.error("{} 停止失败！唯一标识为：{}", holder.getScheduleTask().getName(), key);
+        }
+    }
+
+    /**
+     * 更新一个定时任务的执行时间
+     *
+     * @param key  定时任务的唯一标识
+     * @param cron 新的cron表达式
+     * @return
+     */
+    public String changeTask(String key, String cron) {
+        if (StringUtils.isAnyBlank(key, cron)) {
+            throw new RPanFrameworkException("定时任务的唯一标识以及新的执行表达式不能为空");
+        }
+        // 获取定时任务缓存对象
+        ScheduleTaskHolder holder = cache.get(key);
+        if (Objects.isNull(holder)) {
+            throw new RPanFrameworkException(key + "唯一标识不存在");
+        }
+        // 停止当前的定时任务
+        stopTask(key);
+        // 根据缓存对象的定时任务实现类来重新创建一个执行时间不同的定时任务
+        return startTask(holder.getScheduleTask(), cron);
+    }
+
+}
+
+~~~
+
+
+
+
+
 ####  cron 表达式语法
 
 ​	 在线Cron表达式生成器：
@@ -1578,6 +1791,8 @@ public class UpdateViewCountJob {
 ​	很多情况下我们可以用 ： [在线Cron表达式生成器](https://www.bejson.com/othertools/cron/) 来帮助我们理解cron表达式和书写cron表达式。
 
 ​	但是我们还是有需要学习对应的Cron语法的，这样可以更有利于我们书写Cron表达式。
+
+![](img/cron表达式详解.png)
 
 #### 常用表达式例子
 

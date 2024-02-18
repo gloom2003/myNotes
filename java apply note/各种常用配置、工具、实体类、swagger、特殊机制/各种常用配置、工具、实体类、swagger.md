@@ -941,7 +941,7 @@ public class AddCommentDto{
 @ApiModelProperty用于描述实体的属性
 
 ~~~~java
-    @ApiModelProperty(notes = "评论类型（0代表文章评论，1代表友链评论）")
+    @ApiModelProperty(value = "验证码", example = "999818",notes = "评论类型（0代表文章评论，1代表友链评论）")
     private String type;
 ~~~~
 
@@ -1092,4 +1092,133 @@ public void export(HttpServletResponse response){
         response.setHeader("Content-disposition","attachment; filename="+fname);
     }
 ~~~
+
+
+
+## 2级 使用MapStruct完成Bean拷贝
+
+#### 基本使用
+
+使用@Mapper注解（org.mapstruct.Mapper这个包）来标识一个接口，在接口中定义进行Bean拷贝的方法。
+
+~~~java
+import org.mapstruct.Mapper;
+
+@Mapper(componentModel = "spring") // 配置后就不需要在接口中添加 `INSTANCE` 字段，并且使@Mapper有@Component的作用
+interface MsSampleMapper {
+    /**
+     * 将SampleDO 转换成 SampleDTO
+     * @param sample 待转换的DO
+     * @return 转换结果
+     */
+    SampleDTO sampleToSampleDto(Sample sample);
+}
+~~~
+
+
+
+#### 源类与终类属性名称不同时
+
+我们先更新`Doctor`类，添加一个属性`specialty`：
+
+```java
+public class Doctor {
+    private int id;
+    private String name;
+    private String specialty;
+    // getters and setters or builder
+}
+```
+
+在`DoctorDto`类中添加一个`specialization`属性：
+
+```java
+public class DoctorDto {
+    private int id;
+    private String name;
+    private String specialization;
+    // getters and setters or builder
+}
+```
+
+现在，我们需要让 `DoctorMapper` 知道这里的不一致。我们可以使用 `@Mapping` 注解，并设置其内部的 `source` 和 `target` 标记分别指向不一致的两个字段。
+
+```java
+@Mapper
+public interface DoctorMapper {
+    DoctorMapper INSTANCE = Mappers.getMapper(DoctorMapper.class);
+
+    @Mapping(source = "doctor.specialty", target = "specialization")
+    DoctorDto toDto(Doctor doctor);
+}
+```
+
+这个注解代码的含义是：`Doctor`中的`specialty`字段对应于`DoctorDto`类的 `specialization` 。
+
+编译之后，会生成如下实现代码：
+
+```java
+public class DoctorMapperImpl implements DoctorMapper {
+@Override
+    public DoctorDto toDto(Doctor doctor) {
+        if (doctor == null) {
+            return null;
+        }
+
+        DoctorDtoBuilder doctorDto = DoctorDto.builder();
+
+        doctorDto.specialization(doctor.getSpecialty());
+        doctorDto.id(doctor.getId());
+        doctorDto.name(doctor.getName());
+
+        return doctorDto.build();
+    }
+}
+```
+
+#### 有多个源类时
+
+有时，单个类不足以构建DTO，我们可能希望将多个类中的值聚合为一个DTO，供终端用户使用。这也可以通过在`@Mapping`注解中设置适当的标志来完成。
+
+我们先新建另一个对象 `Education`:
+
+```java
+public class Education {
+    private String degreeName;
+    private String institute;
+    private Integer yearOfPassing;
+    // getters and setters or builder
+}
+```
+
+然后向 `DoctorDto`中添加一个新的字段：
+
+```java
+public class DoctorDto {
+    private int id;
+    private String name;
+    private String degree;
+    private String specialization;
+    // getters and setters or builder
+}
+```
+
+接下来，将 `DoctorMapper` 接口更新为如下代码：
+
+```java
+@Mapper
+public interface DoctorMapper {
+    DoctorMapper INSTANCE = Mappers.getMapper(DoctorMapper.class);
+
+    @Mapping(source = "doctor.specialty", target = "specialization")
+    @Mapping(source = "education.degreeName", target = "degree")
+    DoctorDto toDto(Doctor doctor, Education education);
+}
+```
+
+我们添加了另一个`@Mapping`注解，并将其`source`设置为`Education`类的`degreeName`，将`target`设置为`DoctorDto`类的`degree`字段。
+
+**注意**：如果 `Education` 类和 `Doctor` 类包含同名的字段，我们必须让映射器知道使用哪一个，否则它会抛出一个异常。举例来说，如果两个模型都包含一个`id`字段，我们就要选择将哪个类中的`id`映射到DTO属性中。
+
+
 

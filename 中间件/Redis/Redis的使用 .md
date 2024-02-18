@@ -1377,7 +1377,7 @@ RedisTemplate可以接收任意Object作为值写入Redis：
 public class RedisConfig {
 
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory){
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory){// 自动注入工厂Bean
         // 创建RedisTemplate对象
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         // 设置连接工厂

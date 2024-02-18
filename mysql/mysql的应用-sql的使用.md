@@ -1601,8 +1601,19 @@ d datatime
 ```sql
 alter table 表名 change (column) name1 name2 类型；
 
-alter table 表名 modify (column) name1 新类型;  change,modify,add,drop,rename to column
+alter table 表名 modify (column) name1 新类型;  // change,modify,add,drop,rename to column
 ```
+
+例如：
+
+~~~mysql
+# 给score表添加java字段
+alter table score add column java int;
+# 删除java字段
+alter table score drop column java;
+~~~
+
+
 
 删除表操作：
 
