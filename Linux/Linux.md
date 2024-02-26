@@ -394,6 +394,8 @@ syn off # 关闭颜色的显示
 
 按下i并且输入完成后，按下Esc退出，输入v以当前光标为起点进入可视化模式，键盘上下移动光标进行选取，输入y进行复制，键盘上下移动光标到合适位置然后输入p进行粘贴。
 
+3.vi进入文件后，直接按G跳到最后一行。
+
 #### 基础知识：
 
 vim hello.txt  表示使用vim编辑hello.txt文件，不存在则会自动创建
@@ -695,6 +697,25 @@ mysqldump -u{DB_USER} -p${DB_PW} --host=${HOST} -q -R --databases ${DATABASE} | 
 
 ~~~sh
 whereis nginx # 返回nginx: 表示没有找到
+~~~
+
+### tail 实时查看文件
+
+~~~sh
+# 实时查看log文件，一旦有消息记录下来就马上能够查看到
+tail -f xxx.log
+~~~
+
+### head 只查看文件的前10行
+
+~~~sh
+head xxx.sql # 只查看100万行数据的前10行
+~~~
+
+### wc 查看文件的行数
+
+~~~sh
+wc -l xxx.sql
 ~~~
 
 
