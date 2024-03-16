@@ -2,13 +2,23 @@
 
 ## 1 快捷键
 
-### 1.1 ctrl+shift+R 全局搜索 
+### 搜索类：
+
+####  ctrl+shift+R 全局搜索 
+
+####  shift + shift 全局搜索类、接口、注解等
+
+#### Ctrl + Fn + F12 在当前类中进行搜索，会展示 类的属性与方法
+
+
 
 ### 1.2 Alt + 7 显示类的属性、方法、构造器lombok动态添加的也可以查看到
 
 ### 1.3  shift + Fn + F6 选中文件、变量、文件夹进行重命名
 
-### 1.5 shift + shift 全局搜索类、接口、注解等
+### Ctrl + Shift + U 选中的字母全部变为大写
+
+### 
 
 ### 1.6 Ctrl + D 把剪切板的内容粘贴到下一行
 
@@ -21,7 +31,11 @@
 
 ### 1.10 Ctrl + H 查看接口的实现类、类的父子类
 
+### 1.11 选中代码封装为方法 Ctrl + Alt + M
 
+### 1.12 给选中的每一行添加注释 Ctrl + / ，在选中代码的前后添加两行文档注释 Ctrl + Shift + /
+
+### 1.13 快速删除光标所在行  Shift + Delete 或者 Ctrl + Y
 
 
 
@@ -48,6 +62,12 @@ debug时，右键选中变量，右击选择 add to watchs就能够在debug栏�
 
 #### 2.2.5 Ctrl + Alt + 方向盘的左键 用于进入类内部后快速回到刚才的界面
 
+#### 2.2.6 Ctrl + Alt + B 光标放在类、接口、方法上时，可以选择其子类(实现类)的相关信息
+
+
+
+
+
 ## 3 idea配置模版
 
 ### 3.1 配置关键词替换为代码的模版
@@ -61,3 +81,57 @@ debug时，右键选中变量，右击选择 add to watchs就能够在debug栏�
 配置了一个mybatis-cfg.xml文件的选项，设置以后，当想要创建文件时，可以直接点击mybatis-cfg.xml文件，会自动生成含有模板的文件，达到快速创建文件的目的。
 
 ![image-20210218211942452](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\Mybatis\img\image-1.png)
+
+
+
+## 4 快速生成代码模版
+
+配合idea提示食用更佳：
+
+.var 快速接收变量
+
+psvm main方法
+
+.for 增强for循环升序遍历
+
+~~~java
+        ArrayList<Object> objects = new ArrayList<>();
+        // objects.for 的结果：
+        for (Object object : objects) {
+            
+        }
+~~~
+
+
+
+.forr 使用for循环降序遍历  .fori 使用for循环升序遍历
+
+~~~java
+public static void main(String[] args) {
+        Integer i = 1;
+        int num = i;
+        ArrayList<Object> objects = new ArrayList<>();
+        // objects.forr 的结果：
+        for (int i1 = objects.size() - 1; i1 >= 0; i1--) {
+            
+            
+        }
+    }
+~~~
+
+
+
+
+
+## 5 设置主题
+
+idea2018的Google主题好用
+
+或者：
+
+Plugins中搜索/tag:Theme,选择Material Theme UI Lite即可
+
+
+
+## 配置自动生成序列化id
+

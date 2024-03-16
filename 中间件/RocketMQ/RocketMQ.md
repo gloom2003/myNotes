@@ -18,9 +18,9 @@ dashboard:仪表板
 
 2.访问https://rocketmq.apache.org/zh/download，下载RocketMQ 5.x最新版Binary压缩包
 
-3.解压缩，配置环境变量%ROCKETMQ_HOME%，指向解压缩目录
+3.解压缩，配置环境变量%ROCKETMQ_HOME%，指向解压缩目录。**注意**：目录中不能有空格(如：D:\Program Files\Apache)，否则启动时会报错：找不到类
 
-4.使用cmd命令窗口执行"%ROCKETMQ_HOME%/bin/mqnamesrv.cmd",启动NameServer进程，默认使用9876端口
+4.使用cmd命令窗口执行"%ROCKETMQ_HOME%/bin/mqnamesrv.cmd",启动NameServer进程，默认使用9876端口  或者**手动点击mqnamesrv.cmd，启动NameServer进程**
 
 5.在%ROCKETMQ_HOME%/conf目录下新建master.properties，增加Broker运行配置文件
 
@@ -62,7 +62,7 @@ autoCreateTopicEnable=true
 
 6.
 
-在%ROCKETMQ_HOME%/bin目录下面执行：表示以master.properties作为配置文件执行mqbroker.cmd脚本
+在%ROCKETMQ_HOME%/bin目录下面执行：表示**以master.properties作为配置文件执行mqbroker.cmd脚本**
 
 ~~~ssh
 mqbroker.cmd -c ../conf/master.properties
@@ -100,7 +100,7 @@ set "JAVA_OPT=%JAVA_OPT% -cp "%CLASSPATH%""
 
 
 
-7.运行测试工具tools.cmd验证接入过程
+7.**运行测试工具tools.cmd验证接入过程**
 
 首先执行：建立一个会话级别的环境变量
 
@@ -411,7 +411,7 @@ JMS（JAVA Message Service,java 消息服务）是 Java 的消息服务，JMS �
 
 ![发布/订阅（Pub/Sub）模型](https://javaguide.cn/assets/message-queue-pub-sub-model-nGMeokOu.png)发布/订阅（Pub/Sub）模型
 
-发布订阅模型（Pub/Sub） 使用**主题（Topic）\**作为消息通信载体，类似于\**广播模式**；发布者发布一条消息，该消息通过主题传递给所有的订阅者。
+发布订阅模型（Pub/Sub） 使用**主题（Topic）**作为消息通信载体，类似于**广播模式**；发布者发布一条消息，该消息通过主题传递给所有的订阅者。
 
 
 

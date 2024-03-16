@@ -172,6 +172,88 @@ public interface CourseDao {
 2. POJO对象：#{对象的属性名}
 3. Map对象: #{key},会自动返回value
 
+还可以使用参数名.属性的方式来进行调用
+
+如：
+
+接口定义：
+
+~~~java
+public interface RPanUserFileMapper extends BaseMapper<RPanUserFile> {
+
+    /**
+     * 查询用户的文件列表
+     *
+     * @param context
+     * @return
+     */
+    List<RPanUserFileVO> selectFileList(@Param("param") QueryFileListContext context);
+}
+~~~
+
+参数QueryFileListContext：
+
+~~~java
+@Data
+public class QueryFileListContext implements Serializable {
+
+    private static final long serialVersionUID = 1361135823223937852L;
+
+    private Long parentId;
+
+    private List<Integer> fileTypeArray;
+
+    private Long userId;
+
+    private Integer delFlag;
+
+    private List<Long> fileIdList;
+
+}
+
+~~~
+
+
+
+sql:
+
+~~~xml
+    <select id="selectFileList" resultType="com.imooc.pan.server.modules.file.vo.RPanUserFileVO">
+        SELECT
+        file_id AS fileId,
+        parent_id AS parentId,
+        filename AS filename,
+        file_size_desc AS fileSizeDesc,
+        folder_flag AS folderFlag,
+        file_type AS fileType,
+        update_time AS updateTime
+        FROM
+        r_pan_user_file
+        WHERE
+        user_id = #{param.userId}
+        <if test="param.fileIdList != null"> <!-- 调用参数的fileIdList属性-->
+            AND file_id IN
+            <foreach collection="param.fileIdList" open="(" close=")" item="item" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="param.parentId != null and param.parentId != -1">
+            AND parent_id = #{param.parentId}
+        </if>
+        <if test="param.fileTypeArray != null">
+            AND file_type IN
+            <foreach collection="param.fileTypeArray" open="(" close=")" item="item" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        AND del_flag = #{param.delFlag}
+    </select>
+~~~
+
+
+
+## 
+
 ### 3.2 多个参数 使用@Param
 
 Mybatis会把多个参数放入一个Map集合中，默认的key是argx和paramx这种格式。
@@ -209,6 +291,8 @@ User findByCondition(@Param("id") Integer id,@Param("username") String username)
          select * from user where id = #{id} and username = #{username}
     </select>
 ~~~~
+
+
 
 ## 4. 核心类
 
@@ -415,6 +499,63 @@ log4j.rootLogger=debug, stdout
         </dependency>
 ~~~~
 
+配置slf4j:
+
+## 编写 logback 配置文件
+
+导入依赖：
+
+~~~xml
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.10</version>
+        </dependency>
+~~~
+
+
+
+在 **resources** 中新建 **logback.xml** 。
+
+> 注：**Logback** 日志框架的配置文件名称为：**logback.xml**。
+
+```xml
+<configuration>
+    
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>logs/test.log</file>
+        <encoder>
+            <pattern>%d [%thread] %-5level %logger{36} [%file : %line] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="TRACE">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </root>
+</configuration>
+```
+
+
+
+![img](https://p1-jj.byteimg.com/tos-cn-i-t2oaga2asx/gold-user-assets/2020/6/9/17298501abef368e~tplv-t2oaga2asx-jj-mark:3024:0:0:0:q75.png)
+
+
+
+
+
+![img](https://p1-jj.byteimg.com/tos-cn-i-t2oaga2asx/gold-user-assets/2020/6/9/17298505240a1fc5~tplv-t2oaga2asx-jj-mark:3024:0:0:0:q75.png)
+
+
+
+
+
 ## 9. 注解开发
 
 ​	我们也可以使用注解的形式来进行开发，用注解来替换掉xml。 使用注解来映射简单语句会使代码显得更加简洁，但对于稍微复杂一点的语句，Java 注解不仅力不从心，还会让你本就复杂的 SQL 语句更加混乱不堪。 所以我们在实际企业开发中一般都是使用XML的形式。
@@ -485,7 +626,7 @@ public interface UserDao {
     <select id="findByCondition" resultType="com.sangeng.pojo.User">
          select * from user
          where  id = #{id}
-        <if test="username!=null">
+        <if test="username != null">
            and username = #{username}
         </if>
     </select>
@@ -558,7 +699,7 @@ public interface UserDao {
 
 #### 10.2.4 suffix属性 添加后缀
 
-​	用来设置动态添加的后缀，如果标签中有内容就会添加上设置的后缀
+​	用来设置动态添加的后缀，**如果标签中有内容**就会添加上设置的后缀
 
 ~~~~xml
     <select id="findByCondition" resultType="com.sangeng.pojo.User">
@@ -612,10 +753,10 @@ User findByCondition(@Param("id") Integer id,@Param("username") String username)
     <select id="findByCondition" resultType="com.sangeng.pojo.User">
         select * from user
         <where>
-            <if test="id!=null">
+            <if test="id != null">
                 id = #{id}
             </if>
-            <if test="username!=null">
+            <if test="username != null">
                 and username = #{username}
             </if>
         </where>
@@ -756,7 +897,7 @@ xml映射文件如下
 
 ​	一个choose标签中最多只会有一个when中的判断成立(相当于switch中自带了break)。从上到下去进行判断。如果成立了就把标签体的内容拼接到sql中，并且不会进行其它when的判断和拼接。如果所有的when都不成立则拼接otherwise中的语句。
 
-## 11. SQL片段抽取 include标签，替换sql中的*符号 
+## 11. SQL片段抽取-sql标签
 
 ​	我们在xml映射文件中编写SQL语句的时候可能会遇到重复的SQL片段。这种SQL片段我们可以使用sql标签来进行抽取。然后在需要使用的时候使用include标签进行使用。
 

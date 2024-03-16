@@ -434,6 +434,65 @@ public class TestController {
 
 ## 5.获取请求参数
 
+### postman各种参数的含义
+
+参考链接：
+
+1. https://www.cnblogs.com/dw3306/p/14200862.html
+
+1. **java后台如何接收参数？**  **https://www.cnblogs.com/dw3306/p/13691917.html**
+
+1. 
+
+   
+
+#### postman中 form-data、x-www-form-urlencoded、raw、binary的区别
+
+ 
+
+**1、form-data:** 
+
+​          就是http请求中的multipart/form-data,它会将表单的数据处理为一条消息，以标签为单元，用分隔符分开。既可以上传键值对，也可以上传文件。当上传的字段是文件时，会有Content-Type来说明文件类型；content-disposition，用来说明字段的一些信息；
+
+由于有boundary隔离，所以multipart/form-data既可以上传文件，也可以上传键值对，它采用了键值对的方式，所以可以上传多个文件，在springmvc中可以使用MultipartHttpServletRequest接收通过api根据"name"获取不同的键值，也可以通过MulTipartFile数组接收多个文件。
+
+![img](https://img-blog.csdn.net/20151118130933756?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
+
+**2、x-www-form-urlencoded：**
+
+​       就是application/x-www-from-urlencoded,会将表单内的数据转换为键值对，&分隔。
+当form的action为get时，浏览器用x-www-form-urlencoded的编码方式，将表单数据编码为
+(name1=value1&name2=value2…)，然后把这个字符串append到url后面，用?分隔，跳转
+到这个新的url。
+当form的action为post时，浏览器将form数据封装到http body中，然后发送到server。
+这个格式不能提交文件。
+
+![img](https://img-blog.csdn.net/20151118131219584?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
+
+![img](https://img-blog.csdn.net/20151118131234865?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
+
+**3、raw**
+
+​      可以上传任意格式的文本，可以上传text、json、xml、html等
+
+![img](https://img-blog.csdn.net/20151118131504612?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
+
+![img](https://img-blog.csdn.net/20151118131523976?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
+
+**4、binary**
+
+​     相当于Content-Type:application/octet-stream,从字面意思得知，只可以上传二进制数据，通常用来上传文件，由于没有键值，所以，一次只能上传一个文件。
+
+ 
+
+multipart/form-data与x-www-form-urlencoded区别
+
+​        multipart/form-data：既可以上传文件等二进制数据，也可以上传表单键值对，只是最后会转化为一条信息；
+
+​        x-www-form-urlencoded：只能上传键值对，并且键值对都是间隔分开的。
+
+ 
+
 ### 5.1 获取路径参数 @PathVariable
 
 ​	RestFul风格的接口一些参数是在请求路径上的。类似： /user/1  这里的1就是id。
@@ -1338,7 +1397,7 @@ public class JspController {
 
 如图：
 
-![image-20210516215721896](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\SpringMVC\img\image-20210516215721896.png)
+![image-20210516215721896](img\image-20210516215721896.png)
 
 
 
@@ -1596,7 +1655,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
 ​	这些拦截器中方法的执行顺序如图（**preHandler都返回true的情况下**）：
 
-![image-20210517165433983](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\SpringMVC\img\多拦截器执行顺序.png)
+![image-20210517165433983](img\多拦截器执行顺序.png)
 
 - 先执行preHandle,再执行postHandle,最后执行afterCompletion,不会出现篡位的情况。
 
@@ -1605,7 +1664,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
 如果**拦截器3的preHandle方法返回值为false**。执行顺序如图：
 
-![image-20210519213325101](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\SpringMVC\img\多拦截器执行顺序2.png)
+![image-20210519213325101](img\多拦截器执行顺序2.png)
 
 - ​	只有所有拦截器都放行了，请求被Handler处理器处理之后，postHandle方法才会被执行。
 - ​	只有当前拦截器放行了，当前拦截器的afterCompletion方法才会执行。

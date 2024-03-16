@@ -231,13 +231,34 @@ sudo umount /etc/sda1 取消挂载
 
 df -m
 
-### ps查看当前运行的一些进程
+### ps等命令 查看当前运行的一些进程、线程
 
-ps -ef 表示查看所有的进程
+- `ps -fe` 查看所有进程 
+- `ps -fT -p <PID>` 查看某个进程（PID）的所有线程 
+- `top` 按大写 H 切换是否显示线程 
+- `top -H -p <PID>` 动态查看某个进程（PID）的所有线程 
+
+查看Java进程，安装了JDK后可使用：
+
+~~~sh
+jps 
+~~~
+
+查看进程的所有线程，安装了JDK后可使用
+
+```shell
+jstack 进程id 
+```
+
+
 
 ### kill 操作进程
 
-ps
+~~~sh
+kill 进程id 
+~~~
+
+或者：
 
 kill -9 进程id 
 
@@ -1008,6 +1029,19 @@ kill -9 进程号
 sudo apt install unzip
 unzip xxx.zip
 ~~~
+
+
+
+### 3.11 编译、运行java文件
+
+~~~sh
+javac Test.java # 编译
+java Test # 运行
+~~~
+
+
+
+
 
 ## 4 理解创建虚拟机的过程、注意事项
 

@@ -1379,6 +1379,8 @@ WHERE hire_date = (
    				 )
 ~~~
 
+
+
 数据库SQL实战 No.6
 
 https://www.nowcoder.com/questionTerminal/23142e7a23e4480781a3b978b5e0f33a
@@ -1407,11 +1409,15 @@ order by emp_no DESC
 
 mark1
 
-下一题no.24
+下一题no.24：
 
-https://www.nowcoder.com/questionTerminal/c1472daba75d4635b7f8540b837cc719
+
+
+
 
 no.18:请你查找薪水排名第二多的员工编号emp_no、薪水salary、last_name以及first_name，**不能使用order by完成**
+
+链接：https://www.nowcoder.com/questionTerminal/c1472daba75d4635b7f8540b837cc719
 
 解法1：my max() + 子查询
 
@@ -1462,9 +1468,13 @@ and s.salary =
 
 ~~~
 
-https://www.nowcoder.com/questionTerminal/c727647886004942a89848e2b5130dc2
+
+
+
 
 no.19 查找员工编号emp_no为10001其自入职以来的薪水salary
+
+链接：https://www.nowcoder.com/questionTerminal/c727647886004942a89848e2b5130dc2
 
 解法1：路人严谨思路：
 
@@ -1476,6 +1486,8 @@ SELECT
 ) AS growth
 
 ~~~
+
+
 
 no23:对所有员工的薪水按照salary降序进行1-N的排名
 

@@ -446,7 +446,7 @@ mybatis-plus:
         User user = new User();
         user.setId(2L);
         user.setAge(14);
-        int i = userMapper.updateById(user);
+        int i = userMapper.updateById(user);// user类中为null的字段不会写入update语句中进行更新，id不能为null
         System.out.println(i);
     }
 ~~~~
@@ -1510,9 +1510,13 @@ idea连接数据库，在数据库面板中选择需要生成的表，右键生�
 
 配置信息1
 
+**注意**：应该是entity才对
+
 ![](img/配置信息1.png)
 
 配置信息2.png
+
+**注意，这里选错了!**：Actual Column选择了表示使用与数据库表中相同的列名来生成实体类的属性名，不选择则默认使用小驼峰命名法。
 
 ![](img/配置信息2.png)
 
@@ -1870,6 +1874,13 @@ mybatis-plus:
       logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
 ~~~~
 
+### 步骤 2: 实体类字段上加上`@TableLogic`注解
+
+```java
+@TableLogic
+private Integer deleted;
+```
+
 **注意**：
 
 1 使用mp执行select语句时也会在sql中自动加上delFlog字段，如： ... where ... and delFlog = 0
@@ -1881,13 +1892,45 @@ mybatis-plus:
 
 ## 3.乐观锁
 
-​	作用：解决**并发操作时数据冲突问题**的一种方式。**如**：对price字段 值为0，第一个线程想要加10，在执行的过程中，另一个线程执行完了加20的操作，此时price的值为20，第一个线程执行完毕后，把结果10覆盖price的20，造成了数据的错误,把结果从30变成了10。
+​	并发操作时,我们需要保证对数据的操作不发生冲突。乐观锁就是其中一种方式。
 
-​	并发操作时,我们需要保证对数据的操作不发生冲突。乐观锁就是其中一种方式。乐观锁就是先假设不存在并发冲突问题，在进行实际数据操作的时候再检查是否冲突。
+**乐观锁就是先假设不存在并发冲突问题，在进行实际数据操作的时候再检查是否冲突。**
+
+
+
+​	为什么使用，解决什么问题：解决**并发操作时数据冲突问题**的一种方式。**如**：对price字段 值为0，第一个线程想要加10：
+
+~~~mysql
+update set price = price + 10 from order where id = 1;
+~~~
+
+
+
+在执行的过程中，另一个线程执行完了加20的操作:
+
+~~~mysql
+update set price = price + 20 from order where id = 1;
+~~~
+
+
+
+此时price的值为20，第一个线程执行完毕后，把结果10覆盖price的20，造成了数据的错误,把结果从本来的30变成了10。
+
+(my补充：更新操作不是原子性的，可能包含多条指令，这里相当于在执行这些指令中，第一个线程只执行了部分指令时，另一个线程快速的执行完了一次更新操作，第一个线程继续执行剩下的赋值指令，导致把结果10覆盖price的20，第一个线程幻读了。)
+
+**具体使用**：
 
 ​	我们在使用乐观锁时一般在表中**增加一个version列**。用来记录我们对每天记录操作的版本。**每次对某条记录进行操作时，对应的版本也需要+1。**
 
 ​	然后我们在每次要进行更新操作时，会先查询对应数据的version值。在执行更新时， where子句**为 where ... and version = 老版本 来对老版本进行修改。**
+
+~~~mysql
+update set price = price + 10 
+from order 
+where id = 1 and version = (select version from order where id = 1);
+~~~
+
+
 
 ​	如果在查询老版本号到更新操作的中间时刻有其他人更新了这条数据，**version发生了改变**，那么这次更新语句就会**更新失败**。
 

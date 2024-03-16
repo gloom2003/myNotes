@@ -13,7 +13,7 @@
 
 select st.s_id,st.s_name,st.s_sex,st.s_birth,a.sum_score
 from student st right join (
-     -- 子2:查询 总分最高的学生id 与 分数
+     -- 子2:查询 总分最高的学生id 与 总分数
 	select sc.s_id,sum(sc.s_score) sum_score
 	from score sc
 	group by sc.s_id having sum(sc.s_score) = (
@@ -364,8 +364,4 @@ and s.salary =
 
 
 
-
-
-~~~mysql
-~~~
 

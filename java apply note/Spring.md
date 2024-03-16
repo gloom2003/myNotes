@@ -986,10 +986,17 @@ public class ApplicationConfig {
 execution(* com.sangeng.service.*.*(..))   表示com.sangeng.service包下任意类，方法名任意，参数列表任意，返回值类型任意
    
 execution(* com.sangeng.service..*.*(..))   表示com.sangeng.service包及其子包下任意类，方法名任意，参数列表任意，返回值类型任意
+    // 如：
+     /**
+     * 切点表达式 两个切点表达式都是正确的，建议使用第二个没有省略*的（表示所有类）
+     */
+    // private final static String POINT_CUT = "execution(* com.kana.pan.server.modules.*.controller..*(..))";
+    
+    private final static String POINT_CUT = "execution(* com.kana.pan.server.modules.*.controller..*.*(..))";
     
 execution(* com.sangeng.service.*.*())     表示com.sangeng.service包下任意类，方法名任意，要求方法不能有参数，返回值类型任意
     
-execution(* com.sangeng.service.*.delete*(..))     表示com.sangeng.service包下任意类，要求方法不能有参数，返回值类型任意,方法名要求已delete开头
+execution(* com.sangeng.service.*.delete*(..))     表示com.sangeng.service包下任意类，方法名要求以delete开头，参数列表任意，返回值类型任意
 ```
 
 ### 1.2使用：

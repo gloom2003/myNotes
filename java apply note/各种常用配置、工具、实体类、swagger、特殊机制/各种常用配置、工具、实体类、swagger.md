@@ -439,7 +439,7 @@ public class SecurityUtils
 }
 ~~~
 
-### 8.6 返回数据给客户端的工具类
+### 8.6 Http响应工具类
 
 ~~~java
 public class WebUtils
@@ -796,6 +796,38 @@ public class WebConfig implements WebMvcConfigurer {
 }
 ~~~
 
+使用：
+
+~~~java
+/**
+ * 院舍列表VO类
+ */
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+// 转换为JSON时忽略为null的字段，不进行转换
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class FacilityListVO implements Serializable {
+
+    private static final long serialVersionUID = 2181673880660160143L;
+    /**
+     * 院舍列表的基本信息
+     */
+    private List<FacilityVO> lists;
+    /**
+     * 序号最小的院舍的基本信息
+     */
+    private FacilityBaseInfo facilityBaseInfo;
+    /**
+     * 院舍的统计信息
+     */
+    private FacilityCountInfo facilityCountInfo;
+}
+
+~~~
+
+
+
 ## 10.4 Swagger的配置与使用
 
 优点：
@@ -1099,6 +1131,23 @@ public void export(HttpServletResponse response){
 
 #### 基本使用
 
+导入依赖：
+
+~~~xml
+    <properties>
+        <org.mapstruct.version>1.5.2.Final</org.mapstruct.version>
+    </properties>
+
+		<!-- MapStruct -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${org.mapstruct.version}</version>
+        </dependency>
+~~~
+
+
+
 使用@Mapper注解（org.mapstruct.Mapper这个包）来标识一个接口，在接口中定义进行Bean拷贝的方法。
 
 ~~~java
@@ -1180,45 +1229,438 @@ public class DoctorMapperImpl implements DoctorMapper {
 
 有时，单个类不足以构建DTO，我们可能希望将多个类中的值聚合为一个DTO，供终端用户使用。这也可以通过在`@Mapping`注解中设置适当的标志来完成。
 
-我们先新建另一个对象 `Education`:
+对象 `RPanUser`:
 
 ```java
-public class Education {
-    private String degreeName;
-    private String institute;
-    private Integer yearOfPassing;
-    // getters and setters or builder
+public class RPanUser{
+    private String username;
 }
 ```
 
-然后向 `DoctorDto`中添加一个新的字段：
+对象 `RPanUserFile`
 
 ```java
-public class DoctorDto {
-    private int id;
+public class RPanUserFile {
+
+    private Long fileId;
+    
+    private String filename;
+
+}
+
+```
+
+对象UserInfoVo
+
+~~~java
+public class UserInfoVO{
+    private String username;
+    private Long rootFileId;
+    private String rootFilename;
+
+}
+
+~~~
+
+
+
+转换的接口如下：
+
+```java
+@Mapper(componentModel = "spring")
+public interface UserConverter {
+
+    @Mapping(source = "entity.username",target = "username")
+    @Mapping(source = "rPanUserFile.fileId",target = "rootFileId")
+    @Mapping(source = "rPanUserFile.filename",target = "rootFilename")
+    UserInfoVO assembleUserInfoVO(RPanUser entity, RPanUserFile rPanUserFile);
+
+}
+
+```
+
+
+
+如果 `RPanUser` 类和 `RPanUserFile` 类包含同名的字段，我们必须让映射器知道使用哪一个，否则它会抛出一个异常。所以我们添加了另多个`@Mapping`注解来显示的进行指定。
+
+
+
+## 2级 项目入参数校验器的使用
+
+#### 4级 准备工作
+
+1 写一个配置类
+
+~~~java
+/**
+ * 统一的参数校验器
+ */
+@SpringBootConfiguration
+@Slf4j
+public class WebValidatorConfig {// Validator 验证器
+
+    private static final String FAIL_FAST_KEY = "hibernate.validator.fail_fast";
+
+    @Bean
+    public MethodValidationPostProcessor methodValidationPostProcessor() {
+        MethodValidationPostProcessor postProcessor = new MethodValidationPostProcessor();
+        postProcessor.setValidator(rPanValidator());
+        log.info("The hibernate validator is loaded successfully!");
+        return postProcessor;
+    }
+
+    /**
+     * 构造项目的方法参数校验器
+     *
+     * @return
+     */
+    private Validator rPanValidator() {
+        ValidatorFactory validatorFactory = Validation.byProvider(HibernateValidator.class)
+                .configure()
+                // 配置快速失败的验证机制，只要有一个参数不合法就抛出异常，后面的就不验证了
+                .addProperty(FAIL_FAST_KEY, RPanConstants.TRUE_STR)
+                .buildValidatorFactory();
+        Validator validator = validatorFactory.getValidator();
+        return validator;
+    }
+
+
+}
+
+~~~
+
+准备枚举类ResponseCode
+
+~~~java
+/**
+ * 项目公用返回状态码
+ */
+@AllArgsConstructor
+@Getter
+public enum ResponseCode {
+
+    /**
+     * 成功
+     */
+    SUCCESS(0, "SUCCESS"),
+    /**
+     * 错误
+     */
+    ERROR(1, "ERROR"),
+    /**
+     * token过期
+     */
+    TOKEN_EXPIRE(2, "TOKEN_EXPIRE"),
+    /**
+     * 参数错误
+     */
+    ERROR_PARAM(3, "ERROR_PARAM"),
+    /**
+     * 无权限访问
+     */
+    ACCESS_DENIED(4, "ACCESS_DENIED"),
+    /**
+     * 分享的文件丢失
+     */
+    SHARE_FILE_MISS(5, "分享的文件丢失"),
+    /**
+     * 分享已经被取消
+     */
+    SHARE_CANCELLED(6, "分享已经被取消"),
+    /**
+     * 分享已过期
+     */
+    SHARE_EXPIRE(7, "分享已过期"),
+    /**
+     * 需要登录
+     */
+    NEED_LOGIN(10, "NEED_LOGIN"),
+
+    TOKEN_ERROR(11,"token非法"),
+    USERNAME_PASSWORD_ERROR(12,"用户名或密码错误");
+
+    /**
+     * 状态码
+     */
+    private Integer code;
+
+    /**
+     * 状态描述
+     */
+    private String desc;
+
+}
+
+~~~
+
+
+
+
+
+2 配置全局异常处理器
+
+~~~java
+/**
+ * 全局异常处理器
+ */
+@RestControllerAdvice
+public class WebExceptionHandler {
+
+    @ExceptionHandler(value = MethodArgumentNotValidException.class)
+    public R methodArgumentNotValidExceptionHandler(MethodArgumentNotValidException e) {
+        ObjectError objectError = e.getBindingResult().getAllErrors().stream().findFirst().get();
+        return R.fail(ResponseCode.ERROR_PARAM.getCode(), objectError.getDefaultMessage());
+    }
+
+    @ExceptionHandler(value = ConstraintViolationException.class)
+    public R constraintDeclarationExceptionHandler(ConstraintViolationException e) {
+        ConstraintViolation<?> constraintViolation = e.getConstraintViolations().stream().findFirst().get();
+        return R.fail(ResponseCode.ERROR_PARAM.getCode(), constraintViolation.getMessage());
+    }
+
+    @ExceptionHandler(value = MissingServletRequestParameterException.class)
+    public R missingServletRequestParameterExceptionHandler(MissingServletRequestParameterException e) {
+        return R.fail(ResponseCode.ERROR_PARAM);
+    }
+
+    @ExceptionHandler(value = IllegalStateException.class)
+    public R illegalStateExceptionHandler(IllegalStateException e) {
+        return R.fail(ResponseCode.ERROR_PARAM);
+    }
+
+    @ExceptionHandler(value = BindException.class)
+    public R bindExceptionHandler(BindException e) {
+        FieldError fieldError = e.getBindingResult().getFieldErrors().stream().findFirst().get();
+        return R.fail(ResponseCode.ERROR_PARAM.getCode(), fieldError.getDefaultMessage());
+    }
+
+    @ExceptionHandler(value = RPanFrameworkException.class)
+    public R rPanFrameworkExceptionHandler(RPanFrameworkException e) {
+        return R.fail(ResponseCode.ERROR.getCode(), e.getMessage());
+    }
+
+}
+
+~~~
+
+
+
+#### 具体使用:
+
+**在类上**添加@Validated注解，在需要验证的属性旁添加验证注解即可：
+
+如果验证不通过则会抛出相应的异常。
+
+~~~java
+@RestController
+@Validated
+public class RPanServerLauncher {
+
+    @GetMapping("/test")
+    public R test(@NotBlank(message = "name不能为空") String name){
+        return R.success(name);
+    }
+}
+~~~
+
+**或者** 在**参数列表**添加@Validated注解，以使参数内部的属性能够进行验证
+
+~~~java
+    @PostMapping("/register")
+    public R userRegister(@Validated @RequestBody UserRegisterPO userRegisterPO){
+        UserRegisterContext userRegisterContext =
+                userConverter.UserRegisterContext2UserRegisterPO(userRegisterPO);
+        return null;
+    }
+~~~
+
+其中UserRegisterPO为：
+
+~~~java
+public class UserRegisterPO implements Serializable {
+
+    private static final long serialVersionUID = 2655365643649022645L;
+
+    @ApiModelProperty(value = "用户名",required = true)
+    @NotBlank(message = "用户名不能为空")
+    @Pattern(regexp = "^[0-9a-zA-Z]{6,16}$",message = "用户名必须由6-16位数字与字母组成")
+    private String username;
+
+    @ApiModelProperty(value = "密码",required = true)
+    @NotBlank(message = "密码不能为空")
+    @Length(min = 8,max = 16,message = "请输入8-16位的密码" )
+    private String password;
+
+    @ApiModelProperty(value = "密保问题",required = true)
+    @Length(max = 100,message = "请输入长度小于100的密保问题")
+    private String question;
+
+    @ApiModelProperty(value = "密保答案",required = true)
+    @Length(max = 100,message = "请输入长度小于100的密保答案")
+    private String answer;
+}
+
+~~~
+
+
+
+#### 根据验证注解来分类
+
+##### @Valid 和 @Validated 
+
+总结：
+
+（1）@Valid 和 @Validated 两者都可以对数据进行校验，待校验字段上打的规则注解（@NotNull, @NotEmpty等）都可以对 @Valid 和 @Validated 生效；
+
+（2）@Valid 进行校验的时候，需要用 BindingResult 来做一个校验结果接收。当校验不通过的时候，如果手动不 return ，则并不会阻止程序的执行；
+
+（3）@Validated 进行校验的时候，当校验不通过的时候，程序会抛出400异常，阻止方法中的代码执行，这时需要再写一个全局校验异常捕获处理类，然后返回校验提示。
+
+##### @Min
+
+~~~java
+@Getter
+@Setter
+@ToString
+public class PageQuery {
+    @Min(value = 1, message = "页码最小值为1") // 限制pageIndex的值最小为1，不满足则
+    @ApiModelProperty(value = "查询页码", example = "1")
+    private long pageIndex;
+
+    @Min(value = 1, message = "条数最小值为1")
+    @ApiModelProperty(value = "查询条数", example = "10")
+    private long pageSize;
+}
+~~~
+
+##### 其他：
+
+![](img\校验注解.png)
+
+##### @NotBlank
+
+~~~java
+@EqualsAndHashCode(callSuper = true)
+@Data
+@ApiModel("示例查询对象")
+public class SampleQuery extends PageQuery {
+    @NotBlank(message = "用户名不能为空")
+    @ApiModelProperty(value = "姓名", example = "张三")
     private String name;
-    private String degree;
-    private String specialization;
-    // getters and setters or builder
 }
+~~~
+
+##### @NotNull,@Size
+
+~~~java
+public class UserAccount {
+
+    @NotNull
+    @Size(min = 4, max = 15)
+    private String password;
+
+    @NotBlank
+    private String name;
+
+}
+~~~
+
+##### @Pattern
+
+~~~java
+    @NotBlank(message = "用户名不能为空")
+    @Pattern(regexp = "^[0-9a-zA-Z]{6,16}$",message = "用户名必须由6-16位数字与字母组成") // 使用正则表达式
+    private String username;
+~~~
+
+#### 根据数据类型分类：
+
+
+
+##### Integer、Long 类：
+
+~~~java
+	@Min(value = 1, message = "条数最小值为1")// 或者 @Max
+    @NotNull(message = "院捨id不能爲空")
+    @Range(message = "年龄范围为{min}到{max}之间",min=1,max=100)
+	private Integer facilityId;
+~~~
+
+##### String类：
+
+~~~java
+    @NotNull
+	@NotBlank
+    @Size(min = 4, max = 15)
+	@Length()
+	@Pattern(regexp = "^[0-9a-zA-Z]{6,16}$",message = "用户名必须由6-16位数字与字母组成") // 使用正则表达式
+    private String password;
+~~~
+
+
+
+##### 集合类：
+
+~~~java
+@NotEmpty(message="兴趣爱好不能为空")
+@Size(message="兴趣选择最多{max}个"，max=5)
+private List<String>hobbyList;
+~~~
+
+
+
+1.@NotNull：不能为null，但可以为empty
+
+```sh
+(""," ","   ")     # 都可以
 ```
 
-接下来，将 `DoctorMapper` 接口更新为如下代码：
+ 
+
+2.@NotEmpty：不能为null，而且长度必须大于0
+
+```sh
+("  ","   ")  # 都可以
+```
+
+3.@NotBlank：只能作用在String上，不能为null，而且调用trim()后，长度必须大于0
+
+```sh
+("test")   # 即：必须有实际字符
+```
+
+4.例如：
 
 ```java
-@Mapper
-public interface DoctorMapper {
-    DoctorMapper INSTANCE = Mappers.getMapper(DoctorMapper.class);
+1.String name = null;
 
-    @Mapping(source = "doctor.specialty", target = "specialization")
-    @Mapping(source = "education.degreeName", target = "degree")
-    DoctorDto toDto(Doctor doctor, Education education);
-}
+@NotNull: false
+@NotEmpty:false 
+@NotBlank:false 
+
+
+
+2.String name = "";
+
+@NotNull:true
+@NotEmpty: false
+@NotBlank: false
+
+
+
+3.String name = " ";
+
+@NotNull: true
+@NotEmpty: true
+@NotBlank: false
+
+
+
+4.String name = "Great answer!";
+
+@NotNull: true
+@NotEmpty:true
+@NotBlank:true
+
 ```
-
-我们添加了另一个`@Mapping`注解，并将其`source`设置为`Education`类的`degreeName`，将`target`设置为`DoctorDto`类的`degree`字段。
-
-**注意**：如果 `Education` 类和 `Doctor` 类包含同名的字段，我们必须让映射器知道使用哪一个，否则它会抛出一个异常。举例来说，如果两个模型都包含一个`id`字段，我们就要选择将哪个类中的`id`映射到DTO属性中。
-
-
 

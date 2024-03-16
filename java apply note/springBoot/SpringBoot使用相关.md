@@ -233,7 +233,8 @@ public class ScheduleTestConfig {
  * 定时任务模块单元测试
  */
 @RunWith(SpringJUnit4ClassRunner.class)// Junit4
-@ContextConfiguration(classes = ScheduleTestConfig.class) // 指定配置类
+@ContextConfiguration(classes = ScheduleTestConfig.class) // 指定上面的上下文配置类
+@Transactional // 开启事务，测试完成后自动回滚，防止测试数据污染数据库
 public class ScheduleTaskTest {
 
     @Autowired
@@ -252,6 +253,23 @@ public class ScheduleTaskTest {
 ~~~
 
 
+
+或者使用启动类作为配置类来进行测试，写法如下：
+
+~~~java
+@RunWith(SpringJUnit4ClassRunner.class)// Junit4
+@SpringBootTest(classes = RPanServerLauncher.class) // 指定启动类
+@Transactional // 开启事务，测试完成后自动回滚，防止测试数据污染数据库
+public class TestRegister {
+
+    @Test(expected = RPanBusinessException.class) // 设置期待的异常为RPanBusinessException，出现了则会通过测试
+    public void test2(){
+		// 配合cn.hutool.core.lang.Assert包下的Assrt断言来使用
+        String username = null;
+        Assert.isTrue(username == null);
+    }
+}
+~~~
 
 
 
@@ -890,6 +908,26 @@ public class TestController {
 }
 
 ~~~~
+
+其他获取方式：
+
+~~~java
+// 例如：根据请求上下文持有者RequestContextHolder获取http请求对象 来 判断请求头或者请求参数中是否携带了token信息
+    private boolean checkAndSaveUserId() {
+        ServletRequestAttributes requestAttributes =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+HttpServletRequest request = requestAttributes.getRequest();
+        // 从请求头或者请求参数获取token
+        String accessToken = request.getHeader(LOGIN_AUTH_REQUEST_HEADER_NAME);
+        if(StringUtils.isBlank(accessToken)){
+            accessToken = request.getParameter(LOGIN_AUTH_PARAM_NAME);
+            if(StringUtils.isBlank(accessToken)){
+                return false;
+            }
+        }
+        // 省略...
+    }
+~~~
 
 
 
@@ -2444,5 +2482,33 @@ public class HelloApplication {
         // 返回一个spring容器
         ConfigurableApplicationContext run = SpringApplication.run(HelloApplication.class, args);
     }
+~~~
+
+
+
+### 使用序列化器处理Long类型的数据
+
+把Long类型的文件id使用序列化器进行加密序列化后返回给前端，防止前端js出现精度丢失的问题 使用@JsonSerialize(using IdEncryptSerializer.class)注解，指定使用的序列化器
+
+~~~java
+@ApiModel(value = "用户基本信息VO实体")
+@Data
+public class UserInfoVO implements Serializable {
+
+
+    private static final long serialVersionUID = -2597972106743289163L;
+
+    @ApiModelProperty("用户名称")
+    private String username;
+	// 如：
+    @ApiModelProperty("用户根目录的加密ID")
+    @JsonSerialize(using = IdEncryptSerializer.class)
+    private Long rootFileId;
+
+    @ApiModelProperty("用户根目录名称")
+    private String rootFilename;
+
+}
+
 ~~~
 

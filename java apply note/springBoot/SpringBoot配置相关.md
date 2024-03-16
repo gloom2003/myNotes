@@ -265,8 +265,6 @@ java -jar jar包名称 --server.port=7777 --sever.name=app
 
 则应用程序会运行在7777端口上。
 
-
-
 ### 2.4 直接创建springBoot项目
 
 创建一个空项目，在idea左上角File中选择Project Structure,点击+号创建一个新的模块，选择Spring Initializr填写相关的信息。
@@ -274,6 +272,35 @@ java -jar jar包名称 --server.port=7777 --sever.name=app
 url:`start.aliyun.com`
 
 选择springBoot的版本，选择相关的依赖。
+
+### 2.5 yaml多环境配置
+
+参考链接：
+
+https://blog.csdn.net/qq_37992410/article/details/121008415
+
+
+
+方式一：多个yml文件
+  步骤1：创建多个配置文件
+
+```sh
+application.yml      #主配置文件
+application-dev.yml  #开发环境的配置
+application-prod.yml #生产环境的配置
+application-test.yml #测试环境的配置
+```
+
+  步骤2：applicaiton.yml中指定配置
+在application.yml中选择需要使用的配置文件（当选择的文件和主配置文件application.yml文件存在相同的配置时，application.yml中的配置会被覆盖掉）
+
+```yaml
+spring:
+ profiles:
+   active: dev #需要使用的配置文件的后缀
+```
+
+在application.yml主配置文件中做项目通用的配置，在其他配置文件中做不同环境下的配置，以避免重复配置的情况。
 
 
 
