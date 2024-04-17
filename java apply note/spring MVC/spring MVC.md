@@ -1989,6 +1989,10 @@ Content-disposition: attachment; filename=%E4%B8%8B%E6%B5%B7%E5%81%9Aup%E4%B8%BB
 
 ### 4.2 代码实现
 
+#### 存储在OSS中
+
+
+
 ​	我们可以使用之前封装的下载工具类实现文件下载
 
 工具类代码：
@@ -2052,4 +2056,6 @@ public class DownLoadController {
     }
 }
 ~~~~
+
+#### 存储在本地
 

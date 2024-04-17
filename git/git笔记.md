@@ -279,8 +279,8 @@ git revert HEAD # 表示把HEAD指向的提交复制一份，创建一个新的�
 #### 1.添加
 
 ```sh
-$ git config --global user.name "yourName"
-$ git config --global user.email "your@email.com"
+git config --global user.name "yourName"
+git config --global user.email "your@email.com"
 ```
 
 #### 2.修改
@@ -288,15 +288,15 @@ $ git config --global user.email "your@email.com"
 ###### （1）覆盖的形式：
 
 ```sh
-$ git config --global user.name "yourName"
-$ git config --global user.email "your@email.com"
+git config --global user.name "yourName"
+git config --global user.email "your@email.com"
 ```
 
 ###### （2）替换的形式：
 
 ```sh
-$  git config --global --replace-all user.name "yourName" 
-$  git config --global --replace-all user.email "your@email.com"
+git config --global --replace-all user.name "yourName" 
+git config --global --replace-all user.email "your@email.com"
 ```
 
 #### 3.删除
@@ -305,7 +305,7 @@ $  git config --global --replace-all user.email "your@email.com"
 
 ```sh
 $ git config --global --unset user.name "yourName"
-$ git config --global --unset user.email "your@email.com"
+git config --global --unset user.email "your@email.com"
 ```
 
 #### 4.查看
@@ -313,14 +313,14 @@ $ git config --global --unset user.email "your@email.com"
 ###### （1）查看所有：
 
 ```sh
-$ git config --list
+git config --list
 ```
 
 ###### （2）查看指定信息：
 
 ```sh
-$ git config user.name
-$ git config user.email
+git config user.name
+git config user.email
 ```
 
 #### 直接修改配置文件
@@ -345,13 +345,21 @@ git clone -b 远分支 远链接
 
 ### 2.3 查看提交类：
 
-查看详细的提交信息
+查看项目中你写的代码行数：
+
+~~~sh
+git log --author="Your Name" --oneline --shortstat | grep -E "fil(e|es) changed" | awk '{added+=$4; removed+=$6} END {printf "Added lines: %s, Removed lines: %s, Total lines: %s\n", added, removed, added-removed}'
+~~~
+
+
+
+查看详细的提交信息（作者、日期...），使用上下来查看更多的提交
 
 ~~~sh
 git log
 ~~~
 
-显示所有分支的所有提交情况（窗口足够大才容易看），使用图像、一行的方式
+显示所有分支的所有提交情况（git bash窗口足够大才能够看到更多），使用图像、一行的方式
 
 ```sh
 git log --all --graph --oneline 
@@ -363,11 +371,13 @@ git log --all --graph --oneline
 git log --author='五月的夏天'
 ~~~
 
-显示历史所有的(包括其它人)提交情况
+显示本人历史所有的(不包括其它人)提交情况，从克隆仓库开始
 
 ```sh
 git reflog
 ```
+
+
 
 ### 2.4 删除类
 
@@ -486,7 +496,7 @@ git checkout main
 
 初始状态：
 
-![merge1](D:\alwaysUse\notes\myNotes\git\img\merge1.png)
+![merge1](img\merge1.png)
 
 ```sh
 git merge bugFix
@@ -494,7 +504,7 @@ git merge bugFix
 
 结果：
 
-![merge2](D:\alwaysUse\notes\myNotes\git\img\merge2.png)
+![merge2](img\merge2.png)
 
 ~~~sh
 git checkout bugFix
@@ -957,7 +967,8 @@ git fetch origin 远程分支：本地分支
 相当于：
 
 ```shell
-git fetch origin foo; git merge o/foo
+git fetch origin foo;  # 拉取远程仓库的foo分支来更新本地的o/foo分支
+git merge o/foo # 把当前分支与更新后的o/foof
 ```
 
 还有...

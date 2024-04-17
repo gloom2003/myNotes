@@ -234,7 +234,7 @@ public class HelloController {
 
 ②maven打包
 
-![image-20210528143119257](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\需要三连资料\SpringBoot\img\SpringBoot项目打包.png)
+![image-20210528143119257](img\SpringBoot项目打包.png)
 
 ③运行jar包
 

@@ -196,7 +196,7 @@ docker run -v 宿主机目录:容器目录[:读写权限] 镜像名
 
 
 
-练习
+**练习**
 
 后台运行nginx容器，发布一个最简单的静态页面到Nginx，让我们能够通过浏览器去访问这个静态页面
 
@@ -501,6 +501,63 @@ docker logs -f 容器名称
 # 表示持续不断的打印输出的日志信息，使用Ctrl+C退出
 ~~~
 
+**详细使用**参考：
+
+链接：https://www.jianshu.com/p/1eb1d1d3f25e
+
+通过docker logs命令可以查看容器的日志。
+
+**命令格式：**
+
+
+
+```shell
+$ docker logs [OPTIONS] CONTAINER
+  Options:
+        --details        显示更多的信息
+    -f, --follow         跟踪实时日志
+        --since string   显示自某个timestamp之后的日志，或相对时间，如42m（即42分钟）
+        --tail string    从日志末尾显示多少行日志， 默认是all
+    -t, --timestamps     显示时间戳
+        --until string   显示自某个timestamp之前的日志，或相对时间，如42m（即42分钟）
+```
+
+**例子：**
+
+查看指定时间后的日志，只显示最后100行：
+
+
+
+```shell
+docker logs -f -t --since="2018-02-08" --tail=100 CONTAINER_ID
+```
+
+查看最近30分钟的日志:
+
+
+
+```shell
+docker logs --since 30m CONTAINER_ID
+```
+
+查看某时间之后的日志：
+
+
+
+```shell
+docker logs -t --since="2018-02-08T13:23:37" CONTAINER_ID
+```
+
+查看某时间段日志：
+
+
+
+```shell
+docker logs -t --since="2018-02-08T13:23:37" --until "2018-02-09T12:23:37" CONTAINER_ID
+```
+
+
+
 
 
 ### 2.10 docker commit 把容器打包为镜像 commit方式
@@ -575,6 +632,8 @@ docker network inspect bridge
 > docker cp [OPTIONS] SRC_PATH CONTAINER:DEST_PATH
 
 把宿主机的文件拷贝到容器中
+
+拷贝流向：从左到右
 
 例如：
 
@@ -666,6 +725,26 @@ docker exec -it 容器名 ls
 ~~~~shell
 docker exec -it 容器id bash
 ~~~~
+
+#### **排查容器中出现的问题：**
+
+使用下面的命令运行容器,启动容器后以交互的方式进入容器中进行排查：
+
+~~~sh
+docker run \
+-it \
+-p 7777:7777 \
+--name sg_blog \
+--restart always \
+-v /usr/blog:/usr/blog \
+java:openjdk-8u111 bash
+~~~
+
+使用exec命令进入容器会失败，报错：Error response from daemon: Container 895891e57324e100d0f7383c09875c71502957b763d5225907201b49932003d5 is restarting, wait until the container is running
+
+因为容器设置了自动重启。
+
+
 
 ### 2.22 docker pause命令 暂停容器
 
@@ -859,7 +938,9 @@ nginx:1.21.5
 
 如图：
 
-![](C:\Users\GLOOM\Downloads\博客前台网络架构.png)
+还有容器的DNS服务器等...,springBoot程序启动时会向容器的DNS服务器发起请求，寻找mysql与redis数据库的内网ip地址来进行连接。
+
+![](img\博客前台网络架构.png)
 
 
 
@@ -1045,7 +1126,7 @@ docker run -e CONTENT=JAVA test:1.0
 ​		例如
 ​			RUN echo sg
 ​	作用时机
-​		构建镜像的时候
+​		构建镜像的时候，**在镜像中的那个操作系统去执行的命令**
 
 **例子**：
 
@@ -1240,7 +1321,7 @@ docker run \
 -p 7777:7777 \
 --name sg_blog \
 --network blog_net \
---restart always \
+--restart always \	
 sg_blog:1.0
 ~~~
 
@@ -1424,7 +1505,7 @@ volumes: # 在这里定义数据卷,然后services中的volumes才能够使用�
 docker compose up # 按照当前目录下的docker-compose.yaml文件来部署环境，up指令会创建新的容器
 docker compose up -d # 后台运行
 docker compose -f xxx.yml up # 指定配置文件来运行
-docker-compose -f standalone-derby.yaml start # 重新启动容器，如果服务器宕机后重启建议使用
+docker compose -f standalone-derby.yaml start # 重新启动容器，如果服务器宕机后重启建议使用
 
 docker compose top # 监控整套环境的状态
 # 停止类
@@ -1554,6 +1635,7 @@ services:   # services里面就是我们所有需要进行编排的服务了
     restart: always
     volumes:
      - redis_data:/data
+     # 配置 Redis 服务器在运行时将写操作追加到 AOF 文件中，以便在服务器重启时重新应用这些写操作，从而确保数据的持久化。
     command: ['redis-server','--appendonly','yes']
   sg_blog_vue:
     image: my_blog_vue:1.0
@@ -1666,6 +1748,47 @@ mvn package -DskipTests
 服务器记得开启3306、6379端口
 
 在本地使用sqlYou连接服务器的数据库（容易被打，数据库暴露在公网中），操作服务器的数据库(创建数据库、**创建用户(以后使用这个用户的账号和密码来登录包括springBoot程序中连接数据库时)**，授予权限(bugs:所有数据库的所有权限都给了springBoot程序才能正常连接数据库，讲师只给了需要的查询的数据库的使用权限),执行sql文件)
+
+#### 4 智能床垫项目部署
+
+~~~yaml
+services:
+  mattress_backend:
+    container_name: mattress_backend
+    image: mattress_backend:1.2
+    ports:
+      - 11003:11003
+    restart: always
+    volumes:
+      - /app/src/main/resources/pictures:/app/src/main/resources/pictures
+  pgsql:
+    container_name: pgsql
+    image: postgres:9.6
+    ports:
+      - 5432:5432
+    restart: always
+    volumes:
+      - /app/pgsql/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ysj1072160676wyu
+  mattress_frontend:
+    container_name: mattress_frontend
+    image: mattress_frontend:1.2
+    ports:
+      - 80:80
+    restart: always
+  redis:
+    container_name: redis
+    image: redis:7.2-alpine
+    ports:
+      - 6379:6379
+    restart: always
+    volumes:
+      - /app/redis/data:/data
+      - /app/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - /app/redis/logs:/logs
+    command: redis-server /usr/local/etc/redis/redis.conf
+~~~
 
 
 

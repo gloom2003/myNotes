@@ -18,7 +18,9 @@
 
 ### Ctrl + Shift + U 选中的字母全部变为大写
 
-### 
+### Ctrl + Alt + T  快速生成try-catch等代码
+
+
 
 ### 1.6 Ctrl + D 把剪切板的内容粘贴到下一行
 

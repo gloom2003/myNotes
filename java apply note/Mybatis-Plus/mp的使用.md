@@ -1079,7 +1079,7 @@ public class Orders  {
 
 ①定义接口，定义方法
 
-方法第一个参数定义成Page类型，返回值最好定义为IPage< Orders>类型，定义为List< Orders>获取到的信息会不全
+方法第一个参数定义成Page类型，返回值最好定义为IPage< Orders>类型，定义为List< Orders>获取到的信息会不完整
 
 ~~~~java
 public interface OrdersMapper extends BaseMapper<Orders> {
@@ -1869,7 +1869,7 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
 mybatis-plus:
   global-config:
     db-config:
-      logic-delete-field: delFlag  # 全局逻辑删除的实体字段名(since 3.3.0,配置后可以忽略不配置步骤2)
+      logic-delete-field: delFlag  # 全局逻辑删除的实体字段名(since 3.3.0,配置后可以忽略不配置步骤2) 如果对应的表格有delFlag字段，执行SQL时就会添加上delFlag判断条件，否则就不会添加上这个字段
       logic-delete-value: 1 # 逻辑已删除值(默认为 1)
       logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
 ~~~~
@@ -2118,3 +2118,10 @@ public class Article{
 }
 ~~~
 
+
+
+#### 提高MP批量插入数据的效率
+
+参考：https://blog.csdn.net/qq_35549286/article/details/113603176
+
+不使用saveBatch()，使用Mybatis-plus 批量插入insertBatchSomeColumn

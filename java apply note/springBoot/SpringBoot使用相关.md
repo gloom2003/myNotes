@@ -785,6 +785,88 @@ public class SystemUserController {
 
 ~~~~
 
+#### 过滤器的使用
+
+方式1：
+
+~~~java
+package com.kana.filter;
+
+import com.alibaba.fastjson.JSON;
+import com.kana.constants.SystemConstants;
+import com.kana.domain.ResponseResult;
+import com.kana.domain.entity.LoginUser;
+import com.kana.enums.AppHttpCodeEnum;
+import com.kana.utils.JwtUtil;
+import com.kana.utils.RedisCache;
+import com.kana.utils.WebUtils;
+import io.jsonwebtoken.Claims;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Objects;
+
+/***
+ * 继承OncePerRequestFilter重写方法实现自定义过滤器至SpringSecurity中
+ * 
+ */
+@Component
+public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
+    @Autowired
+    private RedisCache redisCache;
+
+    /***
+     * 
+     * @param httpServletRequest
+     * @param httpServletResponse
+     * @param filterChain
+     * @throws ServletException
+     * @throws IOException
+     */
+    @Override
+    protected void doFilterInternal(HttpServletRequest httpServletRequest,
+                                    HttpServletResponse httpServletResponse,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        //获取前端请求头中携带的token并解析出userId
+        String token = httpServletRequest.getHeader("token");
+		// 业务操作...
+        //放行
+        filterChain.doFilter(httpServletRequest,httpServletResponse);
+
+    }
+}
+
+~~~
+
+方式2：
+
+~~~java
+/**
+ * @Description: 登录用戶信息包装过滤器
+ * @Author: Zifeng.Lin
+ * @Date: 2024/4/7 16:21
+ **/
+@Component
+@WebFilter(urlPatterns = "/**") // 表示该过滤器将匹配所有的 URL 路径
+public class UserInfoRequestWrapperFilter implements Filter {
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        UserInfoRequestWrapper userInfoRequestWrapper = new UserInfoRequestWrapper((HttpServletRequest) request, (HttpServletResponse) response);
+        chain.doFilter(userInfoRequestWrapper, response);
+    }
+}
+~~~
+
 
 
 #### 4.6.1 拦截器的概念
@@ -1027,6 +1109,10 @@ public class UserController {
 ​	对数据库的操作通过mapper层的方法来实现，而service则是通过操作mapper的方法来进行对数据库的操作，使用**@Transactional注解放在Service层中。**
 
 ​	直接在需要事务控制的方法上加上对应的注解**@Transactional**
+
+**注意**：想要**@Transactional**注解在程序有异常时进行回滚操作，**出现的异常必须是RuntimeException或者其子类的异常**。如果是Exception等受检查异常是不能够进行回滚操作的，如果程序程序这些异常**会使事务失效**。
+
+
 
 ~~~~java
 @Service

@@ -103,6 +103,19 @@ FROM a	LEFT JOIN b ON a.cid = b.category_id;
 
 ### 1.5 left join、inner join、right join的使用
 
+连表的原理：
+
+根据连接条件寻找相应的字段(把表名.字段)连接到表上面。
+
+~~~mysql
+select dei.occur_time,dei.handling_time,dei.handling_duration,s1.status_name as exception_type,s2.status_name as exception_status
+from device_exception_info dei
+inner join status s1 on s1.status_id = dei.exception_type -- dei表中添加了exception_type = status_id的一行s1表的数据，添加的每个字段名为s1.status_id,s1.字段2...
+inner join status s2 on s2.status_id = dei.exception_status-- dei表中添加了exception_type = status_id的一行s2表的数据，添加的每个字段名为s2.status_id,s2.字段2...
+~~~
+
+
+
 1.以谁为主表，谁的表的**顺序就不会改变**，并且**完整保留主表**，另一张表没有相应的连接信息时会直接**使用null进行连接**
 
 2.inner join 取两个表的**公共部分**
@@ -218,7 +231,7 @@ where dept_no is null
 
 ## 2 MySQL 常用内置函数的使用
 
-###【数值函数】
+### 数值函数】
 
 - Abs(X) //绝对值abs(-10.9) = 10
 - Format(X，D) //格式化千分位数值format(1234567.456, 2) =1,234,567.46
@@ -232,7 +245,7 @@ where dept_no is null
 - Rand() //随机数
 - TRUNCATE(X,D) //截取D位小数
 
-###【时间日期函数】
+### 【时间日期函数】
 
 - Now(),current_timestamp() //获取当前的日期与时间 返回：2023-11-27 04:03:27
 - year('2023-10-22') = 2023 // 获取字符串中的年、月 **日期字符串支持下面4种格式**：1.YYYY-MM-DD,2.YYYY/MM/DD,3.YYYYMMDD,4.YYMMDD
@@ -295,7 +308,7 @@ concat('2022-','11-11') -- 结果：2022-11-11
 - STRCMP(string1 ,string2 ) //逐字符比较两字串大小
 - TRIM(string) //去除前后两端的空格
 
-###【流程函数】
+### 【流程函数】
 
 - case when语句的使用
 
@@ -304,7 +317,7 @@ concat('2022-','11-11') -- 结果：2022-11-11
 
 - IF(expr1,expr2,expr3) 双分支。
 
-###【聚合函数】
+### 【聚合函数】
 
 - Count() **注意：count(null) = 0,count(666) = 1**,检测配合group by或者case when来使用
 - Sum()

@@ -733,9 +733,11 @@ User findByCondition(@Param("id") Integer id,@Param("username") String username)
     </select>
 ~~~~
 
-调用方法时如果传入的id和username为null则执行的SQL为：select * from user
+调用方法时如果传入的id和username都为null，则执行的SQL为：select * from user
 
 调用方法时如果传入的id为null，username不为null，则执行的SQL为：select * from user where username = ?
+
+
 
 ### 10.3 where标签
 
@@ -862,7 +864,7 @@ List<User> selectChose(User user);
 
 ​		如果id为null,username不为null就通过username查询。
 
-​		如果id和username都会null就查询id为3的用户
+​		如果id和username都为null就查询id为3的用户
 
 xml映射文件如下
 
@@ -896,6 +898,12 @@ xml映射文件如下
   
 
 ​	一个choose标签中最多只会有一个when中的判断成立(相当于switch中自带了break)。从上到下去进行判断。如果成立了就把标签体的内容拼接到sql中，并且不会进行其它when的判断和拼接。如果所有的when都不成立则拼接otherwise中的语句。
+
+
+
+
+
+
 
 ## 11. SQL片段抽取-sql标签
 
@@ -1237,7 +1245,7 @@ WHERE
 
 结果集
 
-![image-20210224164927461](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\Mybatis\img\image-4.png)
+![](img\image-4.png)
 
 我们可以使用如下的方式封装结果集。
 
@@ -1262,7 +1270,7 @@ WHERE
 	
     <resultMap id="userRoleMap" type="com.sangeng.pojo.User"  extends="userMap">
         <!--ofType属性指定需要映射的集合中的泛型-->
-        <!--在这里相当于：对List<Role> roles 属性进行映射-->
+        <!--在这里相当于：对List<Role>中的id,name,desc属性进行映射-->
         <collection property="roles" ofType="com.sangeng.pojo.Role" >
             <id property="id" column="rid"></id>
             <result property="name" column="name"></result>
@@ -1289,7 +1297,7 @@ WHERE
 
 最终封装完的结果如下：
 
-![image-20210224170108202](C:\Users\GLOOM\Desktop\for zip\not system\sangGeng files\普通配套资料\Mybatis\img\image-5.png)
+![](img\image-5.png)
 
 ### 15.2 分步查询（分布式项目中常用，处理数据量大的情况）
 
@@ -1458,7 +1466,7 @@ public interface RoleDao {
 
 ~~~~xml
  <plugins>
-        <!-- 注意：分页助手的插件  注意标签配置的顺序 -->
+        <!-- 注意：分页助手的插件  注意标签配置的顺序必须中environmentsb -->
         <plugin interceptor="com.github.pagehelper.PageHelper">
             <!-- 指定方言(使用的是mysql数据库) -->
             <property name="dialect" value="mysql"/>
@@ -1576,3 +1584,75 @@ public class User implements Serializable
 
 2.创建packge时,使用com.kana.mybatis,创建目录时使用com/kana/mybatis
 
+#### pgsql的日期比较问题
+
+原因分析：
+
+项目用的 PostgreSQL 数据库，使用 SpringBoot + Mybatis 整合
+
+我这边前端传过来的时间是字符串类型的，而数据库是时间类型的，类型不一致，直接使用会报错。
+
+修改前的代码：
+
+```xml
+select id,now_time,message,pretreat_ip from pretreat where 1=1 and device='D500'
+    <if test="startTime !=null and startTime !=''">
+        AND now_time <![CDATA[ >= ]]> #{startTime}
+    </if>
+    <if test="endTime !=null and endTime !=''">
+        AND now_time <![CDATA[ <= ]]> #{endTime}
+    </if>
+```
+解决办法：使用时间转换函数将字符串转为时间类型
+
+to_date(#{startTime},'YYYY-MM-DD HH24:MI:SS')
+
+整体代码如下：
+
+```xml
+select now_time,message,pretreat_ip from pretreat where 1=1 and device='D500'
+    <if test="startTime !=null and startTime !=''">
+        AND now_time <![CDATA[ >= ]]> to_date(#{startTime},'YYYY-MM-DD HH24:MI:SS')
+    </if>
+    <if test="endTime !=null and endTime !=''">
+        AND now_time <![CDATA[ <= ]]> to_date(#{endTime},'YYYY-MM-DD HH24:MI:SS')
+    </if>
+```
+java的时间格式可以写成 ： 'YYYY-MM-dd HH:mm:SS'
+
+mybatis的xml最好写成  :  'YYYY-MM-DD HH24:MI:SS'
+
+
+
+
+## 特殊符号替换
+
+在 XML 中，一些字符拥有特殊的意义。
+
+如果您把字符 "<" 放在 XML 元素中，会发生错误，这是因为解析器会把它当作新元素的开始。
+
+这样会产生 XML 错误：
+
+为了避免这个错误，用实体引用来代替 "<" 字符，如下：
+
+#### xml中的五个实体引用：
+
+![](img/xml中的五个实体引用.png)
+
+#### 使用`<![CDATA[ ]]>`来防止被转义
+
+在使用mybatis 时我们sql是写在xml 映射文件中，如果写的sql中有一些特殊的字符的话，在解析xml文件的时候会被转义，但我们不希望他被转义，所以我们要使用`<![CDATA[ ]]>`来解决。
+
+`<![CDATA[   ]]>` 是什么，这是XML语法。在CDATA内部的所有内容都会被解析器忽略。
+
+如果文本包含了很多的"<"字符 <=和"&"字符——就象程序代码一样，那么最好把他们都放到CDATA部件中。
+
+但是有个问题那就是 `<if test="">   </if>   <where>   </where>  <choose>  </choose>  <trim>  </trim>` 等这些标签都不会被解析，所以我们只把有特殊字符的语句放在 `<![CDATA[   ]]>`  尽量缩小 `<![CDATA[  ]]>` 的范围。
+
+
+
+pgsql中使用Mybatis进行模糊查询的sql写法：
+
+```sql
+where r."name" LIKE CONCAT('%',#{residentName},'%');
+```

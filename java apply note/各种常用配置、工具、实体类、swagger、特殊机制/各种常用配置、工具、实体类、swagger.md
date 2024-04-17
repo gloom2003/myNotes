@@ -948,6 +948,17 @@ public class CommentController {
     }
 ~~~~
 
+或者：
+
+~~~java
+    @PostMapping(value = "/auth/facility",headers = Constant.LOGIN_TOKEN_KEY)
+										// 设置登录token请求的Header Key：Authorization
+    @ApiOperation("添加院舍")										// 不显示这个参数
+    public R addFacility(@RequestBody AddFacilityDTO addFacilityDTO, @ApiParam(hidden = true) Long current_userId){
+        return R.ok();
+    }
+~~~
+
 
 
 #### 3 实体类配置
@@ -1161,6 +1172,27 @@ interface MsSampleMapper {
      * @return 转换结果
      */
     SampleDTO sampleToSampleDto(Sample sample);
+}
+~~~
+
+或者：
+
+~~~java
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.factory.Mappers;
+
+@Mapper
+public interface FacilityDOConverter{
+
+    FacilityDOConverter INSTANCE = Mappers.getMapper(FacilityDOConverter.class);
+
+    @Mapping(source = "id", target = "facilityId")
+    FacilityDTO doMapToDTO(FacilityDO facilityDO);
+
+    @Mapping(source = "facilityId", target = "id")
+    FacilityDO dtoMapToDO(FacilityDTO facilityDO);
+
 }
 ~~~
 
@@ -1607,7 +1639,7 @@ public class UserAccount {
 private List<String>hobbyList;
 ~~~
 
-
+#### @NotNull区别
 
 1.@NotNull：不能为null，但可以为empty
 
@@ -1664,3 +1696,20 @@ private List<String>hobbyList;
 
 ```
 
+
+
+#### implements Serializable的意义
+
+gpt4回答：
+
+在Java中，`implements Serializable`是一个标记接口，表示类的对象可以被序列化。对象序列化是将对象的状态转换为可以被存储或传输的格式（如存储到文件中，或通过网络传输到另一台机器上）的过程。实现了`Serializable`接口的类的对象可以被`ObjectOutputStream` 类序列化，而对象的反序列化则是通过`ObjectInputStream`类完成的。
+
+以下是一些常见场景，你可能需要让你的DO（Data Object）类实现`Serializable`接口：
+
+1. **网络传输**：如果你需要通过网络从一个JVM传输对象到另一个JVM，那么这个对象需要是可序列化的。例如，在RMI（远程方法调用）、Socket编程或使用某些分布式对象缓存框架时。
+2. **持久化到磁盘**：如果你需要将对象的状态保存到文件中，稍后再恢复这些状态，那么这个对象同样需要实现`Serializable`接口。这在实现某些持久化机制时很常见。
+3. **分布式系统**：在分布式系统中，比如使用了EJB或Spring分布式/远程服务，将对象从一个应用传输到另一个应用中时，那些作为参数或返回值的对象应该是可序列化的。
+
+DO类是否需要实现`Serializable`，主要取决于你是否需要上述某种形式的序列化。如果DO类仅仅在同一个JVM内使用，或者不需要通过文件、网络等方式持久化或传输，那么不必强制让DO类实现`Serializable`接口。然而，在企业应用中，为了保证未来可能的需求（例如分布式部署），实现`Serializable`接口是一种常见的做法。此外，在使用一些框架时（例如Hibernate），某些情况下也可能要求你的DO类实现`Serializable`接口，以支持某些特性，如分布式缓存。
+
+总之，是否让DO类实现`Serializable`应基于具体需求做考虑，但从一开始就实现这一接口也无伤大雅，可以为将来可能的需求预留空间。

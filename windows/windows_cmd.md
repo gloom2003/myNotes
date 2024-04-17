@@ -73,6 +73,8 @@ taskkill /T /F /PID 9088
 
 ## windows 
 
+win10:
+
 - 任务管理器可以查看进程和线程数，也可以用来杀死进程 
 
 - `tasklist` 查看进程 
@@ -89,7 +91,18 @@ taskkill /T /F /PID 9088
   taskkill /F /PID 28060 # /F:强制 /PID:指定进程号
   ~~~
 
+  win7: 测试无效
   
+  ~~~sh
+  ntsd -c q -p PID
+  ntsd -c q -pn student.exe
+  ~~~
+  
+  
+  
+  禁止win7 红蜘蛛：
+  
+  修改 ： C:/用户/System32下面的  checkrs 文件的名称，并在任务管理器中结束红蜘蛛任务。
 
 
 
