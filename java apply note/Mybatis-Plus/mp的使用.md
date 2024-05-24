@@ -375,7 +375,7 @@ mybatis-plus:
 
 ## 4.基本使用
 
-### 4.1 插入操作
+### 4.1 插入后获取自增的主键操作
 
 ​	我们可以使用insert方法来实现数据的插入。
 
@@ -387,10 +387,14 @@ mybatis-plus:
         User user = new User();
         user.setUserName("三更草堂333");
         user.setPassword("7777888");
-        int r = userMapper.insert(user);
-        System.out.println(r);
+        int count = userMapper.insert(user); // 注意：如果id设置为自增，会返回影响的行数，并且会把自增后生成的id自动赋值给user对象 service的save()方法也有这个功能，只是返回的是是否执行成功的true与f
+        System.out.println(count);
     }
 ~~~~
+
+MP获取自增后的id：
+
+参考：https://blog.csdn.net/weixin_44917045/article/details/114700476
 
 
 
@@ -611,7 +615,7 @@ ORDER BY
 
 
 
-#### 示例一 
+#### 示例一  普通查询
 
 > select(String... sqlSelect) 方法的测试为要查询的列名
 
@@ -638,7 +642,7 @@ MP写法如下：
 
 
 
-#### 示例二
+#### 示例二 查询某个字段
 
 > `select(Class<T> entityClass, Predicate<TableFieldInfo> predicate)`
 
@@ -677,7 +681,7 @@ MP写法如下：
 
 
 
-#### 示例三
+#### 示例三 不查询某一个字段
 
 > select(Predicate<TableFieldInfo> predicate)
 
@@ -716,6 +720,43 @@ MP写法如下：
 ~~~~
 
 
+
+#### 示例四 and (( or... or ... or))
+
+~~~java
+    public List<UserVO> searchUserByNameOrPhoneOrEmail(String keyword) {
+        if (StringUtils.isBlank(keyword)) {
+            return Lists.newArrayList();
+        }
+        LambdaQueryWrapper<UserDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(UserDO::getId, UserDO::getUserName,
+                        UserDO::getPhoneNumber, UserDO::getEmail)
+                .and(e -> e.eq(UserDO::getPhoneNumber, keyword)// 相当于and ((...))
+                        .or().eq(UserDO::getUserName, keyword)
+                        .or().eq(UserDO::getEmail, keyword));
+        List<UserDO> userDOList = userMapper.selectList(queryWrapper);
+        return UserDOConverter.INSTANCE.doListMapToDtoList(userDOList);
+    }
+~~~
+
+
+
+> 注意事项:
+>
+> 主动调用`or`表示紧接着下一个**条件**用`or`连接!(不调用`or`则默认为使用`and`连接)
+
+
+
+执行的sql为：
+
+~~~java
+==>  Preparing: SELECT user_id AS id,user_name,phone_number,email FROM users WHERE is_deleted=false AND ((phone_number = ? OR user_name = ? OR email = ?))
+==> Parameters: 19364231011(String), 19364231011(String), 19364231011(String)
+<==    Columns: id, user_name, phone_number, email
+<==        Row: 17, test, 19364231011, Manager20@qq.com
+<==      Total: 1
+
+~~~
 
 
 
@@ -1510,7 +1551,7 @@ idea连接数据库，在数据库面板中选择需要生成的表，右键生�
 
 配置信息1
 
-**注意**：应该是entity才对
+**注意**：应该是entity才对  ,也可以输入com/fa/modules/dao来指定DO类的生成位置
 
 ![](img/配置信息1.png)
 
@@ -1859,6 +1900,136 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
 }
 ~~~
 
+智能床垫项目使用案例：
+
+DO类：
+
+~~~java
+/**
+ * @Description: 数据库实体公用父类
+ * @Author: Zifeng.Lin
+ * @Date: 2024/4/7 9:58
+ **/
+@Data
+public class BaseDO {
+
+    /**
+     * 创建者ID
+     */
+    @TableField(value = "create_by", fill = FieldFill.INSERT)
+    private String createBy;
+    /**
+     * 创建时间
+     */
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
+    private Date createTime;
+    /**
+     * 更新者ID
+     */
+    @TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
+    /**
+     * 更新时间
+     */
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
+    private Date updateTime;
+}
+
+~~~
+
+2
+
+~~~java
+/**
+ * @Description: 通用逻辑删除表父类
+ * @Author: Zifeng.Lin
+ * @Date: 2024/4/29 14:21
+ **/
+@Data
+public class LogicDO extends BaseDO {
+
+    @TableLogic
+    @TableField(value = "is_deleted", fill = FieldFill.INSERT)
+    private Boolean deleteFlag;
+
+}
+~~~
+
+
+
+使用：
+
+~~~java
+/**
+ * @Description: 数据库默认字段填充
+ * @Author: Zifeng.Lin
+ * @Date: 2024/4/18 10:32
+ **/
+public class DefaultFieldHander implements MetaObjectHandler {
+
+    @Override
+    public void insertFill(MetaObject metaObject) {
+        // 由于DO类都做了抽象处理，继承了BaseDO、LogicDO，所以这里很方便的进行区分
+        if (metaObject.getOriginalObject() instanceof BaseDO) {
+            BaseDO baseDO = (BaseDO) metaObject.getOriginalObject();
+            Date current = new Date();
+            if (Objects.isNull(baseDO.getCreateTime())) {
+                setFieldValByName(CommonConstant.CREATE_TIME, current, metaObject);
+            }
+
+            if (Objects.isNull(baseDO.getUpdateTime())) {
+                setFieldValByName(CommonConstant.UPDATE_TIME, current, metaObject);
+            }
+            BaseUserInfo currentUser = getUserInfo();
+            if (Objects.nonNull(currentUser) && Objects.isNull(baseDO.getCreateBy())) {
+                setFieldValByName(CommonConstant.CREATE_BY, currentUser.getUserId(), metaObject);
+            }
+
+            if (Objects.nonNull(currentUser) && Objects.isNull(baseDO.getUpdateBy())) {
+                setFieldValByName(CommonConstant.UPDATE_BY, currentUser.getUserId(), metaObject);
+            }
+        }
+        if (metaObject.getOriginalObject() instanceof LogicDO) {
+            LogicDO baseDO = (LogicDO) metaObject.getOriginalObject();
+            if (Objects.isNull(baseDO.getDeleteFlag())) {
+                setFieldValByName(CommonConstant.DELETE_FLAG, false, metaObject);
+            }
+
+        }
+    }
+
+    @Override
+    public void updateFill(MetaObject metaObject) {
+        if (metaObject.getOriginalObject() instanceof BaseDO) {
+            BaseDO baseDO = (BaseDO) metaObject.getOriginalObject();
+
+            Date current = new Date();
+            if (Objects.isNull(baseDO.getUpdateTime())) {
+                setFieldValByName(CommonConstant.UPDATE_TIME, current, metaObject);
+            }
+            BaseUserInfo currentUser = getUserInfo();
+
+            if (Objects.nonNull(currentUser) && Objects.isNull(baseDO.getUpdateBy())) {
+                setFieldValByName(CommonConstant.UPDATE_BY, currentUser.getUserName(), metaObject);
+            }
+        }
+    }
+
+    private BaseUserInfo getUserInfo() {
+        BaseUserInfo currentUser = UserInfoContext.getUserInfo();
+        if (Objects.isNull(currentUser)) {
+            return BaseUserInfo.builder().userId("").userName("").build();
+        }
+        return currentUser;
+    }
+}
+
+~~~
+
+
+
 ## 2.逻辑删除
 
 ​	MP也支持逻辑删除的处理。我们只需要配置好逻辑删除的实体字段名，代表删除的字段值和代表未删除的字段值后即可。
@@ -1892,11 +2063,40 @@ private Integer deleted;
 
 ## 3.乐观锁
 
+### 前言：使用DO类来更新导致的并发问题
+
+如果使用MP进行更新时使用整个DO类来更新，则很容易出现并发问题：
+
+如：
+
+考虑如下场景：
+
+- **用户A** 查询了用户信息，获取到用户的`name`为"Tom"，`age`为30。
+- **用户B** 几乎同时查询了相同的用户信息，也获取到`name`为"Tom"，`age`为30。
+
+此时，两个用户分别对信息进行了修改：
+
+- **用户A** 修改了`age`为31，但没有改变`name`。
+- **用户B** 修改了`name`为"Jerry"，但没有改变`age`。
+
+如果两个用户几乎同时提交了更新，可能会出现以下情况：
+
+- **用户A** 提交了更新请求，将`age`更新为31。
+- 然后，**用户B** 提交了更新请求，将`name`更新为"Jerry"。
+
+如果更新操作是通过将整个DO对象作为更新条件，并且没有考虑版本号（或其它并发控制策略），最终的结果可能是`name`为"Jerry"，`age`为30（如果**用户B**的更新是基于原始数据，即`age`仍然为30）。这意味着**用户A**的更新被覆盖了。
+
+**解决方案**
+
+一种避免这种情况的方法是，更新操作采用字段选择更新，即只更新发生变化的字段(不能完全避免，例子如下)，或者加入乐观锁机制。
+
+
+
 ​	并发操作时,我们需要保证对数据的操作不发生冲突。乐观锁就是其中一种方式。
 
 **乐观锁就是先假设不存在并发冲突问题，在进行实际数据操作的时候再检查是否冲突。**
 
-
+**以 使用MP进行更新时对每个字段一个个set来举例**：可以解耦，別人讀代碼也很清晰，你set幾個字段他就知道你是修改那幾個字段
 
 ​	为什么使用，解决什么问题：解决**并发操作时数据冲突问题**的一种方式。**如**：对price字段 值为0，第一个线程想要加10：
 
@@ -1906,7 +2106,7 @@ update set price = price + 10 from order where id = 1;
 
 
 
-在执行的过程中，另一个线程执行完了加20的操作:
+在执行的过程中，第一个线程卡住了，另一个线程获取price的值为0，执行完了加20的操作:
 
 ~~~mysql
 update set price = price + 20 from order where id = 1;
@@ -1916,7 +2116,7 @@ update set price = price + 20 from order where id = 1;
 
 此时price的值为20，第一个线程执行完毕后，把结果10覆盖price的20，造成了数据的错误,把结果从本来的30变成了10。
 
-(my补充：更新操作不是原子性的，可能包含多条指令，这里相当于在执行这些指令中，第一个线程只执行了部分指令时，另一个线程快速的执行完了一次更新操作，第一个线程继续执行剩下的赋值指令，导致把结果10覆盖price的20，第一个线程幻读了。)
+(my补充：更新操作不是原子性的，可能包含多条指令，这里相当于在执行这些指令中，第一个线程只执行了部分指令时，另一个线程快速的执行完了一次更新操作，第一个线程继续执行剩下的赋值指令，导致把结果10覆盖price的20，不是幻读，只是线程卡顿导致的问题)
 
 **具体使用**：
 
@@ -2068,14 +2268,14 @@ articles.forEach(article -> articleService.updateViewCountToMysql(article.getId(
 
 ~~~java
 @Data
-@AllArgsConstructor
+@AllArgsConstructor// 实体类会根据小驼峰命名把属性与数据库列名进行映射(相当于mapper文件的映射规则)
 @NoArgsConstructor
 @Accessors(chain = true)//开启链式调用
 @TableName("sg_article")//对应数据库中名字为sg_article的表
 public class Article{
-    @TableId//主键id,只能有一个，但是数据库表可能有两个主键
+    @TableId(value = "id",type = IdType.AUTO)d//主键id,只能有一个，但是数据库表可能有两个主键,设置主建自动增长
     private Long id;
-  
+    @TableField(value = "titleDesc")// 名称与小驼峰命名不一样时使用，会在sql中使用as 重命名
     private String title;
    
     private String content;
@@ -2107,7 +2307,7 @@ public class Article{
     private Date updateTime;
 
     private Integer delFlag;
-    //注解表示String categoryName不在数据库表中
+    // 注解表示String categoryName不在数据库表中,不添加的话，执行的sql语句中会查询出这个列，列名为小驼峰命名转换后的结果：即：category_name
     @TableField(exist = false)
     private String categoryName;
 
@@ -2120,8 +2320,88 @@ public class Article{
 
 
 
-#### 提高MP批量插入数据的效率
+### 提高MP批量插入数据的效率
 
 参考：https://blog.csdn.net/qq_35549286/article/details/113603176
 
 不使用saveBatch()，使用Mybatis-plus 批量插入insertBatchSomeColumn
+
+
+
+### 模糊查询：
+
+参考：https://www.hxstrive.com/subject/mybatis_plus/292.htm
+
+### like（完全模糊，即“like '%val%'”）
+
+```
+like(R column, Object val)``like(``boolean` `condition, R column, Object val)
+```
+
+参数说明：
+
+- column：要用于条件筛选的数据库表列名称，如：name
+- val：用于指定数据表列的值，条件将根据该值进行筛选
+- condition：用于指定当前这个条件是否有效；如果为 true，则应用当前条件；如果为 false，则忽略当前条件。
+
+实例：查询用户名称中包含“王”值的用户信息，如下：
+
+```
+QueryWrapper<UserBean> wrapper = ``new` `QueryWrapper<>();``wrapper.like(``"name"``, ``"王"``); ``// 等价 SQL 语句：name like '%王%'
+```
+
+
+
+### notLike（完全模糊取非，即“not like '%val%'”） 
+
+```
+notLike(R column, Object val)``notLike(``boolean` `condition, R column, Object val)
+```
+
+参数说明：
+
+- column：要用于条件筛选的数据库表列名称，如：name
+- val：用于指定数据表列的值，条件将根据该值进行筛选
+- condition：用于指定当前这个条件是否有效；如果为 true，则应用当前条件；如果为 false，则忽略当前条件。
+
+实例：查询用户包含“王”值的用户信息，如下：
+
+```
+QueryWrapper<UserBean> wrapper = ``new` `QueryWrapper<>();``wrapper.notLike(``"name"``, ``"王"``); ``// 等价 SQL 语句：name not like '%王%'
+```
+
+### likeLeft（仅左边模糊，即“like '%val'”）
+
+```
+likeLeft(R column, Object val)``likeLeft(``boolean` `condition, R column, Object val)
+```
+
+参数说明：
+
+- column：要用于条件筛选的数据库表列名称，如：name
+- val：用于指定数据表列的值，条件将根据该值进行筛选
+- condition：用于指定当前这个条件是否有效；如果为 true，则应用当前条件；如果为 false，则忽略当前条件。
+
+实例：查询用户名以“王”值结束的用户信息列表，如下：
+
+```
+QueryWrapper<UserBean> wrapper = ``new` `QueryWrapper<>();``wrapper.likeLeft(``"name"``, ``"王"``); ``// 等价 SQL 语句：name like '%王'
+```
+
+### likeRight（仅右边模糊，即“like 'val%'”）
+
+```
+likeRight(R column, Object val)``wrapper.likeRight(``boolean` `condition, R column, Object val)
+```
+
+参数说明：
+
+- column：要用于条件筛选的数据库表列名称，如：name
+- val：用于指定数据表列的值，条件将根据该值进行筛选
+- condition：用于指定当前这个条件是否有效；如果为 true，则应用当前条件；如果为 false，则忽略当前条件。
+
+实例：查询用户名以“王”值开始的用户信息列表，如下：
+
+```
+QueryWrapper<UserBean> wrapper = ``new` `QueryWrapper<>();``likeRight(``"name"``, ``"王"``); ``// 等价 SQL 语句：name like '王%'
+```

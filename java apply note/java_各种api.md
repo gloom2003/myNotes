@@ -524,6 +524,119 @@ public int test(int[][] envelopes){
     }
 ~~~
 
+
+
+### 求集合的交集：retainAll()方法
+
+set 、list集合的交集（retainAll）、差集(removeAll)是没有区别的都是一样的.
+
+~~~java
+public static void main(String[] args) {
+            Set<Integer> result = new HashSet<Integer>();
+            Set<Integer> set1 = new HashSet<Integer>(){{
+                add(1);
+                add(3);
+                add(5);
+            }};
+
+            Set<Integer> set2 = new HashSet<Integer>(){{
+                add(1);
+                add(2);
+                add(3);
+            }};
+
+            result.clear();
+            result.addAll(set1);
+            System.out.println("去重复交集前1："+set1);
+            System.out.println("去重复交集前2："+set2);
+            result.retainAll(set2);
+            System.out.println("set1与set2的交集是："+result);
+}
+~~~
+
+#### retainAll返回值的说明
+
+这里有两个说明。
+第一个：如果集合A数组的大小没有改变，则返回false。如果集合A和集合B是完全相同的集合，也会返回false。
+
+```typescript
+public static void main(String[] args) {
+        ArrayList<String> list1= new ArrayList<String>();
+        list1.add("123");
+        ArrayList<String> list2= new ArrayList<String>();
+        list2.add("123");
+        System.out.println(list1.retainAll(list2)); 
+    }
+```
+
+如上代码会返回false。
+第二个：两个集合没有交集，会返回true。
+
+```typescript
+public static void main(String[] args) {
+        ArrayList<String> list1= new ArrayList<String>();
+        list1.add("123");
+        ArrayList<String> list2= new ArrayList<String>();
+        list2.add("12345");
+        System.out.println(list1.retainAll(list2));
+    }
+```
+
+如上代码会返回true。
+总结：当集合A的大小改变的时候返回的是True,大小没有改变的时候返回的是False。
+
+#### retainAll的判断方法
+
+```typescript
+public static void main(String[] args) {
+        ArrayList<String> list1= new ArrayList<String>();
+        list1.add("123");
+        ArrayList<String> list2= new ArrayList<String>();
+        list2.add("123");
+        list1.retainAll(list2);
+        if(list1.size()>0){
+            System.out.println("有交集");
+        }else{
+            System.out.println("没有交集");
+        }
+    }
+```
+
+通过判断集合的大小，来确定是否存在交集。不能通过方法返回的True和False来判断。
+
+#### retainAll的实际效果使用
+
+我们声明两个集合，通过调用retainAll，保留两个集合的交集。最后再看输出的效果。
+
+```csharp
+    public static void main(String[] args) {
+        Collection collection1 = new ArrayList();
+        collection1.add("a");
+        collection1.add("b");
+        collection1.add("c");
+        Collection collection2 = new ArrayList();
+        collection2.add("ab");
+        collection2.add("abc");
+        collection2.add('a');
+        System.out.println(collection1);
+        boolean flag = collection1.retainAll(collection2);
+        System.out.println(flag);
+        System.out.println(collection1);
+    }
+```
+
+执行结果如下：
+
+```csharp
+[a, b, c]
+true
+[a]
+```
+
+保留了两个结合的交集。
+
+
+
 ## 6 Stack
 
 - stack.**push**()把元素压入堆栈顶部。

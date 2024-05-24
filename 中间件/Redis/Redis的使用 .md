@@ -1437,14 +1437,14 @@ private static final ObjectMapper mapper = new ObjectMapper();
 void testSaveUser() throws JsonProcessingException {
     // 创建对象
     User user = new User("虎哥", 21);
-    // 手动序列化 writeValueAsString方法：把对象序列化为json字符串
+    // 手动json序列化 writeValueAsString方法：把对象序列化为json字符串
     String json = mapper.writeValueAsString(user);
     // 写入数据
     stringRedisTemplate.opsForValue().set("user:200", json);
 
     // 获取数据
     String jsonUser = stringRedisTemplate.opsForValue().get("user:200");
-    // 手动反序列化 readValue()方法，把json字符串反序列化为对象
+    // 手动j反序列化 readValue()方法，把json字符串反序列化为对象
     User user1 = mapper.readValue(jsonUser, User.class);
     System.out.println("user1 = " + user1);
 }

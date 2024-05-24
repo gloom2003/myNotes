@@ -20,6 +20,8 @@
 
 ### Ctrl + Alt + T  快速生成try-catch等代码
 
+### 清除没有使用的import语句 Ctrl + Alt + O (欧)
+
 
 
 ### 1.6 Ctrl + D 把剪切板的内容粘贴到下一行

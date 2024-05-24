@@ -252,8 +252,6 @@ sql:
 
 
 
-## 
-
 ### 3.2 多个参数 使用@Param
 
 Mybatis会把多个参数放入一个Map集合中，默认的key是argx和paramx这种格式。

@@ -737,6 +737,33 @@ http://localhost:81/testRquestParam?id=1&name=三更草堂&likes=编程&likes=�
 
 使用postman选择Body的x-www-form-urlencodeed，**可以在请求体中设置QueryString格式的参数然后发送post请求**，Spring MVC也能够从请求体获取到QueryString格式的数据并且转换为对象。
 
+##### 3 使用List接受参数
+
+~~~java
+    @PostMapping("/saveUserFacilityList")
+    @ResponseBody
+    @ApiOperation("保存用户授权的院舍列表")
+    public ResultDTO<Boolean> saveUserFacilityList(@ApiParam(value = "用户ID", required = true)
+                                                   @RequestParam(value = "userId") Long userId,
+                                                   @ApiParam(value = "用户授权的院舍ID集合", required = true)
+                                                   @RequestParam(value = "facilityIds") List<Long> facilityIds) {
+        return ResultDTO.success(userService.saveUserFacilityList(userId, facilityIds));
+    }
+~~~
+
+请求方式：
+
+使用postman选择Body的x-www-form-urlencodeed
+
+~~~
+userId = 2
+facilityIds = 1,2,3 
+~~~
+
+
+
+
+
 ### 5.4 相关注解其他属性
 
 #### 5.4.1 required
@@ -1935,7 +1962,7 @@ public class UploadController {
 
 ~~~
 
-### 
+
 
 ### 3.3 MultipartFile常见用法
 

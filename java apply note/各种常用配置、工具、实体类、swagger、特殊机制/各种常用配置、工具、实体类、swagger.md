@@ -796,7 +796,80 @@ public class WebConfig implements WebMvcConfigurer {
 }
 ~~~
 
-使用：
+#### Jackson的使用
+
+**转换日期格式**
+
+~~~java
+public class UpdateDeviceDTO {
+
+    private Integer deviceType;
+    private String deviceModel;
+    private String deviceNumber;
+    private Integer status;
+    private String bedNumber;
+    private Long facilityId;
+
+    @NotNull(message = "設備id不能為空")
+    private Integer deviceId;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
+    private Date activationDate;
+}
+~~~
+
+解释：
+
+~~~
+在Java开发中，@JsonFormat注解是Jackson库提供的一个功能，用于控制日期和时间值如何序列化（转换成JSON格式）和反序列化（从JSON格式解析回日期或时间对象）。当你在一个数据传输对象（DTO）类中使用此注解时，它可以帮助确保日期和时间数据在前后端之间的传输是一致且符合预期的格式。
+
+@JsonFormat注解的属性如下所述：
+
+shape: 指定如何处理日期值。例如，JsonFormat.Shape.STRING表明日期值应被处理为文本格式（即字符串）。
+pattern: 定义日期和时间的具体格式。在你的例子中，"yyyy-MM-dd"表示日期应该以年-月-日的格式显示。这是一种常见的国际化日期格式，符合ISO 8601标准。
+timezone: 指定用于日期和时间计算的时区。在你的例子中使用了"UTC"，这意味着所有日期时间都会基于协调世界时（UTC）来处理，无论服务器或客户端的本地时区如何。
+~~~
+
+前端这样请求即可
+
+~~~json
+{
+    "activationDate": "2024-04-30"
+}
+~~~
+
+或者直接：
+
+如何接受字符串的日期参数，并转换为日期Date类：
+
+~~~java
+@Data
+public class DeviceExceptionDTO extends PageQuery{
+    
+    @ApiModelProperty(value = "异常发生时间", example = "2024年2月4日10:01:56",dataType = "Date")
+    @JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN_CHINESE)
+    private Date occurTime;
+
+    @ApiModelProperty(value = "异常处理时间", example = "2024年2月4日12:01:56",dataType = "Date")
+    @JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN_CHINESE)
+    private Date handlingTime;
+
+}
+~~~
+
+其中：
+
+~~~java
+    /**
+     * 中文日期格式 2024年2月4日10:01:56
+     */
+    public final static String DATE_TIME_PATTERN_CHINESE = "yyyy年MM月dd日HH:mm:ss";
+~~~
+
+
+
+
+
+**忽略非空字段**：
 
 ~~~java
 /**
@@ -825,6 +898,8 @@ public class FacilityListVO implements Serializable {
 }
 
 ~~~
+
+
 
 
 
@@ -984,7 +1059,7 @@ public class AddCommentDto{
 @ApiModelProperty用于描述实体的属性
 
 ~~~~java
-    @ApiModelProperty(value = "验证码", example = "999818",notes = "评论类型（0代表文章评论，1代表友链评论）")
+    @ApiModelProperty(value = "验证码", example = "999818",dataType = "String",notes = "评论类型（0代表文章评论，1代表友链评论）", required = true)
     private String type;
 ~~~~
 
@@ -1140,7 +1215,44 @@ public void export(HttpServletResponse response){
 
 ## 2级 使用MapStruct完成Bean拷贝
 
+参考：https://juejin.cn/post/6956190395319451679
+
 #### 基本使用
+
+基础知识：
+
+1. 与使用BeanCopyUtils类似，但是BeanCopyUtils是**对属性的数据类型、名称相同时才会自动进行映射**，而MapStruct对**即使数据类型不一致的如：(source为String类型,target为Integer类型)，也会进行拷贝**，会默认把字符串转换为数字，如果这个字符串的内容不是数字则会报错。
+2. MapStruct想要进行映射的可以手动进行指定，MapStruct底层就是调用了set方法进行赋值，效率比BeanCopyUtils使用反射快。
+
+数据类型、名称相同时：
+
+~~~java
+    @Override
+    public FacilityDO updateFacilityDetailsContext2FacilityDO(UpdateFacilityDetailsContext updateFacilityDetailsContext) {
+        if ( updateFacilityDetailsContext == null ) {
+            return null;
+        }
+
+        FacilityDO facilityDO = new FacilityDO();
+		// 数据类型、名称相同时
+        facilityDO.setFacilityId( updateFacilityDetailsContext.getFacilityId() );
+        facilityDO.setFloorCount( updateFacilityDetailsContext.getFloorCount() );
+        // 数据类型不同，名称相同时
+        if ( updateFacilityDetailsContext.getZoneExample() != null ) {
+            facilityDO.setZoneExample( Integer.parseInt( updateFacilityDetailsContext.getZoneExample() ) );
+        }
+        facilityDO.setZoneCount( updateFacilityDetailsContext.getZoneCount() );
+        facilityDO.setFacilityArea( updateFacilityDetailsContext.getFacilityArea() );
+        facilityDO.setFloorAreaUniform( updateFacilityDetailsContext.getFloorAreaUniform() );
+        if ( updateFacilityDetailsContext.getUsageRules() != null ) {
+            facilityDO.setUsageRules( Integer.parseInt( updateFacilityDetailsContext.getUsageRules() ) );
+        }
+
+        return facilityDO;
+    }
+~~~
+
+
 
 导入依赖：
 
@@ -1155,6 +1267,31 @@ public void export(HttpServletResponse response){
             <artifactId>mapstruct</artifactId>
             <version>${org.mapstruct.version}</version>
         </dependency>
+~~~
+
+编译相关配置：
+
+~~~xml
+   <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>16</source>
+                    <target>16</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${org.mapstruct.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 ~~~
 
 
@@ -1175,6 +1312,17 @@ interface MsSampleMapper {
 }
 ~~~
 
+后面使用时就用下面的方式来调用：
+
+~~~java
+@Autowired
+private MsSampleMapper msSampleMapper
+    
+    msSampleMapper.sampleToSampleDto();
+~~~
+
+
+
 或者：
 
 ~~~java
@@ -1194,6 +1342,12 @@ public interface FacilityDOConverter{
     FacilityDO dtoMapToDO(FacilityDTO facilityDO);
 
 }
+~~~
+
+后面使用时就用下面的方式来调用
+
+~~~java
+FacilityDOConverter.INSTANCE.doMapToDTO()
 ~~~
 
 
@@ -1314,6 +1468,42 @@ public interface UserConverter {
 
 
 如果 `RPanUser` 类和 `RPanUserFile` 类包含同名的字段，我们必须让映射器知道使用哪一个，否则它会抛出一个异常。所以我们添加了另多个`@Mapping`注解来显示的进行指定。
+
+#### 忽略某个属性
+
+~~~java
+   /**
+     * UserRegisterContext转RPanUser,忽略password字段
+     * @param userRegisterContext
+     * @return
+     */
+    @Mapping(target = "password",ignore = true)
+    RPanUser UserRegisterContext2RPanUser(UserRegisterContext userRegisterContext);
+~~~
+
+
+
+#### 执行Java代码：
+
+~~~java
+@Mapper(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE) // 忽略null值
+public interface BedDOConverter extends BaseConverter<BedVO, BedsDO> {
+
+    BedDOConverter INSTANCE = Mappers.getMapper(BedDOConverter.class);
+
+    @Mapping(target = "bedTypeDesc", expression = "java(" +
+            "com.fa.common.utils.EnumUtils.getEnumDescByValue(" +
+            "bed.getBedType(), " +
+            "com.fa.modules.common.constant.bed.BedTypeEnum.class))")
+    @Mapping(target = "statusDesc", expression = "java(" +
+            "com.fa.common.utils.EnumUtils.getEnumDescByValue(" +
+            "bed.getStatus(), " +
+            "com.fa.modules.common.constant.bed.BedStatusEnum.class))")
+    @Mapping(target = "floorNumber", expression = "java(" +
+            "bed.getFloorId().toString())")
+    BedVO doMapToDTO(BedsDO bed);
+}
+~~~
 
 
 
@@ -1479,6 +1669,38 @@ public class WebExceptionHandler {
 
 #### 具体使用:
 
+注意：在继承的父类中使用会失效
+
+DTO:
+
+~~~java
+public class DeviceExceptionDTO extends PageQuery{
+	// s...
+}
+
+~~~
+
+
+
+父类：
+
+~~~java
+@Data
+@ApiModel("通用分页查询")
+public class PageQuery extends BaseQuery {
+
+    @ApiModelProperty(value = "每页数量， 默认10", dataType = "Integer")
+    @Min(value = 1,message = "每頁數量最少爲1")
+    private Integer pageSize = 10;// 失效
+
+    @ApiModelProperty(value = "页码，默认1", dataType = "Integer")
+    @Min(value = 1,message = "頁碼最少爲1")
+    private Integer pageNum = 1;
+}
+~~~
+
+
+
 **在类上**添加@Validated注解，在需要验证的属性旁添加验证注解即可：
 
 如果验证不通过则会抛出相应的异常。
@@ -1597,13 +1819,41 @@ public class UserAccount {
 }
 ~~~
 
-##### @Pattern
+##### @Pattern 使用正则表达式
 
 ~~~java
     @NotBlank(message = "用户名不能为空")
     @Pattern(regexp = "^[0-9a-zA-Z]{6,16}$",message = "用户名必须由6-16位数字与字母组成") // 使用正则表达式
     private String username;
 ~~~
+
+或
+
+~~~java
+@Data
+@ApiModel("创建院舍用户请求")
+public class AddFacilityUserRequestDTO extends BaseDTO {
+    @ApiModelProperty(value = "E-mail", dataType = "String", required = true)
+    @NotBlank(message = "E-mail不能爲空")
+    @Email(message = "請輸入正確的E-mail")
+    private String email;
+}
+~~~
+
+自己使用正则表达式：
+
+~~~java
+            // 正则表达式校验日期格式
+		   Pattern compile = Pattern.compile(DateUtils.CHINESE_DATE_FORMAT_REGULAR_EXPRESSION);
+            Matcher matcher = compile.matcher(occurTimeDesc);
+            if(!matcher.matches()){
+                throw new RRException("輸入時間的格式必須類似於：" + nowDesc);
+            }
+~~~
+
+
+
+
 
 #### 根据数据类型分类：
 
@@ -1698,6 +1948,8 @@ private List<String>hobbyList;
 
 
 
+## 其他
+
 #### implements Serializable的意义
 
 gpt4回答：
@@ -1713,3 +1965,204 @@ gpt4回答：
 DO类是否需要实现`Serializable`，主要取决于你是否需要上述某种形式的序列化。如果DO类仅仅在同一个JVM内使用，或者不需要通过文件、网络等方式持久化或传输，那么不必强制让DO类实现`Serializable`接口。然而，在企业应用中，为了保证未来可能的需求（例如分布式部署），实现`Serializable`接口是一种常见的做法。此外，在使用一些框架时（例如Hibernate），某些情况下也可能要求你的DO类实现`Serializable`接口，以支持某些特性，如分布式缓存。
 
 总之，是否让DO类实现`Serializable`应基于具体需求做考虑，但从一开始就实现这一接口也无伤大雅，可以为将来可能的需求预留空间。
+
+
+
+### PostMan的使用
+
+配置全局的环境变量：
+
+https://blog.csdn.net/qq_41187577/article/details/110222262
+
+发起**Path请求参数**：在url路径中使用：`/:userId`即可，下面会自动出现Path Variables
+
+**上传文件**：www-form-data中 选择file
+
+
+
+### Date类的使用：
+
+在JDK17中使用`new Date("2024-12-22 23:23:12")`的话，**运行时会直接报错了**，已经**被弃用了**。
+
+实在要使用的话，可以使用SimpleDateFormat类来创建：
+
+~~~java
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DateUtils.TIME_DATE__PATTERN);
+        // 添加默认的離床有效時間段
+        BedLeaveRulesDO bedLeaveRulesDO = new BedLeaveRulesDO();
+        try {
+            bedLeaveRulesDO.setStartTime(simpleDateFormat.parse(RuleConstant.DEFAULT_BED_LEAVE_START_TIME));
+            bedLeaveRulesDO.setEndTime(simpleDateFormat.parse(RuleConstant.DEFAULT_BED_LEAVE_END_TIME));
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+~~~
+
+
+
+默认的日期格式化方式：如：2024-12-22 23:23:12
+
+
+
+#### 如何进行Date比较
+
+参考：https://blog.csdn.net/hanxiaotongtong/article/details/107588694
+
+`java.util.Date`提供了在Java中比较两个日期的经典方法compareTo（）。
+
+1. 如果两个日期相等，则返回值为0。
+2. 如果Date在date参数之后，则返回值大于0。
+3. 如果Date在date参数之前，则返回值小于0。
+
+~~~java
+@Test
+void testDateCompare() throws ParseException {
+  SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+  Date date1 = sdf.parse("2009-12-31");
+  Date date2 = sdf.parse("2019-01-31");
+
+  System.out.println("date1 : " + sdf.format(date1));
+  System.out.println("date2 : " + sdf.format(date2));
+
+  if (date1.compareTo(date2) > 0) {
+    System.out.println("Date1 时间在 Date2 之后");
+  } else if (date1.compareTo(date2) < 0) {
+    System.out.println("Date1 时间在 Date2 之前");
+  } else if (date1.compareTo(date2) == 0) {
+    System.out.println("Date1 时间与 Date2 相等");
+  } else {
+    System.out.println("程序怎么会运行到这里?正常应该不会");
+  }
+}
+
+~~~
+
+
+
+
+
+### JDK1.8新特性 日期类LocalDate,LocalDateTime
+
+为什么使用？
+
+```
+1 使用LocalDateTime类校验日期格式(如："yyyy年MM月dd日HH:mm:ss")，非常严格，缺少一个前导0都不允许，相当于正则表达式，只有符合格式的才能够使用，而DateTime就不严格了，即使格式为yyyy，写成20还是能够进行转换
+2 JDK 1.8 新特性...
+```
+
+参考：
+
+https://blog.csdn.net/qq_31635851/article/details/117880835
+
+https://blog.51cto.com/lenglingx/6589259
+
+#### 日期转字符串
+
+
+LocalDate format() 转换格式
+LocalDate 的默认日期格式为 yyyy-MM-dd。
+
+format 方法使用指定的格式化程序格式化日期。
+
+找到它的声明。
+
+```java
+String format(DateTimeFormatter formatter) 
+```
+
+
+示例:
+
+```java
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+public class LocalDateDemo {
+  public static void main(String[] args) {
+	LocalDate localDate = LocalDate.parse("2018-02-18");
+	String formattedDate = localDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
+	System.out.println(formattedDate);
+  }
+} 
+```
+
+输出
+
+```
+二月 18, 2018
+```
+
+
+
+#### 字符串转日期
+parse(CharSequence text, DateTimeFormatter formatter)
+
+> 将text字符串转换为formatter格式，`text的格式必须与formatter格式一致`，如text为yyyyMMdd格式,则formatter也应该为yyyyMMdd格式,否则会报错
+
+```java
+LocalDate l = LocalDate.parse("2021-11-29", DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+LocalDate localDate1 = LocalDate.parse("20211129", DateTimeFormatter.ofPattern("yyyyMMdd"));
+System.out.println(l);
+System.out.println(localDate1);1.2.3.4.
+2021-11-29
+2021-11-291.2.
+为什么localDate1输出后格式为yyyy-MM-dd?
+虽然入参格式为yyyyMMdd,但是转换为LocalDate后，格式默认为yyyy-MM-dd, LocalDate返回的格式默认为yyyy-MM-dd，
+```
+
+
+
+### 二：LocalDate日期比较
+
+
+#### 1、boolean isBefore(ChronoLocalDate other)
+
+> 用于检查此LocalDate值是否在给定的ChronoLocalDate(other)之前
+
+```java
+	    LocalDateTime occurTime = LocalDate.parse("2024-11-29");
+        LocalDateTime handlingTime = LocalDate.parse("2021-11-29");
+        LocalDateTime now = LocalDateTime.now();
+		// 不能选择当前时间往后的时间
+        if(occurTime.isAfter(now) || handlingTime.isAfter(now)){
+            throw new RRException("不能選擇當前時間往後的時間");
+        }
+```
+
+#### 2、boolean isAfter(ChronoLocalDate other)
+
+> 用于检查此LocalDate值是否在给定的ChronoLocalDate(other)之后
+
+```java
+LocalDate l = LocalDate.parse("2021-11-29");
+System.out.println(l.isAfter(LocalDate.parse("2021-11-28"))); //true
+System.out.println(l.isAfter(LocalDate.parse("2021-11-30"))); //false1.2.3.
+```
+
+#### 3、boolean isEqual(ChronoLocalDate other)
+
+> 用于检查此LocalDate值是否与给定的ChronoLocalDate(other)相等
+
+```java
+LocalDate l = LocalDate.parse("2021-11-29");
+System.out.println(l.isEqual(LocalDate.parse("2021-11-28"))); //false
+System.out.println(l.isEqual(LocalDate.parse("2021-11-30"))); //false
+System.out.println(l.isEqual(l)); //true1.2.3.4.
+```
+
+#### 4、int compareTo(ChronoLocalDate other)
+
+> 比较两个日期A.compareTo(B)，若日期相同则返回0；
+>
+> 若A>B，则返回1；
+>
+> 若A<B，则返回-1；
+
+
+
+```java
+LocalDate l = LocalDate.parse("2021-11-29");
+System.out.println(l.compareTo(LocalDate.parse("2021-11-28"))); //1
+System.out.println(l.compareTo(LocalDate.parse("2021-11-30"))); //-1
+System.out.println(l.compareTo(l)); //01.2.3.4.
+```

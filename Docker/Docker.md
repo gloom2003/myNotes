@@ -482,6 +482,16 @@ docker image prune # 清理临时的、没有被使用的镜像文件。
   docker logs -n 20 容器id
   ~~~~
 
+**常用**:
+
+搜索 日志中最近3分钟的from device_exception_info字符串，并展示匹配字符串的前后5行：
+
+~~~sh
+docker logs --since 3m 容器id或名称 | grep 'from device_exception_info' -C 5
+~~~
+
+
+
 例子：
 
 启动springBoot项目的容器

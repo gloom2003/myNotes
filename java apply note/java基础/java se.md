@@ -997,6 +997,28 @@ public interface 接口名{
 
 
 
+#### 用于定义常量
+
+注意：
+
+~~~java
+public interface AppUserConstant {
+    /**
+     * 存储用户头像的绝对路径
+     */
+    String PICTURE_ABSOLUTE_URL = System.getProperty("user.dir") + File.separator + AppUserConstant.PICTURE_BASE_RELATIVE_PATH; // 在常量中引用其他的常量会出现问题，获取时AppUserConstant.PICTURE_BASE_RELATIVE_PATH为null，即使AppUserConstant.PICTURE_BASE_RELATIVE_PATH是有值的
+    
+        String PICTURE_BASE_RELATIVE_PATH = "src" + File.separator +"main" + File.separator + "resources"
+            + File.separator + "pictures" + File.separator + "user" + File.separator;
+    
+    // String PICTURE_ABSOLUTE_URL = System.getProperty("user.dir") + File.separator + "src" + File.separator
+            // + "main" + File.separator + "resources" + File.separator + "pictures" + File.separator
+            // + "user" + File.separator;
+}
+~~~
+
+
+
 
 
 ### 2.2 实现接口
@@ -2671,7 +2693,7 @@ public class TooSmallException extends Exception {
 
 ​	集合主要有两个顶层接口，单列集合的顶层接口Collection和双列集合的顶层接口Map。
 
-![image-20201128195014504](D:\alwaysUse\notes\java学习资料\三更\sangGeng files\普通配套资料\JavaSE进阶\img\集合体系图.png)
+![](img\集合体系图.png))
 
 
 
@@ -3670,7 +3692,7 @@ String getAbsolutePath()//获取File对象的绝对路径
 ### 1.4 重要方法
 
 ~~~~java
-File[] listFiles() //如果当前File对象是一个文件夹，可以获取文件夹下的所有文件或者文件夹的File对象。
+File[] listFiles() //如果当前File对象是一个文件夹，可以获取文件夹下的所有文件或者文件夹的File对象。	
 ~~~~
 
 注意：如果不是文件夹或者是文件夹的权限受限返回值是null。所以一定要对返回结果做非空判断。
