@@ -130,7 +130,7 @@ ln -s .bash_logout kkk 表示给.bash_logout创建一个软链接文件(文件�
 
 ### chmod修改文件的权限
 
-ugo:u用户 、g用户组、o其他
+ugo:u用户(user) 、g用户组(group)、o其他(other)
 
 读r、写w、执行x
 
@@ -564,10 +564,19 @@ wget http://code.imnks.com/zip/portainer-ce-public-cn-20221227.zip
 
 Windows上是ipconfig，在Linux上是ifconfig。
 
-~~~sh
+~~~java
 ifconfig
 
-ip addr
+ip addr 
+// ens33一般就是本主j网卡的ip地址
+// 如: 下面的192.168.134.128
+2: ens33: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 00:0c:29:8d:db:db brd ff:ff:ff:ff:ff:ff
+    inet 192.168.134.128/24 brd 192.168.134.255 scope global dynamic ens33
+       valid_lft 1076sec preferred_lft 1076sec
+    inet6 fe80::20c:29ff:fe8d:dbdb/64 scope link 
+       valid_lft forever preferred_lft forever
+
 ~~~
 
 ### history 查看历史命令

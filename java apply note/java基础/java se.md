@@ -3127,6 +3127,10 @@ public static void main(String[] args) {
     }
 ~~~~
 
+**removeAll(Collection<?> c) java set排除另一个set**
+
+https://blog.51cto.com/u_16175484/8543773
+
 #### 1.2.3 遍历
 
 
@@ -3288,7 +3292,7 @@ HashMap<key的数据类型,value的数据类型> map = new HashMap<>();
         map.put("age","15");
 
         Set<Map.Entry<String, String>> entries = map.entrySet();
-        //使用迭代器遍历entrySet
+        // 使用迭代器遍历entrySet，在循环里面进行删除操作并且使用it.remove();才不会出现java.util.ConcurrentModificationException: null 异常
         Iterator<Map.Entry<String, String>> it = entries.iterator();
         while (it.hasNext()){
             Map.Entry<String, String> entry = it.next();
@@ -3304,12 +3308,65 @@ HashMap<key的数据类型,value的数据类型> map = new HashMap<>();
         map.put("age","15");
 		
         Set<Map.Entry<String, String>> entries = map.entrySet();
-        //使用foreach遍历entrySet
+        //使用foreach遍历entrySet，在里面进行删除操作会出现java.util.ConcurrentModificationException: null 异常
         for (Map.Entry<String, String> entry : entries) {
             System.out.println(entry.getKey()+"===="+entry.getValue());
         }
     }
 ~~~~
+
+异常例子：
+
+解决方法参考：https://blog.csdn.net/baidu_37107022/article/details/73555034
+
+~~~java
+    public List<UserVO> getAllUser() {
+        LambdaQueryWrapper<UserDO> userDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<UserRoleDO> userRoleDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        // 查询所有状态正常的用户
+        userDOLambdaQueryWrapper
+                .select(UserDO::getUserId, UserDO::getUserName,
+                        UserDO::getPhoneNumber, UserDO::getEmail)
+                .eq(UserDO::getStatus, (Integer)UserStatusEnum.ENABLE.getEnumValue());
+        List<UserDO> userDOList = list(userDOLambdaQueryWrapper);
+        if(CollectionUtils.isEmpty(userDOList)){
+            throw new RRException("當前繫統還沒有相應的用戶，快去添加吧");
+        }
+        Map<Long, UserDO> idUserDOMap = userDOList
+                .stream()
+                .collect(Collectors.toMap(UserDO::getUserId, userDO -> userDO));
+        // 查询所有的超级管理员用户(role_level)
+        userRoleDOLambdaQueryWrapper.select(UserRoleDO::getUserId)
+                .eq(UserRoleDO::getRoleLevel,(Integer)RoleLevelEnum.SUPER_ADMIN.getEnumValue());
+        List<UserRoleDO> userRoleDOList = userRoleMapper.selectList(userRoleDOLambdaQueryWrapper);
+        if(CollectionUtils.isEmpty(userRoleDOList)){
+            return UserDOConverter.INSTANCE.userDOList2UserVOList(userDOList);
+        }
+        // 排除超级管理员
+        Set<Long> superAdminIds = userRoleDOList.stream()
+                .map(UserRoleDO::getUserId)
+                .collect(Collectors.toSet());
+        Iterator<Map.Entry<Long, UserDO>> iterator = idUserDOMap.entrySet().iterator();
+        while (iterator.hasNext()){
+            Map.Entry<Long, UserDO> next = iterator.next();
+            if (superAdminIds.contains(next.getKey())) {
+                idUserDOMap.remove(next.getKey());
+            }
+        }
+        idUserDOMap.keySet()
+                .forEach(key -> {
+                    if (superAdminIds.contains(key)) {
+                        // 异常：java.util.ConcurrentModificationException: null
+                        idUserDOMap.remove(key);
+                    }
+                });
+        Collection<UserDO> userDOS = idUserDOMap.values();
+        if(CollectionUtils.isEmpty(userDOS)){
+            throw new RRException("當前繫統還沒有相應的用戶，快去添加吧");
+        }
+        return UserDOConverter.INSTANCE.userDOList2UserVOList(userDOS);
+    }
+~~~
 
 
 

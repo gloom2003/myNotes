@@ -1254,6 +1254,8 @@ public class PrintLogAspect {
         try {
             ret = pjp.proceed();//ret就是目标方法执行后的返回值
         } catch (Throwable throwable) {
+            // 执行结果：失败
+   
             throwable.printStackTrace();//throwable就是出现异常时的异常对象
         }
         return ret;

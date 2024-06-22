@@ -80,12 +80,14 @@
 sudo mkdir -p /etc/docker
 sudo tee /etc/docker/daemon.json <<-'EOF'
 {
-  "registry-mirrors": ["https://账号id.mirror.aliyuncs.com"]
+  "registry-mirrors": ["l"]
 }
 EOF
 sudo systemctl daemon-reload
 sudo systemctl restart docker
 ~~~
+
+
 
 ## 基础知识
 

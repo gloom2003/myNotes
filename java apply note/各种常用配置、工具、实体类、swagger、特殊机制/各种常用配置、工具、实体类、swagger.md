@@ -746,6 +746,8 @@ public class RedisConfig {
 
 ### 10.3设置跨域、FastJson配置解决时间的显示
 
+#### 配置跨域处理
+
 配置FastJson，使用FastJson进行json转换，替换默认的json转换（可以解决从数据库查询出来的Date类型的数据经过json转换后的格式问题）
 
 ~~~java
@@ -767,8 +769,26 @@ public class WebConfig implements WebMvcConfigurer {
                 // 跨域允许时间
                 .maxAge(SystemConstants.CROS_ALLOW_TIME);
     }
+}
+~~~
 
-    /***
+坑：
+
+参考：https://blog.csdn.net/qq_39136661/article/details/119580081
+
+现像：post请求不能够通过跨域，但是get请求可以
+
+原因：没有配置允许携带所有的请求头进行跨域
+
+~~~java
+			// 设置允许的header属性
+                .allowedHeaders("*")
+~~~
+
+#### FastJson:
+
+~~~java
+ /***
      * FastJson配置,解决时间显示格式不正常的问题
      */
     @Bean//使用@Bean注入fastJsonHttpMessageConvert
@@ -792,9 +812,13 @@ public class WebConfig implements WebMvcConfigurer {
         // 添加自定义的fastJson消息转换器到消息转换器列表中即可
         converters.add(fastJsonHttpMessageConverters());
     }
-
-}
 ~~~
+
+
+
+
+
+
 
 #### Jackson的使用
 
@@ -829,7 +853,7 @@ pattern: 定义日期和时间的具体格式。在你的例子中，"yyyy-MM-dd
 timezone: 指定用于日期和时间计算的时区。在你的例子中使用了"UTC"，这意味着所有日期时间都会基于协调世界时（UTC）来处理，无论服务器或客户端的本地时区如何。
 ~~~
 
-前端这样请求即可
+上面这个例子中，前端直接这样发起请求即可
 
 ~~~json
 {
@@ -1946,6 +1970,241 @@ private List<String>hobbyList;
 
 ```
 
+#### 3.18.3 铺垫知识
+
+##### 3.18.3.1 CommandLineRunner实现项目启动时预处理
+
+​	如果希望在SpringBoot应用启动时进行一些初始化操作可以选择使用CommandLineRunner来进行处理。
+
+​	我们只需要实现CommandLineRunner接口，并且把对应的bean注入容器。把相关初始化的代码重新到需要重新的方法中。
+
+​	这样就会在应用启动的时候执行对应的代码。
+
+~~~~java
+@Component
+public class TestRunner implements CommandLineRunner {
+    @Override
+    public void run(String... args) throws Exception {
+        System.out.println("程序初始化");
+    }
+}
+
+~~~~
+
+
+
+##### 3.18.3.2 定时任务
+
+​	定时任务的实现方式有很多，比如XXL-Job等。但是其实核心功能和概念都是类似的，很多情况下只是调用的API不同而已。
+
+​	这里就先用SpringBoot为我们提供的定时任务的API来实现一个简单的定时任务，让大家先对定时任务里面的一些核心概念有个大致的了解。
+
+实现步骤
+
+① 使用@EnableScheduling注解开启定时任务功能
+
+​	我们可以在配置类上加上@EnableScheduling
+
+~~~~java
+@SpringBootApplication
+@MapperScan("com.sangeng.mapper")
+@EnableScheduling
+public class SanGengBlogApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(SanGengBlogApplication.class,args);
+    }
+}
+~~~~
+
+② 确定定时任务执行代码，并配置任务执行时间
+
+​	使用@Scheduled注解标识需要定时执行的代码。注解的cron属性相当于是任务的执行时间。目前可以使用 0/5 * * * * ? 进行测试，代表从0秒开始，每隔5秒执行一次。 
+
+​	注意：对应的bean要注入容器，否则不会生效。
+
+~~~~java
+@Component
+public class TestJob {
+
+    @Scheduled(cron = "0/5 * * * * ?")
+    public void testJob(){
+        //要执行的代码
+        System.out.println("定时任务执行了");
+    }
+}
+
+~~~~
+
+
+
+###### 3.18.3.2.1 cron 表达式语法
+
+​	cron表达式是用来设置定时任务执行时间的表达式。
+
+​	很多情况下我们可以用 ： [在线Cron表达式生成器](https://www.bejson.com/othertools/cron/) 来帮助我们理解cron表达式和书写cron表达式。
+
+​	但是我们还是有需要学习对应的Cron语法的，这样可以更有利于我们书写Cron表达式。
+
+
+
+如上我们用到的 0/5 * * * * ? *，cron表达式由七部分组成，中间由空格分隔，这七部分从左往右依次是：
+
+秒（0~59），分钟（0~59），小时（0~23），日期（1-月最后一天），月份（1-12），星期几（1-7,1表示星期日），年份（一般该项不设置，直接忽略掉，即可为空值）
+
+
+
+通用特殊字符：, - * /  (可以在任意部分使用)
+
+> *
+
+星号表示任意值，例如：
+
+```
+* * * * * ?
+```
+
+表示 “ 每年每月每天每时每分每秒 ” 。
+
+
+
+> ,   
+
+可以用来定义列表，例如 ：  
+
+```
+1,2,3 * * * * ?
+```
+
+表示 “ 每年每月每天每时每分的每个第1秒，第2秒，第3秒 ” 。
+
+
+
+> -
+
+定义范围，例如：
+
+```
+1-3 * * * * ?
+```
+
+表示 “ 每年每月每天每时每分的第1秒至第3秒 ”。
+
+
+
+> /
+
+每隔多少，例如
+
+```
+5/10 * * * * ?
+```
+
+表示 “ 每年每月每天每时每分，从第5秒开始，每10秒一次 ” 。即 “ / ” 的左侧是开始值，右侧是间隔。如果是从 “ 0 ” 开始的话，也可以简写成 “ /10 ” 
+
+
+
+
+
+
+
+
+
+日期部分还可允许特殊字符： ? L W
+
+星期部分还可允许的特殊字符: ? L # 
+
+
+
+> ?
+
+只可用在日期和星期部分。表示没有具体的值，使用?要注意冲突。日期和星期两个部分如果其中一个部分设置了值，则另一个必须设置为 “ ? ”。
+
+例如：
+
+~~~~
+0\* * * 2 * ?
+ 和
+0\* * * ? * 2
+~~~~
+
+同时使用?和同时不使用?都是不对的
+
+例如下面写法就是错的
+
+~~~~
+* * * 2 * 2
+ 和
+* * * ? * ?
+
+~~~~
+
+
+
+
+
+> W
+
+只能用在日期中，表示当月中最接近某天的工作日
+
+```
+0 0 0 31W * ?
+```
+
+表示最接近31号的工作日，如果31号是星期六，则表示30号，即星期五，如果31号是星期天，则表示29号，即星期五。如果31号是星期三，则表示31号本身，即星期三。
+
+
+
+
+
+
+
+
+
+> L
+
+表示最后（Last）,只能用在日期和星期中
+
+
+
+在日期中表示每月最后一天，在一月份中表示31号，在六月份中表示30号
+
+也可以表示每月倒是第N天。例如： L-2表示每个月的倒数第2天
+
+
+
+ 0 0 0 LW * ?
+ LW可以连起来用，表示每月最后一个工作日，即每月最后一个星期五
+
+
+
+在星期中表示7即星期六
+
+
+~~~~
+0 0 0 ? * L
+表示每个星期六
+0 0 0 ? * 6L
+若前面有其他值的话，则表示最后一个星期几，即每月的最后一个星期五
+~~~~
+
+
+
+
+
+
+> # 
+
+只能用在星期中，表示第几个星期几
+
+~~~~
+0 0 0 ? * 6#3
+表示每个月的第三个星期五。
+~~~~
+
+
+
+
+
 
 
 ## 其他
@@ -2011,8 +2270,8 @@ https://blog.csdn.net/qq_41187577/article/details/110222262
 `java.util.Date`提供了在Java中比较两个日期的经典方法compareTo（）。
 
 1. 如果两个日期相等，则返回值为0。
-2. 如果Date在date参数之后，则返回值大于0。
-3. 如果Date在date参数之前，则返回值小于0。
+2. 如果方法调用的date本身比date参数大，则返回值大于0。
+3. 如果方法调用的date本身比date参数小，则返回值小于0。
 
 ~~~java
 @Test
@@ -2039,9 +2298,49 @@ void testDateCompare() throws ParseException {
 
 
 
+#### Date与JSON的相互转换
+
+参考：https://xyzghio.xyz/DateTimeFormatAndJsonFormat/
+
+JSON 格式转Date：@DateTimeFormat
+
+~~~java
+class Pc{    
+    ...        
+    private String name;
+    @DateTimeFormat(pattern = "yyyy-MM-dd") // 此为 Spring 框架提供的注解，将 JSON 格式的日期信息信息解析转换并绑定到 Date 对象中，该注解用于 Date 字段即可，同时指定 JSON 日期的格式 (pattern)
+    private Date birthday;
+    ...
+}
+~~~
+
+Date转JSON 格式:@JsonFormat
+
+~~~java
+class Pc{    
+    ...        
+    private String name;
+    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd") // 此为 Jackson 框架提供的注解，将 Date 对象数据解析转换为 JSON 格式，该注解用于 Date 字段即可，同时指定期望 JSON 日期的格式 (pattern)
+    private Date birthday;
+    ...
+}
+~~~
+
 
 
 ### JDK1.8新特性 日期类LocalDate,LocalDateTime
+
+##### 相关的坑
+
+1
+
+Date类可以直接作为对象保存到数据库中的timestamp类型进行存储，但是LocalDateTime不行，直接存储的话会报错：
+
+~~~java
+Caused by: org.apache.ibatis.reflection.ReflectionException: Could not set property 'createTime' of 'class com.fa.modules.dao.OprateLogDO' with value '2024-06-14T19:41:03.156926' Cause: java.lang.IllegalArgumentException: java.lang.ClassCastException@3f9a9764
+~~~
+
+2
 
 为什么使用？
 
@@ -2056,8 +2355,38 @@ https://blog.csdn.net/qq_31635851/article/details/117880835
 
 https://blog.51cto.com/lenglingx/6589259
 
-#### 日期转字符串
 
+
+在Java中，如果你想得到一个表示特定时间（如09:00:00）的`LocalDateTime`对象，你可以使用`LocalDate`和`LocalTime`类结合来创建。这里有一个例子如何创建一个表示上午9点的`LocalDateTime`对象：
+
+```java
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.LocalDateTime;
+
+public class Main {
+    public static void main(String[] args) {
+        // 获取当前日期
+        LocalDate date = LocalDate.now();
+        // 创建一个表示09:00:00的时间
+        LocalTime time = LocalTime.of(9, 0, 0);
+        // 将日期和时间结合，创建LocalDateTime
+        LocalDateTime dateTime = LocalDateTime.of(date, time);
+        
+        System.out.println("LocalDateTime at 09:00:00: " + dateTime);
+    }
+}
+```
+
+在这个代码中，`LocalDate.now()`获取当前的日期，而`LocalTime.of(9, 0, 0)`创建一个代表上午9点整的时间。然后，这两个部分被合并成一个`LocalDateTime`对象。你可以根据需要调整日期和时间的具体值。
+
+#### LocalDateTime、LocalDate、Date的相互转换
+
+参考：https://www.cnblogs.com/CF1314/p/13884530.html#_label1
+
+
+
+#### 日期转字符串
 
 LocalDate format() 转换格式
 LocalDate 的默认日期格式为 yyyy-MM-dd。
@@ -2097,17 +2426,26 @@ public class LocalDateDemo {
 #### 字符串转日期
 parse(CharSequence text, DateTimeFormatter formatter)
 
-> 将text字符串转换为formatter格式，`text的格式必须与formatter格式一致`，如text为yyyyMMdd格式,则formatter也应该为yyyyMMdd格式,否则会报错
+
 
 ```java
-LocalDate l = LocalDate.parse("2021-11-29", DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+LocalDate l = LocalDate.parse("2021-01-29");
+System.out.println(l); //2021-01-29
+
+LocalDate l1 = LocalDate.parse("2021-11-29", DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+System.out.println(l1); //2021-11-29
+
 LocalDate localDate1 = LocalDate.parse("20211129", DateTimeFormatter.ofPattern("yyyyMMdd"));
-System.out.println(l);
-System.out.println(localDate1);1.2.3.4.
-2021-11-29
-2021-11-291.2.
-为什么localDate1输出后格式为yyyy-MM-dd?
-虽然入参格式为yyyyMMdd,但是转换为LocalDate后，格式默认为yyyy-MM-dd, LocalDate返回的格式默认为yyyy-MM-dd，
+System.out.println(localDate1); //2021-11-29
+
+DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd");
+System.out.println(l.format(dtf));// 2021-01-29 十位转八位 ==> 20210129
+
+dtf = DateTimeFormatter.ofPattern("yyyy年MM月dd日");
+System.out.println(l.format(dtf));// 2021-01-29  ==> 2021年01月29日
+
+dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+System.out.println(l.format(dtf));// 2021-01-29  ==> 2021/01/29
 ```
 
 
