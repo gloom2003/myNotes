@@ -6,6 +6,8 @@
 
 ### 8.1BeanCopyUtil
 
+**注意：** 结果实体类要有get,set方法并且属性的类型与名称要与源类相同才能够拷贝成功，Boolean类型拷贝不了，要boolean类型
+
 ~~~java
 public class BeanCopyUtil {
     private BeanCopyUtil() {
@@ -41,6 +43,14 @@ public class BeanCopyUtil {
 }
 
 ~~~
+
+
+
+注意：
+
+参考：https://blog.csdn.net/weixin_34043301/article/details/91753467
+
+![image-20240929150142120](E:\alwaysUse\notes\myNotes\java apply note\各种常用配置、工具、实体类、swagger、特殊机制\各种常用配置、工具、实体类、swagger.assets\image-20240929150142120.png)
 
 ### 8.2JWT工具类 根据id生成对应的token
 
@@ -2049,7 +2059,7 @@ public class TestJob {
 
 如上我们用到的 0/5 * * * * ? *，cron表达式由七部分组成，中间由空格分隔，这七部分从左往右依次是：
 
-秒（0~59），分钟（0~59），小时（0~23），日期（1-月最后一天），月份（1-12），星期几（1-7,1表示星期日），年份（一般该项不设置，直接忽略掉，即可为空值）
+秒（0~59），分钟（0~59），小时（	0~23），日期（1-月最后一天），月份（1-12），星期几（1-7,1表示星期日），年份（一般该项不设置，直接忽略掉，即可为空值）
 
 
 
@@ -2296,13 +2306,76 @@ void testDateCompare() throws ParseException {
 
 ~~~
 
+##### 例子：
+
+~~~java
+    public List<Map<String,Object>> getUserAttendance(String userId, String startTime, String endTime) throws Exception {
+        StringBuilder sql = new StringBuilder();
+        List<Map<String,Object>> attendanceList = this.findAll(sql.toString());
+        attendanceList.forEach(map -> {
+            // 哪一天的日志
+            Date logDate = (Date) map.get("date");
+            // 什么时候发的这个日志
+            Date sendLogDatetime = (Date) map.get("send_log_datetime");
+            // 提取年月日
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            Date sendLogDate = null;
+            try {
+                sendLogDate = dateFormat.parse(dateFormat.format(sendLogDatetime));
+            } catch (ParseException e) {
+                log.error("dateFormat.parse(dateFormat.format(sendLogDatetime))方法错误");
+                throw new RuntimeException(e);
+            }
+            // 添加日志状态
+            // 是同年同月同天发送的
+            if(sendLogDate.compareTo(logDate) == 0){
+                // 定义22:00:00的时间
+                SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
+                try {
+                    Date nightTenTime = timeFormat.parse("22:00:00");
+                    // 提取Date对象中的时间部分
+                    String timeString = timeFormat.format(sendLogDatetime);
+                    Date send_log_time = timeFormat.parse(timeString);
+                    // 正常发：sendLogDatetime <= 当天的22:00:00
+                    if(send_log_time.compareTo(nightTenTime) <= 0){
+                        // 正常发
+                        map.put("send_log_state", SendLogState.NORMAL.getEnumDesc());
+                    } else{
+                        // 晚发
+                        map.put("send_log_state", SendLogState.LATE_SEND.getEnumDesc());
+                    }
+                } catch (ParseException e) {
+                    log.error("timeFormat.parse(timeString)方法错误");
+                    throw new RuntimeException(e);
+                }
+            }else{
+                // sendLogDate > logDate
+                if(sendLogDate.compareTo(logDate) > 0){
+                    // 补发
+                    map.put("send_log_state",SendLogState.SUPPLEMENT_SEND.getEnumDesc());
+                }else{
+                    throw new RuntimeException(" send_log_state < log_date,有人提前几天写了当天的日报");
+                }
+            }
+        }
+        );
+        return attendanceList;
+    }
+~~~
+
+
+
+### 处理序列化与反序列化
+
 
 
 #### Date与JSON的相互转换
 
 参考：https://xyzghio.xyz/DateTimeFormatAndJsonFormat/
 
-JSON 格式转Date：@DateTimeFormat
+##### JSON 格式转Date：反序列化
+
+@DateTimeFormat,@JsonFormat都可以
 
 ~~~java
 class Pc{    
@@ -2314,17 +2387,95 @@ class Pc{   
 }
 ~~~
 
-Date转JSON 格式:@JsonFormat
+1
+
+~~~~java
+@Data
+// 默认json中有但是这个dto中没有的话，转换时就会报错，即：必须把整个json的全部字段全部接收，不管有没有用
+// 在反序列化时会忽略相应的字段
+@JsonIgnoreProperties(ignoreUnknown = true) // 
+public class SaveInvoiceDTO implements Serializable {
+    // 非实体类中的字段 
+    private Integer isFlicker;
+	@JsonProperty("passengerName") // 指定对应json的n字段名称
+    private String passengerName;
+
+    private Boolean showMergeNum;
+
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+    private Date onlyDateStart;
+
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+}
+~~~~
+
+
+
+
+
+##### Date转JSON 格式:@JsonFormat 序列化
+
+使用阿里的Jackson进行json转对象，用@JsonFramat指定日期格式 默认没有YYYY-MM-dd HH-mm-ss格式,需要手动指定后才可以，就能够把指定日期格式的字符串转换为日期对象
 
 ~~~java
 class Pc{    
-    ...        
+  
     private String name;
     @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd") // 此为 Jackson 框架提供的注解，将 Date 对象数据解析转换为 JSON 格式，该注解用于 Date 字段即可，同时指定期望 JSON 日期的格式 (pattern)
+    @JsonProperty("birthday") // 指定对应json的n字段名称
     private Date birthday;
-    ...
+
 }
 ~~~
+
+##### BigDecimal转JSON
+
+~~~java
+	/**
+     * 发票金额（总金额）
+     * 指定将 BigDecimal 序列化为字符串格式，并保留两位小数。
+     */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "0.00")
+    private BigDecimal totalMoney;
+~~~
+
+
+
+
+
+#### @DateTimeFormat 把字符串转换为Date类
+
+~~~java
+    /**
+     * 条件查询发票文件夹，参数全为null则查询全部发票文件夹
+     * @param userId 用户id 一开始默认查询当前用户的发票文件夹信息时使用
+     * @param departmentName 部门名称
+     * @param userName 用户名
+     * @param startTime 开始时间
+     * @param endTime 结束时间
+     * @param isOver 是否完结
+     * @param reimbursementCategory 报销类别
+     * @return
+     * @throws Exception
+     */
+    @GetMapping("/getInvoiceFolder")
+    public ResultVO<List<InvoiceFolderVO>> getInvoiceFolder(
+            @RequestParam(value = "userId",required = false) Long  userId,
+            @RequestParam(value = "departmentName",required = false) String  departmentName,
+            @RequestParam(value = "userName",required = false) String userName,
+            // 把指定时间格式的字符串转换为Date类，前端queryString中不传startTime这个参数时则为null
+            @RequestParam(value = "startTime",required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date startTime,
+            @RequestParam(value = "endTime",required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date endTime,
+            @RequestParam(value = "isOver",required = false) Boolean isOver,
+            @RequestParam(value = "reimbursementCategory",required = false) Integer reimbursementCategory
+    ) throws Exception {
+        return submitAccountService.getInvoiceFolder(userId,departmentName,userName,startTime,endTime,isOver,reimbursementCategory);
+    }
+~~~
+
+
+
+
 
 
 

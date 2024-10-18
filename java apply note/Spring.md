@@ -695,6 +695,20 @@ public class UserServiceImpl implements UserService {
 
 **注意：该直接不能单独使用。单独使用没有作用**
 
+#### Lombok提供的依赖注入功能
+
+##### @RequiredArgsConstructor用法
+参考：https://www.cnblogs.com/kaka-qiqi/p/14783002.html
+
+**在我们写controller或者Service层的时候，需要注入很多的mapper接口或者另外的service接口，这时候就会写很多的@Autowired注解，代码看起来很乱
+lombok提供了一个注解：**
+
+@RequiredArgsConstructor(onConstructor =@_(@Autowired))
+**写在类上可以代替@Autowired注解，需要注意的是在注入时需要用final定义，或者使用@notnull注解**
+![image](https://img2020.cnblogs.com/blog/1486554/202105/1486554-20210518221522216-820267448.png)
+
+
+
 ### 2.3 替换xml配置文件的相关注解
 
 #### @Configuration
@@ -1150,6 +1164,32 @@ public class LogAspect {
 
 ~~~
 
+指定切点：
+
+~~~java
+/**
+* 切点
+*/
+@Pointcut("@annotation(com.example.lock.lockdemo.step2.LockDistributedStep2)")
+private void pointcut() {
+}
+@Around(value = "pointcut() && @annotation(anno)")
+public Object exec(ProceedingJoinPoint joinPoint,
+                   LockDistributedStep2 anno) throws Throwable {// 这样子写可以直接获取到这个LockDistributedStep2注解对象，从而获取这个注解d
+}
+
+~~~
+
+
+
+在 `@Around` 注解中，`value` 属性定义了增强的切点表达式。在这个表达式中，`pointcut()` 表示引用上面定义的切点，`@annotation(anno)` 表示该切点应该匹配那些带有 `@LockDistributedStep2` 注解的方法。
+
+综合来看，`pointcut() && @annotation(anno)` 这个切点表达式的意思是：
+
+- 匹配所有由 `@LockDistributedStep2` 注解标记的方法。
+
+
+
 ### 2.3 设置作用于哪一个方法
 
 ~~~java
@@ -1261,6 +1301,8 @@ public class PrintLogAspect {
         return ret;
     }
 ~~~~
+
+
 
 ## 4 xml配置AOP
 

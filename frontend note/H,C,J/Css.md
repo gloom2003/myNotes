@@ -119,16 +119,18 @@
 
 
 
-### 1.2常用css属性
+### 1.2常用css属性(字体，颜色...)
 
 - 字体大小：font-size  Chrome浏览器中最小为12px
+- 字体宽度 font-weight: bold;  （加粗）相当于 font-weight: 700; 
 - 字体颜色: color
 - 宽度：width
 - 高度：height
 - 背景颜色：background-color
-- 文本水平对齐(align): text-align
+- 文本水平对齐(align): text-align : center       解释：可ctrl + f 搜索text-align 或者 参考：https://developer.mozilla.org/zh-CN/docs/Web/CSS/text-align
 - 文本行高: line-height
 - 设置字体：css设置黑体样式的方法：可以利用font-family属性来进行设置，如【font-family: 黑体;】。font-family属性用于指定一个元素的字体。
+- 防止文字换行：`white-space: nowrap;` 
 
 例子：
 
@@ -192,6 +194,12 @@
 <link rel="stylesheet" href="style/index.css"/>
 ~~~
 
+4）在Vue文件中引入CSS
+
+![image-20240902161035261](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240902161035261.png)
+
+
+
 ## 2盒子模型的css属性
 
 ### 2.1 边框 board：
@@ -239,6 +247,8 @@
 - margin:0px               表示上下左右都设置为0px
 - margin:0 auto           auto表示自动设置左右两边外边距相等
 
+
+
 ### 2.3 内边距 padding
 
 (边框与内部之间的距离):
@@ -250,6 +260,10 @@
 - bottom
 - left
 
+
+
+
+
 ### 2.4 其他css：
 
 #### 2.4.1**使实际宽度 =设置的宽度** box-sizing
@@ -259,6 +273,8 @@ css设置**box-sizing:border-box;**后：
 元素的**实际宽度 =** width属性**设置的宽度**
 
 元素的实际高度 = width属性设置的高度
+
+
 
 #### 2.4.2 li的css
 
@@ -293,6 +309,8 @@ css设置**box-sizing:border-box;**后：
 | 独立成行   | 块元素：h1-h6,p,div,ul,li    |                      |
 | 不独立成行 | 行内块元素：img,input,button | 行内元素：a,span     |
 
+
+
 通过设置display属性可以进行改变：
 
 把a标签转换为块元素
@@ -305,8 +323,10 @@ a{
 
 - block  标签转换为块元素
 - inline 转换为行内元素
-- inline-block  转换为行内块元素
+- inline-block  转换为行内块元素: 可以把内容显示在同一列上：![image-20240828141350202](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828141350202.png)![image-20240828141541245](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828141541245.png)以达到文字居中效果：![image-20240828141729624](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828141729624.png)
 - none  把元素隐藏起来
+
+
 
 ### 2.5 示例:
 
@@ -1634,3 +1654,339 @@ align-self属性，
 
 
 ### 9 其他css注意事项
+
+#### white-space
+
+
+
+~~~css
+white-space:nowrap;
+~~~
+
+**`white-space` 属性**：该属性控制元素内的空白处理方式，包括如何处理空格和换行符。它有多个可能的值，如 `normal`、`pre`、`nowrap` 等。
+
+**`nowrap`**：这个值指定文本不会换行，所有内容都显示在同一行上。如果内容的宽度超出了父容器的宽度，内容就会溢出容器，除非使用了其他CSS属性来处理溢出的部分。
+
+假设有以下HTML结构：
+
+```html
+<div style="width: 100px; white-space: nowrap; border: 1px solid black;">
+    这是一个很长的文本示例。
+</div>
+```
+
+- 如果 `white-space` 设为 `normal`（默认值），文本会在到达容器宽度（100px）时自动换行，因此这个文本会分成多行显示。
+- 但是如果 `white-space: nowrap;`，这个文本就会保持在同一行，不会换行。如果文本长度超过了容器宽度，文本会超出容器边界，可能看不全，除非使用了 `overflow` 属性来处理溢出的内容（比如 `overflow: hidden;` 或 `overflow: scroll;`）。
+
+
+
+## 项目案例
+
+### 新闻项目效果图如下
+
+具体：E:\Afrontend files vsCode\frontend_item\uniapp-ling_project   中的ReadMe
+
+![image-20240828154104096](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828154104096.png)
+
+### 让内容显示在同一行或同一列
+
+#### 1）flex
+
+~~~vue
+<template>	
+	<view class="newsbox">
+		<view class="pic">
+			<image :src="item.picurl" mode="aspectFill"></image>
+		</view>
+		<view class="text">
+			<view class="title">
+				<view class="con">
+					{{item.title}}
+				</view>				
+			</view>
+			<view class="info" v-if="!item.looktime">
+				<view class="font">{{item.author}}</view>
+				<view class="font">{{item.hits}}浏览</view>
+			</view>
+			<view class="info" v-else>
+				<view class="font">浏览时间：{{item.looktime}}</view>
+			</view>
+		</view>
+		
+	</view>	
+</template>
+~~~
+
+
+
+![image-20240828145329459](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828145329459.png)
+
+参考：https://www.bilibili.com/video/BV1mT411K7nW?p=52&spm_id_from=pageDriver&vd_source=d6367c1fc21883823f1fb738f86ef26e    p52 9:40
+
+同一列：
+
+![image-20240828151823475](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828151823475.png)
+
+效果：
+
+
+
+#### 2）inline-block
+
+在此文件搜索：inline-block  转换为行内块元素: 可以把内容显示在同一列上
+
+
+
+#### 3）oneRow 与 oneColumn
+
+> 设置元素展示为一行
+
+1
+
+~~~css
+	.oneRow {
+	    display: flex;               /* 启用 flex 布局 */
+	    justify-content: flex-start; /* 子元素在水平方向从左到右排列 */
+	    align-items: center;         /* 子元素垂直居中对齐 */
+	}
+
+~~~
+
+在这个基础上，如何保证元素都在同一行，不会有元素被挤下来，变成多行?
+
+回答：
+
+这是最直接的方法。添加 `flex-wrap: nowrap;` 可以确保所有子元素在水平方向上都保持在同一行，即使总宽度超过容器宽度，元素也不会换行。
+
+~~~css
+.oneRow { 
+    display: flex; 
+    justify-content: flex-start; 
+    align-items: center; 
+    flex-wrap: nowrap;  /* 防止元素换行 */
+}
+~~~
+
+
+
+> 设置元素展示为一列
+
+
+
+~~~css
+	/* 显示成一列 */
+	.oneColumn{
+		display: flex; /* 启用 flex 布局 */
+		flex-direction: column; /* 设置垂直排列 */
+		align-items: flex-start; /* 左对齐 */
+	}
+~~~
+
+
+
+
+
+### css两行后显示省略号
+
+![image-20240828152457667](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828152457667.png)
+
+老师用：
+
+~~~css
+/* 溢出2行后进行省略 */
+.overflowOmit{
+	overflow: hidden;
+	text-overflow: -o-ellipsis-lastline;
+    overflow:hidden;
+    text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+~~~
+
+
+
+1 csdn  这个可以使用： 参考：https://blog.csdn.net/Tracy_frog/article/details/77881808
+
+~~~css
+/* 溢出一行后使用省略号进行省略*/
+.overflowOmit{
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 1;
+	overflow:hidden;
+	/*! autoprefixer: off */
+	-webkit-box-orient: vertical;
+}
+~~~
+
+2 https://www.cnblogs.com/tcyweb/p/16739241.html
+
+~~~css
+/* 溢出一行后进行省略，显示不出省略号 */
+.overflowOmit{
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	word-break: break-all;
+}
+~~~
+
+
+
+注意：如果不能正常使用：则新开一个标签，把上面的样式写在靠近文字内容的标签上面
+
+![image-20240828152329723](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828152329723.png)
+
+
+
+#### max-width解决图片显示大小问题
+
+解释js代码：`res.data.content=res.data.content.replace(/<img/gi,'<img style="max-width:100%"')`
+
+
+
+这段JavaScript代码的作用是修改 `res.data.content` 中的所有 `<img>` 标签，以便为它们添加一个内联样式，使图像的最大宽度不超过容器的宽度。
+
+代码解析：
+
+```javascript
+res.data.content = res.data.content.replace(/<img/gi, '<img style="max-width:100%"')
+```
+
+1. **`res.data.content`**：表示从某个API或数据源获取的数据中的 `content` 字段，通常是HTML格式的内容。
+
+2. **`replace(/<img/gi, '<img style="max-width:100%"')`**：
+   - **`/<img/gi`**：这是一个正则表达式，用来匹配所有的 `<img>` 标签。
+     - **`<img`**：匹配 `<img>` 标签的起始部分。
+     - **`g`**：表示全局匹配，即替换所有匹配项，而不仅是第一个。
+     - **`i`**：表示不区分大小写，即匹配 `<IMG>`、`<Img>` 等不同写法。
+
+   - **`'<img style="max-width:100%"'`**：这是替换的字符串，它会将 `<img>` 标签替换为 `<img style="max-width:100%">`，从而在 `<img>` 标签中添加或覆盖 `style="max-width:100%"`，使图像的最大宽度限制为其父容器的宽度。
+
+应用场景：
+
+这种替换通常用于使图片在网页中自适应布局，避免图片宽度超过容器，造成布局问题，尤其在响应式设计中。
+
+
+
+## 设置两个元素在页面最下面的中间处紧挨着显示
+
+
+
+~~~vue
+如何设置这两个元素在页面最下面的中间处紧挨着显示：
+<text class="pad_LP2">新增报销</text>
+<view v-if="isShowReimbursementCategory" class="reimbursementCategory">
+    <button size="mini" type="primary" @click="toSubmitAccount(1)">差旅报销</button>
+    <button size="mini" type="primary" @click="toSubmitAccount(2)">费用报销</button>
+    <button size="mini" type="primary" @click="toSubmitAccount(3)">物料报销</button>
+</view>
+~~~
+
+
+
+
+
+要将这两个元素放置在页面底部，并紧挨着显示，可以采用以下步骤来实现布局：
+
+### 1. **使用 `position: fixed` 定位到页面底部**
+
+首先，可以为容器设置 `position: fixed`，将其定位到页面的底部中间位置。通过使用 `display: flex` 配合 `justify-content` 和 `align-items` 来实现水平和垂直方向上的布局。
+
+### 2. **HTML 结构示例**
+
+在这个例子中，我假设你需要的容器元素是 `<div>` 或 `<view>`，你可以根据实际情况调整。修改后的 HTML 结构如下：
+
+```html
+<div class="bottom-bar">
+    <text class="pad_LP2">新增报销</text>
+    <view v-if="isShowReimbursementCategory" class="reimbursementCategory">
+        <button size="mini" type="primary" @click="toSubmitAccount(1)">差旅报销</button>
+        <button size="mini" type="primary" @click="toSubmitAccount(2)">费用报销</button>
+        <button size="mini" type="primary" @click="toSubmitAccount(3)">物料报销</button>
+    </view>
+</div>
+```
+
+### 3. **CSS 样式设置**
+
+通过以下样式将这两个元素固定在页面底部并紧挨显示：
+
+```css
+.bottom-bar {
+    position: fixed;              /* 固定在页面某个位置 */
+    bottom: 0;                    /* 定位到页面底部 */
+    left: 50%;                    /* 定位到页面水平中间 */
+    transform: translateX(-50%);  /* 水平居中 */
+    display: flex;                /* 启用 flex 布局 */
+    align-items: center;          /* 子元素垂直居中对齐 */
+    justify-content: center;      /* 子元素水平居中对齐 */
+    background-color: white;      /* 背景色可以根据需要调整 */
+    padding: 10px;                /* 内边距，防止元素贴边 */
+}
+
+.pad_LP2 {
+    margin-right: 10px;           /* 设置第一个元素与第二个元素之间的间距 */
+}
+
+.reimbursementCategory button {
+    margin: 0 5px;                /* 调整按钮之间的间隔 */
+}
+```
+
+### 4. **解释说明**
+- `position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);`：将 `.bottom-bar` 容器固定在页面底部，并水平居中显示。
+- `display: flex; justify-content: center; align-items: center;`：使用 `flex` 布局，使子元素在容器内水平和垂直居中对齐。
+- `margin-right: 10px;`：为 `text` 元素设置右边距，使其与下一个 `view` 元素保持紧凑的间距。
+
+这样就可以确保 `<text>` 和 `<view>` 元素在页面底部中间紧挨着显示，并且不同按钮也有适当的间距。
+
+
+
+## 设置子元素在超过容器宽度时自动换行
+
+要使 `search-container` 中的子元素在超过容器宽度时自动换行，可以将 `display: flex` 的 `flex-wrap` 属性设置为 `wrap`。这样，当子元素超过容器宽度时，就会自动换行显示。
+
+修改后的样式：
+
+可以在 `search-container` 的样式中加入 `flex-wrap: wrap;`，如下所示：
+
+```css
+.search-container {
+  display: flex;
+  flex-wrap: wrap; /* 允许子元素超出时换行 */
+  justify-content: start;
+  align-items: start;
+  padding: 10px;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+}
+```
+
+### 解释
+
+- **`flex-wrap: wrap;`**：表示当子元素在当前行中排列不下时，会自动换到下一行继续排列。
+
+
+
+## 设置文本不换行，居中显示
+
+~~~css
+	.uploadPictureButtonMP{
+		width: 190rpx !important;
+		height: 80rpx;
+		color: white;
+		white-space: nowrap;            /* 防止文字换行 */
+		background-color: rgb(102, 177, 255);
+        /* 文字水平居中 */
+		text-align: center;
+        /* 设置值等于height，实现文字垂直居中 */
+		line-height: 80rpx;
+		border-radius: 10%;
+	}
+~~~
+

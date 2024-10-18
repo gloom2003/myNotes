@@ -8,7 +8,7 @@
 
 默认的认证流程，使用了UsernamePasswordAuthenticationFilter来进行：
 
-![image-20211214151515385](D:\alwaysUse\notes\myNotes\java apply note\springSecurity\img\image-20211214151515385.png)
+![image-20211214151515385](img\image-20211214151515385.png)
 
 概念速查:
 

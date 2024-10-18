@@ -47,7 +47,7 @@ select * from article LIMIT 1,3
 
 group by**会把组变成一行，**前提是group by后面的字段的**值有多个相同，而不是全部不同**，否则group by相当于没写。
 
-1 group by 有一个原则,就是 **select中使用了聚合函数时，select 中没有使用聚合函数的字段,必须出现在 group by 后面**,gruop by 之后直接查询emp_no会默认取非聚合起来的第一条数据（没有意义），或者直接报错。
+1 group by emp_no字段有一个原则,就是 **select中使用了聚合函数时，select 中没有使用聚合函数的字段,必须出现在 group by 后面**,gruop by 之后直接查询emp_no会默认取非聚合起来的第一条数据（没有意义），或者直接报错。
 
 
 
@@ -1528,7 +1528,7 @@ ORDER BY s1.salary DESC, s1.emp_no ASC
 
 ### 4.1 在windows上使用cmd操作数据库：
 
-从0开始，下载mysql，配置环境变量(mysql安装目录下的bin目录)到path中
+从0开始，下载mysql，配置环境变量(mysql安装目录下的bin目录)到path中  或者 每次使用都在mysql的bin目录下面打开cmd
 
 默认有一个root用户，密码？。
 
@@ -1537,7 +1537,7 @@ ORDER BY s1.salary DESC, s1.emp_no ASC
 连接本地的mysql服务器：		
 
 ~~~shell
-mysql -u 用户名 -p
+mysql -u 用户名 -p # -h指定主机，默认不写则使用localhost
 ~~~
 
 通过`create user`来创建用户并设置密码为123456：
@@ -1566,6 +1566,27 @@ exit;
 show databases;
 ~~~
 
+#### 修改mysql的密码：
+
+参考：https://blog.csdn.net/kq425/article/details/106539972
+
+在mysql5.7的bin目录下面打开cmd:
+
+连接本地的mysql服务器：		
+
+~~~shell
+mysql -u 用户名 -p
+~~~
+
+修改MySQL5.7版本库的user表
+
+```SQL
+UPDATE mysql.user SET authentication_string = PASSWORD("new-password");
+FLUSH PRIVILEGES;
+```
+
+
+
 #### 4.1.2 权限控制命令
 
 使用**`grant`**来为一个数据库用户进行授权：
@@ -1590,11 +1611,33 @@ grant select,update(s_name) on test.student to test;
 
 
 
+例子：
+
+~~~mysql
+grant all privileges on *.* to root@"%" identified by ".";
+~~~
+
+这段代码是一条用于 MySQL 数据库管理系统的 SQL 语句。它的作用是授予某个用户对所有数据库和表的所有权限。具体解释如下：
+
+- `grant all privileges`：授予所有权限。这意味着授予用户对数据库中的所有操作权限，如 SELECT、INSERT、UPDATE、DELETE、CREATE、DROP 等。
+
+- `on *.*`：指定权限的范围。`*.*` 表示所有数据库中的所有表。第一个 `*` 表示所有数据库，第二个 `*` 表示所有表。
+
+- `to root@"%"`：指定授予权限的用户。这里是 `root` 用户，`"%"` 表示该用户可以从任何主机连接到 MySQL 服务器。
+
+- `identified by "."`：指定用户的密码为 `.`。这表示在授予权限时，用户的密码是一个单字符的 `.`。
+
+综上所述，这条语句的作用是：授予 `root` 用户从任何主机连接到 MySQL 服务器时，对所有数据库和表的所有权限，并且这个 `root` 用户的密码是 `.`。
+
+
+
 我们可以使用`revoke`来收回一个权限：
 
 ```sql
 revoke all|权限1,权限2...(列1,...) on 数据库.表 from 用户
 ```
+
+
 
 ## 5 数据定义语言：DDL
 
@@ -1671,7 +1714,149 @@ truncate table table_name;
 
 ## 7 数据库字段的设计
 
-数据库的字段类型与java数据类型的对应关系：
+
+
+## 选择合适的数据类型
+
+### 存储整数
+
+在 MySQL 中，按存储数字的数据类型容量从小到大排序如下：
+
+1. **`BIT(M)`**：每位占用 **1 bit**，用于存储二进制数据，`M` 表示位的数量，最多 64 位（8 字节）。
+
+   bit(5)可以存储多大的数据？`BIT(5)` 可以存储 **5 位**的二进制数据，具体的存储范围为 **0 到 31**。因为 5 位二进制可以表示的最大值是 `2^5 - 1 = 31`。
+
+   详细解释：
+
+   - `BIT(5)` 表示一个 5 位的二进制数。
+   - 二进制 5 位的最小值是 `00000`，对应十进制的 `0`。
+   - 二进制 5 位的最大值是 `11111`，对应十进制的 `31`。
+
+   因此，`BIT(5)` 可以存储的十进制数据范围是 **0 到 31**。
+
+2. **`TINYINT`**：占用 **1 字节**（8 位）。
+
+   - 有符号范围：`-128` 到 `127`
+   - 无符号范围：`0` 到 `255`
+
+3. **`SMALLINT`**：占用 **2 字节**（16 位）。
+
+   - 有符号范围：`-32,768` 到 `32,767`
+   - 无符号范围：`0` 到 `65,535`
+
+4. **`MEDIUMINT`**：占用 **3 字节**（24 位）。
+
+   - 有符号范围：`-8,388,608` 到 `8,388,607`
+   - 无符号范围：`0` 到 `16,777,215`
+
+5. **`INT` / `INTEGER`**：占用 **4 字节**（32 位）。
+
+   - 有符号范围：`-2,147,483,648` 到 `2,147,483,647`
+   - 无符号范围：`0` 到 `4,294,967,295`
+
+6. **`BIGINT`**：占用 **8 字节**（64 位）。
+
+   - 有符号范围：`-9,223,372,036,854,775,808` 到 `9,223,372,036,854,775,807`
+   - 无符号范围：`0` 到 `18,446,744,073,709,551,615`
+
+#### 总结顺序：
+
+1. `BIT(M)`（可变，最大 8 字节）
+2. `TINYINT`（1 字节）
+3. `SMALLINT`（2 字节）
+4. `MEDIUMINT`（3 字节）
+5. `INT`（4 字节）
+6. `BIGINT`（8 字节）
+
+
+
+### `VARCHAR(255)`
+
+`VARCHAR(255)` 是 MySQL 中的一种可变长度字符串类型，表示该列可以存储最多 **255 个字符** 的字符串。
+
+#### 详细解释：
+
+1. **`VARCHAR`**：代表可变长度的字符串类型。与 `CHAR` 不同，`VARCHAR` 只占用实际字符所需的空间，并且在每条记录中附带一个额外的字节或两个字节用于记录字符串的长度。
+
+2. **`(255)`**：指定最大字符长度为 255 个字符。`VARCHAR` 的长度范围可以是 0 到 65535（受行大小、编码等限制），但在实际使用中，常用的最大长度是 255，因为超过这个值会存储为 `TEXT` 类型。
+
+#### 存储空间：
+
+- `VARCHAR(255)` 使用的存储空间与实际存储的字符长度有关：
+  - **1 字节**用于存储字符串长度信息（如果最大长度小于 255）。
+  - 如果字符串使用了多字节字符集（如 UTF-8），每个字符可能占用多个字节。对于 UTF-8，每个字符最多占用 3 字节（4 字节在某些扩展字符集中）。
+
+#### 举例：
+
+- 如果你在 `VARCHAR(255)` 列中存储了 "Hello"（5 个字符），实际存储的是 5 个字符 + 1 字节的长度信息，总共占用 6 字节的存储空间。
+
+#### 注意：
+
+- `VARCHAR(255)` 的长度表示的是字符数，而不是字节数。因此，字符集和编码（如 UTF-8）会影响实际的存储空间。
+
+
+
+### 设置utf8字符集
+
+错误现象：https://blog.csdn.net/qq_43747519/article/details/124213384
+
+解决：
+
+~~~mysql
+alter table tbl_oaex_invoices convert to character set utf8
+~~~
+
+参考：https://www.cnblogs.com/zjfjava/p/6849797.html
+
+
+
+完整的sql:
+
+~~~mysql
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for tbl_oaex_invoices
+-- ----------------------------
+DROP TABLE IF EXISTS `tbl_oaex_invoices`;
+CREATE TABLE `tbl_oaex_invoices`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `invoice_type` int(11) NULL DEFAULT NULL COMMENT '发票类型 ( 0-增值税发票 1-火车票 2-出租车发票 3-飞机行程单 4-定额发票 5-发票文件夹\")',
+  `invoice_image_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '发票图片的id,多个id使用,进行分隔',
+  `enclosure_pic_ids` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附件的id,多个id使用,进行分隔',
+  `material_type` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '发票材料类型（0-电子 1-纸质）',
+  `reimbursement_category` int(11) NULL DEFAULT NULL COMMENT '报销分类: 0-差旅报销 1-费用报销 2-物料报销',
+  `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '发票说明',
+  `parent_id` bigint(20) NULL DEFAULT NULL COMMENT '上一级id，为null表示是根文件夹',
+  `is_over` bit(1) NULL DEFAULT NULL COMMENT '是否完结',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '提交人的id',
+  `create_at` datetime NULL DEFAULT NULL COMMENT '提交时间',
+  `merge_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '发票文件夹的名称（合并后的名称）',
+  `expense_type` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '各种报销的费用类型,直接存储中文,如:1.购买固定资产 2.火车',
+  `start_location` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '出发地点',
+  `arrival_location` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '到达地点',
+  `start_time` datetime NULL DEFAULT NULL COMMENT '出发时间',
+  `arrival_time` datetime NULL DEFAULT NULL COMMENT '到达时间',
+  `total_money` decimal(10, 2) NULL DEFAULT NULL COMMENT '发票金额（总金额）',
+  `travel_number` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '车次或航班号',
+  `ticket_number` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '票号：存储火车票的售票信息（售票码 售票车站信息）或飞机电子客票号码，作为火车票与飞机票的唯一标识',
+  `invoice_number` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '增值税发票号码',
+  `invoice_code` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '增值税发票代码',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Dynamic;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+~~~
+
+
+
+
+
+
+
+### 数据库的字段类型与java数据类型的对应关系：
 
 1.  bigint -> Long
 2. varchar,longtext,char -> String
@@ -1738,6 +1923,8 @@ public class Article{
 
 
 ~~~
+
+
 
 ## 8 Bug
 

@@ -200,6 +200,23 @@ var:声明变量(ES2015中使用let声明变量)
 ~~~
 
 - sort 排序
+
+  ~~~js
+  (res) => {
+      if (res.confirm) {
+          console.log(`this.mergArryIndex = ${JSON.stringify(this.mergArryIndex)}`);
+          // 获取要删除的发票对象降序后,从后向前删除
+          this.mergArryIndex.sort((a, b) => b - a);
+          for(let i = 0; i < this.mergArryIndex.length; i++){
+              let deletedIndex = this.mergArryIndex[i];
+              console.log(`要删除的发票对象索引: deletedIndex = ${deletedIndex}`);
+              this.allInvoiceMsg.splice(deletedIndex,1);
+          }
+  }
+  ~~~
+
+  
+
 - filter 过滤
 
 ~~~html
@@ -238,7 +255,74 @@ var:声明变量(ES2015中使用let声明变量)
     </script>
 ~~~
 
+
+
+#### splice删除：
+
+![image-20240805111347514](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240805111347514.png)
+
+![image-20240805111317613](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240805111317613.png)
+
+`splice` 方法的语法为：`array.splice(start, deleteCount)`，其中 `start` 是开始删除的位置，`deleteCount` 是要删除的元素个数。
+
+
+
+#### findIndex 根据条件查询元素的索引
+
+~~~js
+function saveHistory(){
+				let historyArr= [1,2,3];
+				let item={
+					id:this.detail.id,
+					classid:this.detail.classid,
+					picurl:this.detail.picurl,
+					title:this.detail.title,
+					looktime:parseTime(Date.now())
+				}
+				
+				let index = historyArr.findIndex(i=>{
+					return i.id == this.detail.id
+				})
+				
+				if(index>=0){
+					historyArr.splice(index,1)
+				}
+			}
+~~~
+
+
+
+#### slice
+
+~~~js
+				// 最多记录10条历史记录
+				historyArr=historyArr.slice(0,10)	
+~~~
+
+这段JavaScript代码的作用是对数组 `historyArr` 进行裁剪，只保留数组的前10个元素，删除其余的元素。
+
+代码解析：
+```javascript
+historyArr = historyArr.slice(0, 10);
+```
+
+1. **`historyArr`**：这是一个数组，可能用于存储一些历史记录或其他数据。
+
+2. **`slice(0, 10)`**：
+   - `slice()` 是JavaScript中的一个数组方法，用于从数组中提取一个片段，并返回一个新的数组。**它不会修改原始数组。**
+   - **`0`**：这是起始索引，表示从数组的第一个元素开始（索引从0开始）。
+   - **`10`**：这是结束索引（不包括该索引对应的元素）。所以 `slice(0, 10)` 将提取 `historyArr` 的前10个元素（从索引0到索引9的元素）。
+
+3. **`historyArr =`**：这部分将 `slice()` 返回的新数组重新赋值给 `historyArr`，因此 `historyArr` 现在只包含前10个元素。
+
+应用场景：
+
+这种操作通常用于限制数组的长度。例如，保留最近的10条历史记录，或限制数据集的大小，以避免处理过多的数据或浪费内存。
+
+
+
 ### 1.6 常用的内置对象
+
 #### 1.6.1 Array-数组 join,sort,map见上文。
 
 
@@ -251,11 +335,53 @@ var:声明变量(ES2015中使用let声明变量)
 - Math.sqrt(9):开方
 - Math.pow(2,4):乘方
 
+在JavaScript中，可以通过多种方式将浮点数2.5转换为整数2。以下是几种常见的方法：
+
+1. 使用`Math.floor()`方法：
+   ```javascript
+   let number = 2.5;
+   let integer = Math.floor(number); // 结果为2
+   ```
+
+2. 使用`parseInt()`方法：
+   ```javascript
+   let number = 2.5;
+   let integer = parseInt(number); // 结果为2
+   ```
+
+3. 使用`Math.trunc()`方法（ES6引入）：
+   ```javascript
+   let number = 2.5;
+   let integer = Math.trunc(number); // 结果为2
+   ```
+
+4. 使用按位运算符`| 0`：
+   ```javascript
+   let number = 2.5;
+   let integer = number | 0; // 结果为2
+   ```
+
+5. 使用双重否定运算符`~~`：
+   ```javascript
+   let number = 2.5;
+   let integer = ~~number; // 结果为2
+   ```
+
+6. 使用`Math.round()`方法，如果你希望四舍五入：
+   ```javascript
+   let number = 2.5;
+   let integer = Math.round(number); // 结果为3
+   ```
+
+前五种方法都会将2.5转换为2，而`Math.round()`方法会将2.5转换为3，因为它是四舍五入的。根据你的需求选择合适的方法。
+
+
+
 #### 1.6.3 Date
 
 Date对象
 
-```
+```javascript
 var d = new Date();
 var d_target = new Date("2020-1-1);
 
@@ -268,6 +394,44 @@ d.getMinutes();
 d.getSeconds();
 d.getTime(0);//时间戳是指格林威治时间1970年01月01日00时00分00秒起至现在的总毫秒数
 ```
+
+
+
+解释代码：	setHours()		
+
+```js
+isHandLate(log,create) { 			
+    let date1 = new Date(log); 			
+    let date2 = new Date(create); 			
+    return (date1.setHours(0, 0, 0, 0) == date2.setHours(0, 0, 0, 0));
+}
+```
+
+
+
+1. **设置时间为午夜**:
+
+   ```js
+   return (date1.setHours(0, 0, 0, 0) == date2.setHours(0, 0, 0, 0));
+   ```
+
+   
+
+   `setHours(0, 0, 0, 0)` 是一个方法，它将 `date1` 和 `date2` 的时间部分设置为当天的午夜（00:00:00.000）。这样做的目的是忽略时间，只比较日期部分。
+
+   - `date1.setHours(0, 0, 0, 0)` 和 `date2.setHours(0, 0, 0, 0)` 都会返回相应日期的时间戳（自1970年1月1日00:00:00 UTC以来的毫秒数）。
+   - 最后，通过比较这两个日期的时间戳来判断它们是否在同一天。如果时间戳相等，说明这两个日期在同一天。
+
+2. **返回值**:
+
+   - 如果 `date1` 和 `date2` 的日期部分相同（即在同一天），则返回 `true`。
+   - 否则，返回 `false`。
+
+总结：
+
+这个函数 `isHandLate` 判断两个日期是否在同一天。如果它们的日期部分相同（忽略时间部分），则返回 `true`，否则返回 `false`。
+
+
 
 ##### 设置定时任务 setInterval
 

@@ -304,6 +304,12 @@ spring:
 
 
 
+## 配置 @ComponentScan
+
+![image-20240926115102919](E:\alwaysUse\notes\myNotes\java apply note\springBoot\SpringBoot配置相关.assets\image-20240926115102919.png)
+
+
+
 
 
 ## 3.起步依赖

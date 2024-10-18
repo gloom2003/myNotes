@@ -380,7 +380,7 @@ try {
 
 ##  join方法
 
-底层使用wait()实现
+底层使用wait()实现，与sleep()有些类似，都是阻塞当前线程。
 
 ### 为什么需要 join 
 
@@ -402,7 +402,7 @@ private static void test1() throws InterruptedException {
     });
     t1.start();
     // t1.join(); // 把当前线程一直阻塞直到t1线程运行结束为止
-    // t1.join(3000); // 设置最多等待t1线程3秒，如果t1线程提前结束了，则停止等待
+    // t1.join(3000); // 设置当前线程最多等待t1线程3秒，如果t1线程提前结束了，则停止等待
     log.debug("结果为:{}", r);
     log.debug("结束");
 }
@@ -416,7 +416,7 @@ private static void test1() throws InterruptedException {
 解决方法 
 
 - 用 sleep 行不行？为什么？ 不好，因为不能够确定t1线程休息了多久。
-- 用 join，加在 t1.start() 之后即可
+- 用 join，加在 t1.start() 之后即可，这样子最终输出： 结果为:10
 
 
 

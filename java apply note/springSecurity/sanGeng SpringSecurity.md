@@ -1051,6 +1051,10 @@ public class LoginUser implements UserDetails {
 }
 ```
 
+也可以使用Spring自带的User类：
+
+![image-20240818212334775](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240818212334775.png)
+
 注意：如果要测试，需要往用户表中写入用户数据，并且如果你想让用户的密码是明文存储，需要在密码前加{noop}。例如
 
 ![image-20211216123945882](img/image-20211216123945882.png)

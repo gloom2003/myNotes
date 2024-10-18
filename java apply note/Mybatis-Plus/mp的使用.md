@@ -1563,6 +1563,10 @@ idea连接数据库，在数据库面板中选择需要生成的表，右键生�
 
 
 
+可以选择JPA 来生成JPA的实体类，emplate可以选择生成swagger注解 或 xml文件
+
+
+
 ## EasyCode生成代码
 
 也能够让我们一键生成实体类，Mapper接口，Service，Controller等全套代码 。

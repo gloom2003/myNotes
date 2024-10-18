@@ -152,7 +152,7 @@ Redis诞生于2009年全称是**Re**mote  **D**ictionary **S**erver 远程词典
 - 支持主从集群、分片集群
 - 支持多语言客户端
 
-## 1.3.安装Redis
+## 1.3.Linux下安装Redis
 
 大多数企业都是基于Linux服务器来部署项目，而且Redis官方也没有提供Windows版本的安装包。因此课程中我们会基于Linux系统来安装Redis.
 
@@ -362,6 +362,44 @@ systemctl status redis
 
 ```sh
 systemctl enable redis
+```
+
+
+
+## windows下安装Redis
+
+### 安装Redis
+
+无脑下一步即可。
+
+### 启动Redis
+
+参考：https://blog.csdn.net/yaomingyang/article/details/82686705
+
+1)进入redis根目录，打开cmd,输入下面的指令启动服务器：
+
+```sh
+redis-server.exe redis.windows.conf
+```
+
+
+根据启动服务器后输出的信息可以看到端口号是6379
+
+2.客户端连接服务器，输入如下命令：
+
+```sh
+C:\software\tool\redis\Redis-x64-3.2.100>redis-cli.exe -p 6379
+```
+
+3.查找所有符合给定模式的key
+
+```sh
+127.0.0.1:6379> KEYS *
+
+1) "book-name"
+2) "name"
+3) "runoob"
+4) "runoobkey"
 ```
 
 
@@ -1617,7 +1655,7 @@ public void exit() {
 ### 基本原理和实现方式对比
 
 - 分布式锁：满足分布式系统或集群模式下多线程课件并且可以互斥的锁
-- 分布式锁的核心思想就是让大家共用同一把锁，那么我们就能锁住线程，不让线程进行，让程序串行执行，这就是分布式锁的核心思路
+- 分布式锁的核心思想就是让大家共用同一把锁，那么我们就能锁住线程，不让线程并行，让程序串行执行，这就是分布式锁的核心思路
 
 
 
@@ -1634,7 +1672,7 @@ public void exit() {
   1. 互斥：互斥是分布式锁的最基本条件，使得程序串行执行
   2. 高可用：锁是能够获取的，不会因为获取不了锁导致下游的程序崩溃，时时刻刻都保证较高的可用性
   3. 高性能：由于加锁本身就让性能降低，所以对于分布式锁需要他较高的加锁性能和释放锁性能
-  4. 安全性：防止出现死锁 如：设置过期时间前宕机了，锁不能够释放 怎么办
+  4. 安全性：防止出现死锁 如：**设置过期时间前宕机了，锁不能够释放** 怎么办
 
 - 常见的分布式锁有三种
 
@@ -1658,26 +1696,24 @@ public void exit() {
   1. 获取锁
 
      - 互斥：确保只能有一个线程获取锁
-     - 非阻塞式：只尝试获取一次，成功返回true，失败返回false，后面就不尝试了，这里实现的是非阻塞式的
+     - 非阻塞式：只尝试获取一次，成功返回true，失败返回false，后面就不阻塞起来进行尝试了，这里实现的是非阻塞式的
      - 阻塞式：失败后进入阻塞等待状态，直到锁被释放后再重试获取锁
 
-     ```sh
-     BASH
+     ```bash
      SET lock thread01 NX EX 10 # EX 10指定过期时间 SET NX实现互斥
      # 
      ```
-	  - setnx()方法：
-        setnx 的含义就是 SET if Not Exists，其主要有两个参数 setnx(key, value)。该方法是原子的，如果 key 不存在，则设置当前 key 成功，返回 1；如果当前 key 已经存在，则设置当前 key 失败，返回 0。
+    - setnx()方法：
+	      setnx 的含义就是 SET if Not Exists，其主要有两个参数 setnx(key, value)。该方法是原子的，如果 key 不存在，则设置当前 key 成功，返回 1；如果当前 key 已经存在，则设置当前 key 失败，返回 0。
   2. 释放锁
-
+  
      - 手动释放
      - 超时释放：获取锁的时候添加一个超时时间
-
-     ```
-     BASH
+  
+     ```bash
      DEL lock
      ```
-
+  
 - 核心思路
 
   - 我们利用redis的`SETNX`方法，当有多个线程进入时，我们就利用该方法来获取锁。第一个线程进入时，redis 中就有这个key了，返回了1，如果结果是1，则表示他抢到了锁，那么他去执行业务，然后再删除锁，退出锁逻辑，没有抢到锁（返回了0）的线程，等待一定时间之后重试
@@ -1688,7 +1724,7 @@ public void exit() {
 
 
 
-### 实现分布式锁
+### Redis实现分布式锁 1.0
 
 - 锁的基本接口
 
@@ -1731,9 +1767,10 @@ public class SimpleRedisLock implements ILock {
 
     @Override
     public boolean tryLock(long timeoutSec) {
-        //获取线程标识 递增的，不同主机主机可能重复
+        //获取线程标识 递增的，不同主机可能重复
         long threadId = Thread.currentThread().getId();
-        //获取锁，使用Redis中的SETNX方法进行加锁，同时设置过期时间，防止死锁
+        //获取锁，使用Redis中的SETNX方法进行加锁，同时设置过期时间，防止死锁  Absent：不存在
+        // 注意：value的数据类型为String类型
         Boolean success = stringRedisTemplate.opsForValue().setIfAbsent(KEY_PREFIX + name, threadId + "", timeoutSec, TimeUnit.SECONDS);
         //success为null时自动拆箱可能会出现空指针异常，这样写更稳妥,哪怕success为null也能够正常运行
         return Boolean.TRUE.equals(success);
@@ -1753,7 +1790,7 @@ public class SimpleRedisLock implements ILock {
 JAVA
 
 @Override
-public Result seckillVoucher(Long voucherId) {
+public Result seckillVoucher(Long voucherId) {// 秒杀优惠券,优惠券ID
     LambdaQueryWrapper<SeckillVoucher> queryWrapper = new LambdaQueryWrapper<>();
     //1. 查询优惠券
     queryWrapper.eq(SeckillVoucher::getVoucherId, voucherId);
@@ -1808,12 +1845,14 @@ public Result seckillVoucher(Long voucherId) {
   ```
 
   - 解决方案就是在每个线程释放锁的时候，都判断一下这个锁是不是自己的，如果不属于自己，则不进行删除操作。
-  - 假设还是上面的情况，线程1阻塞，锁自动释放，线程2进入到锁的内部执行逻辑，此时线程1阻塞完了，继续往下执行，开始删除锁，但是线程1发现这把锁不是自己的，所以不进行删除锁的逻辑，当线程2执行到删除锁的逻辑时，如果TTL还未到期，则判断当前这把锁是自己的，于是删除这把锁
+  - 如图：假设还是上面的情况，线程1阻塞，锁自动释放，线程2获取到锁后执行核心逻辑，此时线程1阻塞完了，继续往下执行，开始删除锁，但是线程1发现这把锁不是自己的，所以不进行删除锁的逻辑，当线程2执行到删除锁的逻辑时，如果TTL还未到期，则判断当前这把锁是否为自己的，是就删除这把锁
     [![img](img/分布式锁改进1.jpg)](https://pic1.imgdb.cn/item/635aa1b016f2c2beb1e68e4f.jpg)
 
 
 
-### 解决Redis分布式锁误删问题
+### Redis分布式锁2.0 解决Redis分布式锁误删问题
+
+此版本的分布式锁其实已经是可用的了。
 
 - 需求：修改之前的分布式锁实现
 - 满足：在获取锁的时候存入线程标识（用UUID标识，在一个JVM中，ThreadId一般不会重复，但是我们现在是集群模式，有多个JVM，多个JVM之间可能会出现ThreadId重复的情况），在释放锁的时候先获取锁的线程标识，判断是否与当前线程标识一致
@@ -1827,6 +1866,11 @@ public Result seckillVoucher(Long voucherId) {
 ```java
 // 使用UUID标识JVM，使用线程id标识线程，防止冲突
 private static final String ID_PREFIX = UUID.randomUUID().toString(true) + "-";
+//锁的前缀
+private static final String KEY_PREFIX = "lock:";
+//具体业务名称，将前缀和业务名拼接之后当做Key
+private String name;
+
 @Override
 public boolean tryLock(long timeoutSec) {
     // 获取线程标识
@@ -1856,37 +1900,34 @@ public void unlock() {
 - 假设线程1已经获取了锁，在判断标识一致之后，准备释放锁的时候，又出现了阻塞（例如JVM垃圾回收机制），并且时间足够长
 - 于是锁的TTL到期了，自动释放了
 - 那么现在线程2趁虚而入，拿到了一把锁
-- 但是线程1的逻辑还没执行完，那么线程1就会执行删除锁的逻辑
+- 线程1的阻塞结束后，由于线程1的逻辑还没执行完，那么线程1就会执行删除锁的逻辑
 - 但是在阻塞前线程1已经判断了标识一致，所以现在线程1把线程2的锁给删了
 - 那么就相当于判断标识那行代码没有起到作用
-- 这就是删锁时的原子性问题
-- 因为线程1的拿锁，判断标识，删锁，不是原子操作，所以我们要防止刚刚的情况
+- 这就是**删锁时的原子性问题**
+- 导致这个问题的原因是因为：线程1的拿锁，判断标识，删锁，不是原子操作
 
 ![img](img/分布式删锁时的原子性问题.png)
 
-### Lua脚本解决多条命令原子性问题
+### Lua（撸啊）脚本解决多条命令原子性问题
 
 - Redis提供了Lua脚本功能，在一个脚本中编写多条Redis命令，**确保多条命令执行时的原子性**。
 - Lua是一种编程语言，它的基本语法可以上菜鸟教程看看，链接：https://www.runoob.com/lua/lua-tutorial.html
 - 这里重点介绍Redis提供的调用函数，我们可以使用Lua去操作Redis，而且还能保证它的原子性，这样就可以实现`拿锁`，`判断标识`，`删锁`是一个原子性动作了
 - Redis提供的调用函数语法如下
 
-```
-BASH
+```bash
 redis.call('命令名称','key','其他参数', ...)
 ```
 
 - 例如我们要执行`set name Kyle`，则脚本是这样
 
-```
-BASH
+```bash
 redis.call('set', 'name', 'Kyle')
 ```
 
 - 例如我我们要执行`set name David`，在执行`get name`，则脚本如下
 
-```sh
-BASH
+```bash
 ## 先执行set name David
 redis.call('set', 'name', 'David')
 ## 再执行get name
@@ -1897,21 +1938,19 @@ return name
 
 - 写好脚本以后，需要用Redis命令来调用脚本，调用脚本的常见命令如下
 
-```sh
-BASH
+```bash
 EVAL script numkeys key [key ...] arg [arg ...]
 ```
 
 - 例如，我们要调用`redis.call('set', 'name', 'Kyle') 0`这个脚本，语法如下
 
-```
-BASH
+```bash
 EVAL "return redis.call('set', 'name', 'Kyle')" 0
 ```
 
 - 如果脚本中的key和value不想写死，可以作为参数传递，key类型参数会放入KEYS数组，其他参数会放入ARGV数组，在脚本中可以从KEYS和ARGV数组中获取这些参数
 
-注意：在Lua中，数组下标从1开始
+**注意**：在Lua中，数组下标从1开始
 
 如图：
 ![](img/Lua1.png)
@@ -1938,7 +1977,7 @@ return 0 -- 失败返回0
 
 
 
-### 利用Java代码调用Lua脚本改造分布式锁
+### Redis分布式锁3.0 利用Java代码调用Lua脚本改造分布式锁
 
 - 在RedisTemplate中，可以利用execute方法去执行lua脚本
 
@@ -1964,23 +2003,38 @@ static {
 @Override
 public void unlock() {
     stringRedisTemplate.execute(UNLOCK_SCRIPT,
-            Collections.singletonList(KEY_PREFIX + name),// 封装为一个单个元素的集合
+            Collections.singletonList(KEY_PREFIX + name),// 把Key封装为一个单个元素的集合
             ID_PREFIX + Thread.currentThread().getId());
 }
 ```
 
+或者
+
+~~~java
+		try {
+			// 执行业务
+        } finally {
+            // 调用Lua脚本保证删锁的原子性
+            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            RedisScript<Long> redisScript = new DefaultRedisScript<>(luaScript,Long.class);
+            Object releaseStatus = this.redisTemplate.execute(redisScript, Collections.singletonList(key),value);
+            log.info("releaseStatus:{}",releaseStatus);
+        }
+~~~
 
 
-### 小结
+
+### 存在的问题与小结
 
 基于SETNX实现的分布式锁存在以下问题
 
-1. 不可重入问题
-   - 重入问题是指获取锁的线程，可以再次进入到相同的锁的代码块中，可重入锁的意义在于防止死锁，例如在HashTable这样的代码中，它的方法都是使用synchronized修饰的，假如它在获取锁m后执行A方法时调用另一个方法B，在B方法中又需要获取锁m，如果此时是不可重入的，即：不能够获取到锁m(已经被自己这个线程获取了)，那就死锁了。所以可重入锁的主要意义是防止死锁，我们的synchronized和Lock锁都是可重入的
+1. **不可重入**问题
+   - 重入问题是指获取锁的线程，是否可以再次进入到相同的锁的代码块中，可重入锁的意义在于防止死锁，例如在HashTable这样的代码中，它的方法都是使用synchronized修饰的，假如它在获取锁m后执行A方法时调用另一个方法B，在B方法中又需要获取锁m，如果此时是不可重入的，即：不能够获取到锁m(已经被自己这个线程获取了)，那就**死锁了**（A方法在等待B方法执行完成然后释放锁，B方法获取不到锁而在等待？【获取不到没有自己return吗】因为这个锁已经被当前线程获取了）。所以**可重入锁的主要意义是防止死锁**，我们的synchronized和Lock锁都是可重入的
 2. 不可重试(非阻塞式的)问题
-   - 我们编写的基于setnx的分布式锁只能尝试一次，失败了就返回false，没有重试机制。有时的需求为：当线程获取锁失败后，他应该能再次尝试获取锁
+   - 我们编写的基于setnx的分布式锁只尝试一次就结束了，是非阻塞式的，失败了就返回false，没有重试机制。
+   - 有时的需求为：当线程获取锁失败后，他能进行阻塞等待，一段时间后再次尝试获取锁
 3. 超时释放问题
-   - 锁超时释放虽然可以避免死锁，但如果是业务执行耗时较长，也会导致锁释放，存在安全隐患
+   - 锁超时释放虽然可以**避免死锁**，但如果是业务执行耗时较长，也会导致锁释放，存在安全隐患
 4. 主从一致性问题
    - 如果Redis提供了主从集群(向主节点写数据，向从节点读数据)，那么当我们向主节点写入锁数据时，主节点需要异步的将数据同步给从节点，万一在同步之前，主节点宕机了(概率很低，同步的延迟是毫秒级别的)，则会选择一个从节点来作为新的主节点，但是这个从节点没有同步刚刚的锁数据，其他线程就可以趁虚而入进行新的写操作来获取锁，那么就会出现锁失效的问题。
 
@@ -1995,7 +2049,7 @@ public void unlock() {
 
 
 - 那么什么是Redisson呢
-  - Redisson是一个在Redis的基础上实现的Java驻内存数据网格(In-Memory Data Grid)。它不仅提供了一系列的分布式Java常用对象，还提供了许多分布式服务，其中就包含了各种分布式锁的实现。
+  - Redisson是一个在Redis的基础上实现的Java驻内存数据网格(In-Memory Data Grid)。它不仅**提供了一系列的分布式Java常用对象，还提供了许多分布式服务，其中就包含了各种分布式锁的实现**。
 - Redis提供了分布式锁的多种多样功能
   1. 可重入锁(Reentrant Lock)
   2. 公平锁(Fair Lock)
@@ -2117,9 +2171,9 @@ void testRedisson() throws InterruptedException {
 
 - 在redisson中，我们也支持可重入锁
 
-  - 在分布式锁中，它采用hash结构来存储锁，其中外层key表示这把锁是否存在，内层key则记录当前这把锁被哪个线程持有
+  - 在分布式锁中，它采用(类似Redis的)hash结构来存储锁，其中外层key表示这把锁是否存在，内层key则记录当前这把锁被哪个线程持有
 
-- 案例：method1在方法内部调用method2，method1和method2出于同一个线程，那么method1已经拿到锁了，想进入method2中拿同一把锁，必然是拿不到的，于是就出现了死锁
+- 案例：method1在方法内部调用method2，method1和method2处于同一个线程，那么method1已经拿到锁了，想进入method2中拿同一把锁，必然是拿不到的，于是就出现了死锁（疑问：method2拿锁拿不到的话，直接return然后去释放method1的锁了，怎么会死锁呢？）
 
 ```java
 @Resource
@@ -2129,7 +2183,7 @@ private RLock lock;
 
 @BeforeEach
 void setUp() {
-    lock = redissonClient.getLock("lock");
+    lock = redissonClient.getLock("lock");// 设置hash结构的外层key
 }
 
 @Test
@@ -2149,7 +2203,7 @@ void method1() {
 }
 
 void method2() {
-    RLock lock = redissonClient.getLock("lock");
+    RLock lock = redissonClient.getLock("lock");// 又获取了一遍锁对象 应该是可以直接：boolean success = lock.tryLock();的
     boolean success = lock.tryLock();
     if (!success) {
         log.error("获取锁失败，2");
@@ -2402,7 +2456,7 @@ void method2() {
 1. 不可重入Redis分布式锁
    - 原理：利用SETNX的互斥性；利用EX避免死锁；释放锁时判断线程标识
    - 缺陷：不可重入、无法重试、锁超时失效
-2. 可重入Redis分布式锁
+2. 可重入Redis分布式锁(Redisson?)
    - 原理：利用Hash结构，记录线程标识与重入次数实现可重入锁；利用WatchDog延续锁时间防止业务没有执行完成锁就失效了；利用发布订阅方案控制锁重试等待(对CPU的利用率较高，不会进行过多无效的重试)
    - 缺陷：Redis宕机引起锁失效问题(主从一致性问题)
 3. Redisson的multiLock
