@@ -1960,3 +1960,451 @@ public  void transfer(Account target, int amount) {
 以 32 位虚拟机为例
 
 对象由对象头与成员变量组成
+
+
+
+
+
+# 实际应用
+
+
+
+## ThreadPoolTaskExecutor 线程池
+
+
+
+### ① 配置与定义：
+
+~~~java
+@Configuration
+@EnableAsync
+public class AsyncConfiguration {
+
+    @Bean("firstExecutor")
+    public Executor doSomethingExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        // 核心线程数：线程池创建时候初始化的线程数
+        executor.setCorePoolSize(10);
+        // 最大线程数：线程池最大的线程数，只有在缓冲队列满了之后才会申请超过核心线程数的线程
+        executor.setMaxPoolSize(20);
+        // 缓冲队列：用来缓冲执行任务的队列
+        executor.setQueueCapacity(500);
+        // 允许线程的空闲时间60秒：当超过了核心线程之外的线程在空闲时间到达之后会被销毁
+        executor.setKeepAliveSeconds(60);
+        // 线程池名的前缀：设置好了之后可以方便我们定位处理任务所在的线程池
+        executor.setThreadNamePrefix("first-");
+        // 缓冲队列满了之后的拒绝策略：由调用线程处理（一般是主线程）
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
+        executor.initialize();
+        return executor;
+    }
+}
+~~~
+
+
+
+
+
+`ThreadPoolTaskExecutor` 是 Spring 提供的一种实现 `Executor` 接口的线程池类，它内部是基于 `ThreadPoolExecutor` 构建的。你可以使用 `ThreadPoolTaskExecutor` 来提交任务并等待任务执行完成。这里有两种常见的方式：使用 `Future` 对象和任务计数等待器。
+
+### ②使用
+
+### 1. 使用 `Future` 对象等待任务完成
+
+`ThreadPoolTaskExecutor` 支持通过 `submit()` 方法提交 `Callable` 任务并返回 `Future`，你可以使用 `Future` 的 `get()` 方法来阻塞当前线程，直到任务完成。示例如下：
+
+#### 示例代码
+
+```java
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+
+public class TaskExecutorExample {
+
+    public static void main(String[] args) throws Exception {
+        // 创建一个 ThreadPoolTaskExecutor
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5); // 核心线程数
+        executor.setMaxPoolSize(10); // 最大线程数
+        executor.setQueueCapacity(25); // 队列容量
+        executor.initialize(); // 初始化线程池
+
+        // 提交任务并获取 Future 对象
+        Future<String> future = executor.submit(new Callable<String>() {
+            @Override
+            public String call() throws Exception {
+                Thread.sleep(2000); // 模拟耗时任务
+                return "任务完成";
+            }
+        });
+
+        // 阻塞当前线程，直到任务完成并获取结果
+        String result = future.get();
+        System.out.println(result); // 输出 "任务完成"
+
+        // 关闭线程池
+        executor.shutdown();
+    }
+}
+```
+
+#### 解释
+- `executor.submit()` 提交一个任务并返回 `Future` 对象。
+- 调用 `future.get()` 会阻塞当前线程，直到任务执行完成并返回结果。
+- 这种方式适用于需要同步等待任务完成的场景。
+
+### 2. 使用计数器或 `CountDownLatch` 等待多个任务
+
+如果需要等待多个任务执行完成，可以使用 Java 的并发工具类 `CountDownLatch`。示例如下：
+
+#### 示例代码
+
+```java
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import java.util.concurrent.CountDownLatch;
+
+public class TaskExecutorExample {
+
+    public static void main(String[] args) throws InterruptedException {
+        // 创建一个 ThreadPoolTaskExecutor
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(25);
+        executor.initialize();
+
+        // 计数器，表示需要等待的任务数量
+        CountDownLatch latch = new CountDownLatch(3);
+
+        // 提交多个任务
+        for (int i = 0; i < 3; i++) {
+            executor.execute(() -> {
+                try {
+                    System.out.println(Thread.currentThread().getName() + " 执行任务");
+                    Thread.sleep(2000); // 模拟耗时任务
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    latch.countDown(); // 任务完成，计数器减一
+                }
+            });
+        }
+
+        // 等待所有任务完成
+        latch.await();
+        System.out.println("所有任务已完成");
+
+        // 关闭线程池
+        executor.shutdown();
+    }
+}
+```
+
+#### 解释
+- `CountDownLatch` 允许一个或多个线程等待其他线程完成任务。
+- 每个任务完成时调用 `latch.countDown()`，表示一个任务完成。
+- `latch.await()` 会阻塞当前线程，直到计数器归零，即所有任务完成。
+
+### 3. 选择合适的方式
+- 如果只需要等待单个任务完成，使用 `Future` 是更简单的选择。
+- 如果需要等待多个任务，可以使用 `CountDownLatch`、`CyclicBarrier` 等同步工具。
+
+
+
+###  ③`@Async` 注解
+
+下面是一个完整的示例，演示如何使用 `@Async("firstExecutor")` 来将某个方法异步执行，并配置自定义的线程池 `firstExecutor`。
+
+### 示例：异步发送邮件
+
+假设我们有一个服务类 `EmailService`，其中的 `sendEmail` 方法用于发送电子邮件，发送邮件可能比较耗时，因此我们希望它在后台线程池中异步执行。
+
+#### 1. 配置线程池
+
+首先，在配置类中定义 `firstExecutor` 线程池：
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import java.util.concurrent.Executor;
+
+@Configuration
+public class AsyncConfig {
+
+    @Bean(name = "firstExecutor")
+    public Executor firstExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5); // 核心线程数
+        executor.setMaxPoolSize(10); // 最大线程数
+        executor.setQueueCapacity(25); // 队列容量
+        executor.setThreadNamePrefix("EmailExecutor-"); // 线程名称前缀
+        executor.initialize();
+        return executor;
+    }
+}
+```
+
+这里定义了一个名为 `firstExecutor` 的线程池，核心线程数为 5，最大线程数为 10，并为线程名称添加前缀 `"EmailExecutor-"`。
+
+#### 2. 在服务类中使用 `@Async`
+
+接下来，创建 `EmailService` 类并在 `sendEmail` 方法上使用 `@Async("firstExecutor")` 注解，使其异步执行。
+
+```java
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+@Service
+public class EmailService {
+
+    @Async("firstExecutor")
+    public void sendEmail(String recipient, String subject, String body) {
+        // 模拟发送邮件的耗时操作
+        try {
+            System.out.println("开始发送邮件到: " + recipient);
+            Thread.sleep(3000); // 模拟耗时3秒
+            System.out.println("邮件发送完成: " + recipient);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+当调用 `sendEmail` 方法时，它会在 `firstExecutor` 线程池的线程中异步执行，不会阻塞调用它的主线程。
+
+#### 3. 调用异步方法
+
+在其他类中注入 `EmailService` 并调用 `sendEmail` 方法。例如，在一个控制器中：
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class EmailController {
+
+    @Autowired
+    private EmailService emailService;
+
+    @GetMapping("/send-email")
+    public String sendEmail(@RequestParam String recipient) {
+        emailService.sendEmail(recipient, "Welcome!", "Thank you for signing up.");
+        return "邮件正在发送中...";
+    }
+}
+```
+
+当访问 `/send-email?recipient=example@example.com` 时，`emailService.sendEmail` 会在后台线程中异步执行，并立即返回响应 “邮件正在发送中...”。
+
+### 4. 运行结果
+
+访问 `http://localhost:8080/send-email?recipient=example@example.com` 后，日志会显示：
+
+```plaintext
+邮件正在发送中...
+开始发送邮件到: example@example.com
+邮件发送完成: example@example.com
+```
+
+此时，返回到客户端的响应不会等待 `sendEmail` 方法完成，这样即使 `sendEmail` 操作耗时，应用也能迅速响应用户请求，提高了效率。
+
+
+
+### ④计算一个方法的执行时间
+
+在 Java 中，计算一个方法的执行时间可以通过记录方法开始执行和结束执行的时间，然后计算两者之间的时间差。最常用的方法是使用 `System.currentTimeMillis()` 或 `System.nanoTime()`。以下是具体的示例代码：
+
+### 使用 `System.currentTimeMillis()`
+
+```java
+public class TimeMeasurementExample {
+
+    public static void main(String[] args) {
+        long startTime = System.currentTimeMillis(); // 记录开始时间
+
+        // 需要测量时间的方法
+        someMethod();
+
+        long endTime = System.currentTimeMillis(); // 记录结束时间
+        long duration = endTime - startTime; // 计算方法执行时间
+        System.out.println("方法执行时间: " + duration + " 毫秒");
+    }
+
+    private static void someMethod() {
+        // 模拟耗时任务
+        try {
+            Thread.sleep(2000); // 休眠2秒
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+### 使用 `System.nanoTime()`
+
+如果需要更精确的时间测量，可以使用 `System.nanoTime()`，它提供的是更高精度的时间测量（以纳秒为单位）。
+
+```java
+public class TimeMeasurementExample {
+
+    public static void main(String[] args) {
+        long startTime = System.nanoTime(); // 记录开始时间
+
+        // 需要测量时间的方法
+        someMethod();
+
+        long endTime = System.nanoTime(); // 记录结束时间
+        long duration = endTime - startTime; // 计算方法执行时间
+        System.out.println("方法执行时间: " + duration + " 纳秒");
+
+        // 如果需要将纳秒转换为毫秒
+        System.out.println("方法执行时间: " + duration / 1_000_000 + " 毫秒");
+    }
+
+    private static void someMethod() {
+        // 模拟耗时任务
+        try {
+            Thread.sleep(2000); // 休眠2秒
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+### 选择 `System.currentTimeMillis()` vs `System.nanoTime()`
+
+- `System.currentTimeMillis()` 适用于粗略测量较长时间的任务，单位为毫秒。
+- `System.nanoTime()` 提供更精确的时间测量，适用于更细粒度的时间计算，例如测量方法的执行时间，单位为纳秒。
+
+
+
+### ThreadPoolTaskExecutor 实际使用：
+
+#### 配置：
+
+~~~java
+@Configuration
+@EnableAsync
+public class AsyncConfiguration {
+
+    @Bean("firstExecutor")
+    public Executor doSomethingExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        // 核心线程数：线程池创建时候初始化的线程数
+        executor.setCorePoolSize(10);
+        // 最大线程数：线程池最大的线程数，只有在缓冲队列满了之后才会申请超过核心线程数的线程
+        executor.setMaxPoolSize(20);
+        // 缓冲队列：用来缓冲执行任务的队列
+        executor.setQueueCapacity(500);
+        // 允许线程的空闲时间60秒：当超过了核心线程之外的线程在空闲时间到达之后会被销毁
+        executor.setKeepAliveSeconds(60);
+        // 线程池名的前缀：设置好了之后可以方便我们定位处理任务所在的线程池
+        executor.setThreadNamePrefix("first-");
+        // 缓冲队列满了之后的拒绝策略：由调用线程处理（一般是主线程）
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
+        executor.initialize();
+        return executor;
+    }
+}
+~~~
+
+
+
+
+
+#### 使用：
+
+~~~java
+	@Autowired
+    private Executor firstExecutor;
+
+	@Test
+    public void contextLoads() throws Exception {
+
+        String image_url = "http://8.130.138.112/static-resources/files/2550/_02【客多多出行-23.20元-1个行程】高德打车电子发票.pdf.png";
+        String access_token = getOAuth2AccessToken();
+        // 计数器，表示需要等待的任务数量
+        int taskCount = 5;
+        CountDownLatch latch = new CountDownLatch(taskCount);
+
+        // 提交多个任务
+        firstExecutor.execute(() -> {
+            try {
+                // 增值税发票识别
+                Map<String, Object> invoice = ocrCoreInvoice("invoice", image_url, access_token);
+                if (Objects.nonNull(invoice)) {
+                    log.info(String.valueOf(invoice));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }finally {
+                latch.countDown();
+            }
+        });
+
+        firstExecutor.execute(() -> {
+            try {
+                // 增值税发票识别
+                Map<String, Object> invoice = ocrCoreInvoice("invoice", image_url, access_token);
+                if (Objects.nonNull(invoice)) {
+                    log.info(String.valueOf(invoice));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }finally {
+                latch.countDown();
+            }
+
+            try {
+                // 增值税发票识别
+                Map<String, Object> invoice = ocrCoreInvoice("invoice", image_url, access_token);
+                if (Objects.nonNull(invoice)) {
+                    log.info(String.valueOf(invoice));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }finally {
+                latch.countDown();
+            }
+        });
+
+        firstExecutor.execute(() -> {
+            try {
+                // 增值税发票识别
+                Map<String, Object> invoice = ocrCoreInvoice("invoice", image_url, access_token);
+                if (Objects.nonNull(invoice)) {
+                    log.info(String.valueOf(invoice));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }finally {
+                latch.countDown();
+            }
+
+            try {
+                // 增值税发票识别
+                Map<String, Object> invoice = ocrCoreInvoice("invoice", image_url, access_token);
+                if (Objects.nonNull(invoice)) {
+                    log.info(String.valueOf(invoice));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }finally {
+                latch.countDown();
+            }
+        });
+
+        // 等待所有任务完成
+        latch.await();
+
+    }
+~~~
+

@@ -6,13 +6,230 @@
 
 如何查看JPA执行save方法时具体sql日志
 
+~~~yaml
+spring:
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    hibernate:
+      ddl-auto: validate
+      show-sql: true
+      properties:
+        hibernate:
+          format_sql: true
+
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: DEBUG
+        type:
+          descriptor:
+            sql:
+              BasicBinder: TRACE
+~~~
+
 
 
 ## 使用思路
 
-简单查询：使用JpaRepository + @Query注解，使用MP的思想（不配置什么多对多什么的了）
 
-复杂查询：使用原生sql语句
+
+### 简单查询：
+
+#### 使用dao自带的方法 
+
+配置好表关系（多对多等），可以方便的使用dao自带的方法，去查询出有关系的（注解配置后）其他DO对象
+
+
+
+#### 根据方法名自动生成相应sql的方法
+
+~~~java
+@Repository
+public interface InvoiceOrFolderDao extends JpaRepository<InvoiceOrFolder,Long>{
+    /**
+     * 根据 发票号码 列表查询所有匹配的 InvoiceOrFolder
+     * @param invoiceNumberList
+     * @return
+     */
+    List<InvoiceOrFolder> findByInvoiceNumberIn(List<String> invoiceNumberList);
+
+}
+~~~
+
+
+
+#### 使用注解来写原生sql：
+
+![image-20241127114806656](JPA.assets/image-20241127114806656.png)
+
+实际使用：
+
+~~~java
+@Repository
+public interface InvoiceOrFolderDao extends JpaRepository<InvoiceOrFolder,Long>, JpaSpecificationExecutor<InvoiceOrFolder> {
+
+    @Query(value = "select max(sort_number) from tbl_oaex_invoices i where i.parent_id = ?1",nativeQuery = true)
+    int getMaxSortNumberByFolderId(Long folderId);
+
+}
+~~~
+
+
+
+
+
+### 复杂查询：
+
+#### 1）使用类似MP的条件构造 
+
+~~~java
+public ResultVO<List<InvoiceFolderVO>> getInvoiceFolder(Long userId, String departmentName, String userName, Date startTime, Date endTime, Boolean isOver, Integer reimbursementCategory) {
+
+        // 根据发票表有的字段构建动态查询条件
+        Specification<InvoiceOrFolder> specification = (root, query, criteriaBuilder) -> {
+            List<javax.persistence.criteria.Predicate> predicates = new ArrayList<>();
+
+            if (Objects.nonNull(userId)) {
+                // 使用驼峰命名法来写，而不是数据库的字段名称
+                predicates.add(criteriaBuilder.equal(root.get("createBy"), userId));
+            }
+            if (Objects.nonNull(startTime)) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createAt"), startTime));
+            }
+            if (Objects.nonNull(endTime)) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("createAt"), endTime));
+            }
+            if (Objects.nonNull(isOver)) {
+                predicates.add(criteriaBuilder.equal(root.get("isOver"), isOver));
+            }
+            if (Objects.nonNull(reimbursementCategory)) {
+                predicates.add(criteriaBuilder.equal(root.get("reimbursementCategory"), reimbursementCategory));
+            }
+            // 查询根文件夹
+            predicates.add(criteriaBuilder.isNull(root.get("parentId")));
+            // 将条件列表转换为 `Predicate` 数组，并生成 `and` 条件
+            return criteriaBuilder.and(predicates.toArray(new javax.persistence.criteria.Predicate[0]));
+        };
+
+        // 多条件查询根文件夹信息
+        List<InvoiceOrFolder> invoiceFolders = invoiceOrFolderDao.findAll(specification);
+}
+~~~
+
+
+
+#### 2）使用原生sql语句 this.findAll()
+
+继承PersistenceContextService类：
+
+~~~java
+public class StatisticServiceImpl extends PersistenceContextService implements StatisticService {
+    // 在某个方法中使用
+    List<Map<String, Object>> oneList = this.findAll(durationSql.toString());
+}
+~~~
+
+
+
+~~~java
+public abstract class PersistenceContextService {
+
+    @PersistenceContext
+    protected EntityManager _entityManager;
+
+    /**
+     * 通过原生 SQL 查询返回 List<Map> - 多条记录
+     *
+     * @param sql 原生 SQL 语句
+     * @return List<Map<String, Object>>
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> findAll(String sql) {
+        return createResultMapQuery(sql).getResultList();
+    }
+    
+
+    /**
+     * 通过原生 SQL 分页查询返回 List<Map> - 多条记录
+     *
+     * @param sql 原生 SQL 语句
+     * @param pageable Pageable
+     * @return List<Map<String, Object>>
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> findAll(String sql, Pageable pageable) {
+        Query query = createResultMapQuery(sql);
+        query.setFirstResult((int) pageable.getOffset());
+        query.setMaxResults(pageable.getPageSize());
+        return query.getResultList();
+    }
+
+    /**
+     * 通过原生 SQL 查询返回 Map - 单条记录
+     *
+     * @param sql 原生 SQL 语句
+     * @return Map<String, Object>
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> findOne(String sql) {
+        Query query = createResultMapQuery(sql);
+        return (Map<String, Object>) query.getSingleResult();
+    }
+
+    /**
+     * 创建 Map 查询结果转换器
+     *
+     * @param sql 原生 SQL 语句
+     * @return {@link Query}
+     */
+    private Query createResultMapQuery(String sql) {
+        Query query = _entityManager.createNativeQuery(sql);
+        query.unwrap(SQLQuery.class).setResultTransformer(Transformers.ALIAS_TO_ENTITY_MAP);
+        return query;
+    }
+
+    /**
+     * 通过原生 SQL 更新数据
+     * @param sql
+     * @return
+     */
+    public int update(String sql) {
+        Query query = createResultMapQuery(sql);
+        return query.executeUpdate();
+    }
+
+    @Transactional
+    public Long insertAndGetId(String sql) {
+        java.sql.Connection connection = _entityManager.unwrap(SessionImpl.class).connection();
+        try {
+            PreparedStatement statement = connection.prepareStatement(sql,
+                    Statement.RETURN_GENERATED_KEYS);
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows > 0) {
+                try (ResultSet rs = statement.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        return rs.getLong(1);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            // 处理异常
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
+
+~~~
+
+
+
+
+
+其他：
+
+使用JpaRepository + @Query注解
 
 
 

@@ -1677,6 +1677,9 @@ alter table 表名 modify (column) name1 新类型;  // change,modify,add,drop,r
 ~~~mysql
 # 给score表添加java字段
 alter table score add column java int;
+# mysql t
+ALTER TABLE tbl_oaex_invoices 
+ADD COLUMN testA INT COMMENT '排序号，记录排序位置';
 # 删除java字段
 alter table score drop column java;
 ~~~

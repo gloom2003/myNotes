@@ -6,7 +6,9 @@
 
 
 
-## nevigator 跳转页面
+## 跳转页面
+
+https://uniapp.dcloud.net.cn/api/router.html#navigateto
 
 ![image-20240825114301892](E:\alwaysUse\notes\myNotes\frontend note\uniapp\uniapp.assets\image-20240825114301892.png)
 
@@ -52,6 +54,25 @@ https://uniapp.dcloud.net.cn/tutorial/page.html#lifecycle
 
 
 
+### onLoad与onShow一起使用
+
+~~~js
+async onLoad(e){
+    this.isInit = true;
+},
+async onShow(){
+    // 重新获取数据，显示更新后的数据
+    if(this.folderId != undefined && !this.isInit){// 防止第一次加载时查询两次
+        await this.getInvoiceFolderContentAndSet(this.folderId);
+    }
+    this.isInit = false;
+},
+~~~
+
+
+
+
+
 ### 获取页面跳转时传递的参数
 
 https://uniapp.dcloud.net.cn/api/router.html#navigateto
@@ -67,6 +88,20 @@ https://uniapp.dcloud.net.cn/api/router.html#navigateto
 获取：
 
 ![image-20240828102407667](E:\alwaysUse\notes\myNotes\frontend note\uniapp\uniapp.assets\image-20240828102407667.png)
+
+
+
+##### **注意**：
+
+传递的参数param为Boolean类型时，接受到的参数，为字符串类型，如： `e.param = "true"`
+
+![image-20241028103801155](uniapp.assets/image-20241028103801155.png)
+
+![image-20241028103732627](uniapp.assets/image-20241028103732627.png)
+
+结果：
+
+![image-20241028103657923](uniapp.assets/image-20241028103657923.png)
 
 
 
@@ -92,6 +127,14 @@ export default {
 
 
 
+### **onReady**：页面初次渲染完成时触发
+
+参考：https://uniapp.dcloud.net.cn/tutorial/page.html#lifecycle
+
+**onReady**：页面初次渲染完成时触发，DOM 已经加载完成，适合在页面呈现后执行的操作。
+
+
+
 
 
 ## 提示框
@@ -106,11 +149,59 @@ export default {
 
 
 
+#### 可设置展示时间
+
+~~~js
+uni.showToast({
+    title: message,
+    icon:'success',
+    duration:500
+});
+~~~
+
+
+
+
+
 ### 确认框
 
 https://uniapp.dcloud.net.cn/api/ui/prompt.html#iprompterror-values-3
 
 ![image-20240819103628547](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240819103628547.png)
+
+常用：
+
+没有取消的提示：
+
+~~~js
+					uni.showModal({
+						title: '消息提示',
+						content: '小程序不支持导出，请使用电脑网页版进行导出！',
+						showCancel : false
+					});
+					return;
+~~~
+
+有取消的提示：
+
+~~~js
+// 确认删除
+uni.showModal({
+    title: '删除操作',
+    content: '确认删除？',
+    success: (res) => {
+        if (res.confirm) {
+            // 删除操作
+        } else if (res.cancel) {
+            console.log('用户点击取消');
+        }
+    }
+});
+~~~
+
+
+
+
 
 #### 注意this的指向问题
 
@@ -417,6 +508,10 @@ https://uniapp.dcloud.net.cn/component/rich-text.html
 
 一般来说：1px = 2rpx
 
+0.01rem = 1rpx
+
+详细可见CSS中的：`css单位与响应式布局`
+
 
 
 ### 语法糖
@@ -479,6 +574,22 @@ tap和click都是点击事件。不过移动端有太多复杂的功能是click�
 3）使用`!important`来提高优先级
 
 4）实在不行就看官方文档的例子
+
+
+
+#### uni-popup组件的使用
+
+uni-popup默认不会显示内容，调用了open方法才会显示，但是用到的值必须要是有效的（哪怕在页面上没有显示出来），
+
+比如这里的`invoiceFolderList[clickedFolderIndex]`，如何不进行判断直接使用的话，数据变化`invoiceFolderList[clickedFolderIndex]`为undefind时使用description就会报错，导致程序中断。
+
+```vue
+	<uni-popup ref="invoiceFolderForm" type="dialog">
+		<uni-popup-dialog ref="inputClose"  mode="input" title="输入标题" :value="invoiceFolderList[clickedFolderIndex] ? invoiceFolderList[clickedFolderIndex].description : ''" placeholder="请输入标题" @confirm="updateFolder">
+			
+		</uni-popup-dialog>
+	</uni-popup>
+```
 
 
 
@@ -549,5 +660,103 @@ tap和click都是点击事件。不过移动端有太多复杂的功能是click�
 					onFail : function(err) {},
 				})
 				// #endif
+~~~
+
+
+
+### 页面需要滚动到指定位置
+
+整个页面需要滚动，可以使用 Uniapp 提供的 API：
+
+#### 示例代码：
+
+```js
+uni.pageScrollTo({
+  scrollTop: 10000, // 设置一个足够大的值滚动到底部
+  duration: 300 // 滚动动画时间，单位 ms
+});
+```
+
+#### 调用方法：
+
+```js
+methods: {
+  scrollToBottom() {
+    uni.pageScrollTo({
+      scrollTop: 10000,
+      duration: 300
+    });
+  }
+}
+```
+
+#### 说明：
+
+- `scrollTop` 为滚动到的页面位置，需根据实际情况设置。
+- 页面滚动适用于整体页面，而非局部滑动。
+
+
+
+### 移动端、PC端长按与点击事件的区分
+
+1
+
+```vue
+		<!-- 每一个发票文件夹    @mousedown与@mouseup控制PC端的长按与点击 -->
+		<!-- #ifdef H5 -->
+		<view class="accoutStatCard marR_P2"  v-for="(invoiceFolderObj,index) in invoiceFolderList" :key="index" @mousedown="mouseStart()" @mouseup="mouseEnd(index)">
+		<!-- #endif -->
+		
+		<!--  每一个发票文件夹,@longtap与@click控制移动端的长按与点击 -->
+		<!-- #ifdef MP -->
+		<view class="accoutStatCard marR_P2"  v-for="(invoiceFolderObj,index) in invoiceFolderList" :key="index" @longtap="showCheckbox" @click="toEditInvoicePage(index,true)">
+		<!-- #endif -->
+```
+
+2
+
+~~~js
+data: function () {
+            return {
+				startTime: '',//长按的开始时间
+				endTime: '',	//长按的结束时间
+				timer : undefined,// 计算长按的时间
+			}
+        },
+
+// 用于检测结束时间，并判断按住的时长。如果按住时间小于800毫秒，则处理点击事件；否则，长按事件已经触发。
+mouseEnd(clickedFolderIndex) {
+    console.log("mouseUp事件");
+    let _this = this;
+    this.endTime = +new Date()
+    clearTimeout(this.timer)// 清除定时器，避免长按动作触发
+    if (this.endTime - this.startTime < 800) {
+        // 这里类似于点击事件，但不是@click点击事件，点击编辑按钮触发编辑的mousedown、mouseup事件时，也会执行到这里
+        console.log(`按住时间小于800毫秒，则处理点击事件`);
+        // 以只读的状态进入编辑发票界面
+        this.toEditInvoicePage(clickedFolderIndex,true);
+    }
+},
+    // 用于检测按下鼠标或触摸的开始时间，并设置一个800毫秒的定时器来监听长按事件。
+    // 如果用户按住超过800毫秒，没有触发 mouseEnd()，则会调用 _this.showCheckbox() 方法，处理长按事件。
+    mouseStart() {
+        console.log("mouseDown事件");
+        let _this = this;
+        this.startTime = +new Date()
+        this.timer = setTimeout(function () {
+            _this.showCheckbox();
+        }, 800)
+    },
+~~~
+
+3
+
+~~~vue
+<checkbox-group class="cbox" @change="clickCheckBox(index)">
+    <label  v-if="choiceBox" style="display: flex;flex-direction: row;justify-content: end;">
+        <!-- 清除默认的@mousedown、@mouseup、@tap事件 -->
+        <checkbox style="border-radius: 50%;transform: scale(80%);" :disabled="choosed" @mousedown.stop="" @mouseup.stop="" @click.stop="" />
+    </label>
+</checkbox-group>
 ~~~
 

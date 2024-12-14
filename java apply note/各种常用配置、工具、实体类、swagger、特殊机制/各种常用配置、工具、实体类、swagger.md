@@ -1197,7 +1197,7 @@ oss:
 
 或使用@Value注解
 
-### 12.3实现下载文件例如：导出excel文件
+### 12.3导出excel文件(EasyExcel)
 
 查看EasyExcel的文档，使用EasyExcel相关的api进行实现。
 
@@ -1244,6 +1244,417 @@ public void export(HttpServletResponse response){
         response.setHeader("Content-disposition","attachment; filename="+fname);
     }
 ~~~
+
+
+
+### 12.4 poi导出Excel
+
+#### 设置行宽
+
+https://blog.csdn.net/lipinganq/article/details/78090553
+
+![image-20241019095139805](各种常用配置、工具、实体类、swagger.assets/image-20241019095139805.png)
+
+代码设置为25个字符的宽度，在导出的Excel中显示的宽度为24.50(201像素)
+
+
+
+#### 设置单元格的样式
+
+参考：https://blog.csdn.net/java_ying/article/details/83546479
+
+
+
+#### 例子：
+
+~~~java
+@Test
+    public void contextLoads() throws IOException {
+        // 模拟导出的数据
+        List<ExportTravelExcelVO> data = new ArrayList<>(Arrays.asList(
+                new ExportTravelExcelVO("火车", "北京", "上海", "2024/7/22 08:02:00", "2024/7/22 09:02:00", "500.00", 2),
+                new ExportTravelExcelVO("飞机", "广州", "成都", "2024/7/23 10:00:00", "2024/7/23 12:30:00", "1200.00", 1)
+        ));
+
+        // 创建工作簿
+        try(XSSFWorkbook workbook = new XSSFWorkbook()){
+            // 创建Sheet并命名为"交通费"
+            XSSFSheet sheet = workbook.createSheet("交通费");
+
+
+            // 创建表头样式，居中加粗
+            XSSFCellStyle headerStyle = workbook.createCellStyle();
+            Font font = workbook.createFont();
+            font.setBold(true); // 加粗
+            //字体 默认为等线
+            font.setFontName("Calibri");
+            //大小 默认为11
+            font.setFontHeightInPoints((short)10);
+            headerStyle.setFont(font);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER); // 水平居中
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER); // 垂直居中
+
+            // 创建第一行的样式
+            XSSFCellStyle firstRowStyle = workbook.createCellStyle();
+            XSSFFont firstRowFont = workbook.createFont();
+            firstRowFont.setBold(true);
+            //字体
+            firstRowFont.setFontName("Calibri");
+            //大小
+            firstRowFont.setFontHeightInPoints((short)14);
+            firstRowStyle.setFont(firstRowFont);
+            firstRowStyle.setAlignment(HorizontalAlignment.CENTER); // 水平居中
+            firstRowStyle.setVerticalAlignment(VerticalAlignment.CENTER); // 垂直居中
+
+
+            // 第一行：合并单元格，显示"交通费"
+            Row titleRow = sheet.createRow(0);
+            Cell titleCell = titleRow.createCell(0);
+            titleCell.setCellValue("交通费");
+            titleCell.setCellStyle(firstRowStyle);
+            // 合并单元格，合并的列数等于实体类属性的数量（7个）
+            String[] headers = {"交通费用明细", "出发地点", "到达地点", "出发时间", "到达时间", "交通费金额", "交通费附单据数"};
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, headers.length - 1));
+
+            // 第二行：表头
+            Row headerRow = sheet.createRow(1);
+            for (int i = 0; i < headers.length; i++) {
+                Cell headerCell = headerRow.createCell(i);
+                headerCell.setCellValue(headers[i]);
+                headerCell.setCellStyle(headerStyle);
+            }
+
+            // 创建自定义格式的CellStyle
+            CellStyle dateCellStyle = workbook.createCellStyle();
+            DataFormat dataFormat = workbook.createDataFormat();
+            // 设置自定义格式 yyyy/m/d h:mm
+            dateCellStyle.setDataFormat(dataFormat.getFormat("yyyy/m/d h:mm"));
+
+            // 填充数据，从第三行开始
+            int rowIndex = 2;
+            for (ExportTravelExcelVO vo : data) {
+                Row row = sheet.createRow(rowIndex++);
+                row.createCell(0).setCellValue(vo.getExpenseType());
+                row.createCell(1).setCellValue(vo.getStartLocation());
+                row.createCell(2).setCellValue(vo.getArrivalLocation());
+
+                // 设置自定义格式 yyyy/m/d h:mm
+                Cell cell3 = row.createCell(3);
+                cell3.setCellStyle(dateCellStyle);
+                cell3.setCellValue(new Date());
+
+
+                Cell cell4 = row.createCell(4);
+                cell4.setCellStyle(dateCellStyle);
+                cell4.setCellValue(new Date());
+
+                row.createCell(5).setCellValue(vo.getTotalMoneyDesc());
+                row.createCell(6).setCellValue(vo.getInvoiceCount());
+            }
+
+            // 设置列宽为指定字符的宽度
+            sheet.setColumnWidth(0, 14 * 256);
+            sheet.setColumnWidth(1, 18 * 256);
+            sheet.setColumnWidth(2, 10 * 256);
+            // 出发时间
+            sheet.setColumnWidth(3, 18 * 256);
+            // 到达时间
+            sheet.setColumnWidth(4, 18 * 256);
+            sheet.setColumnWidth(5, 11 * 256);
+            // 交通费附单据数
+            sheet.setColumnWidth(6, 15 * 256);
+
+            // 导出Excel
+            try (FileOutputStream fileOut = new FileOutputStream("交通费.xlsx")) {
+                workbook.write(fileOut);
+                System.out.println("Excel 文件已导出！");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+~~~
+
+
+
+### 12.5 poi导出word文件
+
+
+
+#### 基本使用：
+
+~~~java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class OaexApplicationTests {
+
+//    @Value("${bjtds.files.save-path}")
+    private String filesSavePath = "D:/guangtie/sr-root/static-resources/files";
+
+    @Test
+    public void contextLoads() throws IOException, InvalidFormatException {
+        // 创建一个空白的文档
+        try(XWPFDocument document = new XWPFDocument()) {
+
+            // 添加发票图片
+            String invoiceImagePath = this.filesSavePath + File.separator + "1803" + File.separator + "北京到武汉.png"; // 发票图片路径
+            insertImage(document, invoiceImagePath);
+
+            // 添加发票说明
+            XWPFParagraph descriptionParagraph = document.createParagraph();
+            setCompactStyle(descriptionParagraph);
+            XWPFRun descriptionRun = descriptionParagraph.createRun();
+            descriptionRun.addBreak();
+            descriptionRun.setText("说明：");
+            descriptionRun.setBold(true);
+            // 添加一个制表符，让文字在左侧排列而不换行
+//            descriptionRun.addTab();
+
+            XWPFParagraph invoiceDescContentParagraph = document.createParagraph();
+            setCompactStyle(invoiceDescContentParagraph);
+            XWPFRun invoiceDescContentText = invoiceDescContentParagraph.createRun();
+            invoiceDescContentText.setText("杨宋杰报销差旅"); // 发票说明文字内容
+            // 插入一个换行符 (<w:br> 标签)
+            invoiceDescContentText.addBreak();
+
+            // 添加附件图片
+            String attachmentImagePath = this.filesSavePath + File.separator + "1803" + File.separator + "北京到武汉.png"; // 附件图片路径
+            XWPFParagraph attachmentParagraph = document.createParagraph();
+            setCompactStyle(attachmentParagraph);
+            XWPFRun attachmentRun = attachmentParagraph.createRun();
+            attachmentRun.setText("附件：");
+            attachmentRun.setBold(true);
+            attachmentRun.addTab();
+            insertImage(document, attachmentImagePath);
+
+            // 将文档写入文件
+            try (FileOutputStream out = new FileOutputStream("InvoiceDetails.docx")) {
+                document.write(out);
+            }
+
+        }
+
+    }
+
+    // 插入图片的通用方法
+    private static void insertImage(XWPFDocument document, String imagePath) throws IOException, InvalidFormatException {
+        // 创建一个新的段落 (<w:p> 标签),段落是 Word 文档中的基本文本单元，可以包含文字、图片、超链接等。
+        XWPFParagraph paragraph = document.createParagraph();
+        // 创建一个片段
+        XWPFRun run = paragraph.createRun();
+
+        try (FileInputStream fis = new FileInputStream(imagePath)) {
+            // 图片大小
+            run.addPicture(fis, XWPFDocument.PICTURE_TYPE_PNG, imagePath, Units.toEMU(400), Units.toEMU(300));
+        }
+    }
+
+    /**
+     * 给word的段落设置紧凑的段落样式
+     * @param paragraph
+     */
+    private static void setCompactStyle(XWPFParagraph paragraph) {
+        // 设置段落的上下间距为 0，减少段落之间的空隙
+        paragraph.setSpacingBefore(0);           // 段前间距
+        paragraph.setSpacingAfter(0);            // 段后间距
+        paragraph.setSpacingBetween(1.0);        // 行间距（1.0 表示单倍行距）
+        paragraph.setAlignment(ParagraphAlignment.LEFT); // 左对齐
+    }
+
+}
+~~~
+
+
+
+#### 工具类：
+
+~~~java
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFStyle;
+import org.apache.poi.xwpf.usermodel.XWPFStyles;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
+
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
+import java.math.BigInteger;
+
+public class DocUtils {
+
+    /**
+     *
+     * @param doc
+     * @param styles
+     * @param strStyleId	标题id
+     * @param headingLevel	标题级别
+     * @param pointSize	字体大小（相当于word中的字体大小除于2）
+     * @param hexColor	字体颜色
+     * @param typefaceName	字体名称（默认宋体）
+     */
+    public static void createHeadingStyle(XWPFDocument doc, XWPFStyles styles, String strStyleId,
+                                          int headingLevel, int pointSize, String hexColor, String typefaceName) {
+        //创建样式
+        CTStyle ctStyle = CTStyle.Factory.newInstance();
+        //设置id
+        ctStyle.setStyleId(strStyleId);
+
+        CTString styleName = CTString.Factory.newInstance();
+        styleName.setVal(strStyleId);
+        ctStyle.setName(styleName);
+
+        CTDecimalNumber indentNumber = CTDecimalNumber.Factory.newInstance();
+        indentNumber.setVal(BigInteger.valueOf(headingLevel));
+
+        // 数字越低在格式栏中越突出
+        ctStyle.setUiPriority(indentNumber);
+
+        CTOnOff onoffnull = CTOnOff.Factory.newInstance();
+        ctStyle.setUnhideWhenUsed(onoffnull);
+
+        // 样式将显示在“格式”栏中
+        ctStyle.setQFormat(onoffnull);
+
+        // 样式定义给定级别的标题
+        CTPPr ppr = CTPPr.Factory.newInstance();
+        ppr.setOutlineLvl(indentNumber);
+        ctStyle.setPPr(ppr);
+
+        XWPFStyle style = new XWPFStyle(ctStyle);
+
+        CTHpsMeasure size = CTHpsMeasure.Factory.newInstance();
+        size.setVal(new BigInteger(String.valueOf(pointSize)));
+        CTHpsMeasure size2 = CTHpsMeasure.Factory.newInstance();
+        size2.setVal(new BigInteger(String.valueOf(pointSize)));
+
+        CTFonts fonts = CTFonts.Factory.newInstance();
+        if(typefaceName == null || typefaceName.equals("")) typefaceName = "宋体";
+        fonts.setAscii(typefaceName);	//字体
+
+        CTRPr rpr = CTRPr.Factory.newInstance();
+        rpr.setRFonts(fonts);
+        rpr.setSz(size);
+        rpr.setSzCs(size2);	//字体大小
+
+        CTColor color=CTColor.Factory.newInstance();
+        color.setVal(hexToBytes(hexColor));
+        rpr.setColor(color);	//字体颜色
+        style.getCTStyle().setRPr(rpr);
+        // is a null op if already defined
+
+        style.setType(STStyleType.PARAGRAPH);
+        styles.addStyle(style);
+    }
+
+    public static byte[] hexToBytes(String hexString) {
+        HexBinaryAdapter adapter = new HexBinaryAdapter();
+        byte[] bytes = adapter.unmarshal(hexString);
+        return bytes;
+    }
+
+}
+~~~
+
+
+
+
+
+#### 设置标题
+
+参考：https://blog.csdn.net/qq_37945565/article/details/121518330
+
+~~~java
+import com.bjtds.oaex.util.DocUtils;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFStyles;
+import org.apache.xmlbeans.XmlException;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStyles;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class OaexApplicationTests {
+
+    private String filesSavePath = "D:/guangtie/sr-root/static-resources/files";
+
+
+    @Test
+    public void contextLoads() throws IOException, XmlException {
+        // 新建的word文档对象
+        try (XWPFDocument doc = new XWPFDocument()) {
+            // 获取新建文档对象的样式
+            XWPFStyles newStyles = doc.createStyles();
+            String heading2Id = "My Heading 2";
+            DocUtils.createHeadingStyle(doc, newStyles, heading2Id, 2, 32, "000000", "宋体");
+            XWPFParagraph para1 = doc.createParagraph();
+            para1.setStyle("My Heading 2");
+            XWPFRun run1 = para1.createRun();
+            run1.setText("发票说明2");
+            // word写入到文件
+            try (FileOutputStream fos = new FileOutputStream("./twoLevelTitleRes.docx")) {
+                doc.write(fos);
+            }
+        }
+
+
+    }
+
+    public void getTempleDocStyle() throws IOException, XmlException {
+        // 新建的word文档对象
+        try (XWPFDocument doc = new XWPFDocument()) {
+            // word整体样式
+            // 读取模板文档
+            XWPFDocument template = new XWPFDocument(new FileInputStream("C:\\Users\\Gloom\\alwaysUse\\BTS\\demo\\oaex-sys\\oaex-server\\testTitle.docx"));
+            // 获得模板文档的整体样式
+            CTStyles templateStyle = template.getStyle();
+            // 获取新建文档对象的样式
+            XWPFStyles newStyles = doc.createStyles();
+            // 关键行// 修改设置文档样式为静态块中读取到的样式
+            newStyles.setStyles(templateStyle);
+
+            // 标题1，1级大纲
+            XWPFParagraph para1 = doc.createParagraph();
+            // 关键行// 1级大纲
+            para1.setStyle("1");
+            XWPFRun run1 = para1.createRun();
+            // 标题内容
+            run1.setText("标题1");
+
+            // 标题2，2级大纲
+            XWPFParagraph para2 = doc.createParagraph();
+            // 关键行// 2级大纲
+            para2.setStyle("2");
+            XWPFRun run2 = para2.createRun();
+            // 标题内容
+            run2.setText("标题2");
+
+            // 正文
+            XWPFParagraph paraX = doc.createParagraph();
+            XWPFRun runX = paraX.createRun();
+            for (int i = 0; i < 100; i++) {
+                // 正文内容
+                runX.setText("正文\r\n");
+            }
+
+            // word写入到文件
+            try (FileOutputStream fos = new FileOutputStream("./titleRes.docx")) {
+                doc.write(fos);
+            }
+        }
+    }
+
+
+}
+~~~
+
+
 
 
 
@@ -2413,9 +2824,9 @@ public class SaveInvoiceDTO implements Serializable {
 
 
 
-##### Date转JSON 格式:@JsonFormat 序列化
+##### Date转JSON @JsonFormat 序列化
 
-使用阿里的Jackson进行json转对象，用@JsonFramat指定日期格式 默认没有YYYY-MM-dd HH-mm-ss格式,需要手动指定后才可以，就能够把指定日期格式的字符串转换为日期对象
+使用阿里的Jackson进行json转对象，用@JsonFramat指定日期格式 默认没有YYYY-MM-dd HH-mm-ss格式,需要手动指定后才可以，就能够把指定日期格式的字符串 反序列化为日期对象
 
 ~~~java
 class Pc{    
@@ -2428,7 +2839,7 @@ class Pc{   
 }
 ~~~
 
-##### BigDecimal转JSON
+##### BigDecimal转JSON 序列化
 
 ~~~java
 	/**

@@ -330,6 +330,66 @@ if的表达式的布尔表达式，可以进行更复杂条件的判断(例如�
 
 其他情况下if会更适合。 
 
+
+
+## 基本数据类型与引用类型
+
+
+
+### 注意：两个引用类型的交换
+
+![image-20241031161215666](Java SE.assets/image-20241031161215666.png)
+
+
+
+这个函数无法实现交换两个字符串的功能。原因在于 Java 的参数传递机制是按值传递的。虽然`str1`和`str2`在交换时被赋予了新的值，但这种改变仅限于方法内部，不会影响到传入的实际参数。
+
+在 Java 中，String 对象是不可变的，所以即使你尝试通过交换逻辑来改变它们，传入方法的实际对象引用并没有发生变化。你只是在方法内部交换了副本的引用。
+
+如果你需要在外部交换两个字符串的值，可以使用以下方法：
+
+1. 返回交换后的字符串数组：
+
+    ```java
+    private String[] swap(String str1, String str2) {
+        return new String[] { str2, str1 }; 
+    }
+    ```
+
+2. 使用包含字符串的对象，交换对象内部的字符串字段。示例如下：
+
+    ```java
+    public class StringWrapper {
+        public String value;
+        
+        public StringWrapper(String value) {
+            this.value = value;
+        }
+    }
+    
+    private void swapStringWrapper(StringWrapper wrap1, StringWrapper wrap2) {
+        String temp = wrap1.value;
+        wrap1.value = wrap2.value;
+        wrap2.value = temp;
+    }
+    ```
+
+这样的方法确保你能改变原始引用所指的实际数据。
+
+
+
+建议：
+
+直接交换，不要写在其他方法中：
+
+~~~java
+String temp = invoiceNumber;
+invoiceNumber = invoiceCode;
+invoiceCode = temp;
+~~~
+
+
+
 # 循环语句
 
 当我们需要多次执行完全重复的操作或者是多次执行有规律的操作时，我们就可以用循环语句。
@@ -2737,7 +2797,7 @@ ArrayList<集合元素的数据类型> list2 = new ArrayList<>();//限定集合�
 
 
 
-#### 3.2.3 遍历
+#### 3.2.3 遍历 与 并发修改异常！
 
 1.使用索引遍历
 

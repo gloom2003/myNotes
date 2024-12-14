@@ -119,6 +119,28 @@
 
 
 
+#### 1.1.4 选择相同的一类元素
+
+可以使用以下CSS选择器来设置 `id="MPContainer"` 下所有 `<input>` 标签的 `background-color`：
+
+```css
+#MPContainer input {
+    background-color: rgb(252, 195, 31);
+}
+```
+
+### 说明：
+
+- `#MPContainer` 选择 `id` 为 `MPContainer` 的元素。
+- `input` 选择该元素内的所有 `<input>` 标签。
+- `background-color: rgb(252, 195, 31);` 设置背景颜色。
+
+将此 CSS 添加到你的样式表中即可生效。
+
+
+
+
+
 ### 1.2常用css属性(字体，颜色...)
 
 - 字体大小：font-size  Chrome浏览器中最小为12px
@@ -875,16 +897,73 @@ float: left;元素会向左边靠
             position: relative;
             top: 50px;
             left: 50px;
-        }
+}
 ~~~
+
+
+
+如：图片右上角的取消
+
+~~~vue
+<view class="trainFromRight">
+
+    <view v-if="isShowInvoiceImage">
+        <!-- 图片右上角的取消 -->
+        <view class="trainFormDeleteIcon" @click="deleteInvoiceFromImage()">
+            <view class="iconfont icon-guanbi2 font_50 media-delete-btn"></view>
+        </view>
+
+        <image :src="inputInvoiceImageURL" class="formInvoicePicture-add-train" @click="previewInvoiceImage()"></image>
+
+    </view>
+</view>
+~~~
+
+
+
+2
+
+~~~css
+.trainFormDeleteIcon{
+    position: relative;
+    left: 125px;
+    z-index: 99;
+    width: 2vw;
+}
+
+.iconfont {
+  font-family: "iconfont" !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+~~~
+
+
+
+####  常用：父相子绝
+
+
 
 **设置子级以父级的左上角作为坐标系的原点：(相对+绝对)**
 
-一般情况下：
+一般情况下，使用 父相子绝：
 
 父级 position: relative;
 
 子级 position: absolute;
+
+
+
+例子：
+
+~~~css
+~~~
+
+
+
+
 
 ### 6.3 固定定位 fixed
 
@@ -900,17 +979,27 @@ float: left;元素会向左边靠
         }
 ~~~
 
+
+
 ### 6.4 谁显示在前面? z-index
 
 ~~~css
 .pos{
             position: fixed;
             top: 50px;
-            left: 50px;
-    		 /* 默认为0，大的显示在前面 */
+            left: 50px; 
+    	   /* 默认为0，大的显示在前面 注意：要设置了position后才会生效！ */
             z-index: 10;
         }
 ~~~
+
+
+
+### 6.5 实际使用例子
+
+见7.5.1
+
+
 
 ## 7 css3新特性
 
@@ -941,6 +1030,8 @@ float: left;元素会向左边靠
             box-shadow: 10px 20px 30px blue;
         }
 ```
+
+
 
 ### 7.3 转换 transform:
 
@@ -1017,7 +1108,7 @@ float: left;元素会向左边靠
         }
 ~~~
 
-### 7.4 过度效果
+### 7.4 过度效果 transition
 
 transition：
 #### 7.4.1 transition-property：过渡属性
@@ -1025,6 +1116,8 @@ transition：
 设置对哪一个属性添加过度效果
 
 （例如transform);
+
+
 
 #### 7.4.2 transition-duration: 过渡持续时间
 
@@ -1070,7 +1163,7 @@ transition：
               height: 100px;
               margin: 100px auto;
               background-color: blue;
-      		//简写
+      		/* 简写 */
               transition: transform 1s ease;
           }
           .box:hover{
@@ -1084,18 +1177,72 @@ transition：
 
 （例如1s)）;
 
-简写：transition: 属性 持续时间 函数 延迟时间;
 
-处理溢出元素边框的部分 overflow:
 
-~~~css
-.box{
-    /* 溢出的部分隐藏起来 */
-    overflow: hidden;
-    /* 溢出的部分自动使用滚轮进行处理 */
-    overflow: auto;
+#### 7.5 transition 简写
+
+简写：transition: 属性 持续时间 速度函数 延迟时间;
+
+
+
+##### 7.5.1 transition 与 父相子绝配合的输入框例子（vue3）：
+
+
+
+点击输入框获取到焦点后用动画的效果显示图片，失去焦点后不显示图片：
+
+~~~vue
+<template>
+  <view class="out"> 
+	<image class="pic" :class="isActive ? 'active' : ''" src="@/static/chicken.gif"></image>
+	<input @blur="isActive = false" @focus="isActive =true" /> 
+  </view>
+</template>
+
+<script setup>
+	import {ref} from "vue";
+	let isActive = ref(false);
+	
+</script>
+
+<style lang="scss" scoped>
+.out{
+	padding:0 20px;
+	margin-top:40px;
+	// 1.父相
+	position: relative;
+	input{
+		border:1px solid #ccc;
+		height: 40px;
+		// z-index与position配合才能使z-index生效
+		position: relative;
+		z-index: 2;
+		background: #fff;
+		padding:0 10px;
+	}
+	.pic{
+		width: 24px;
+		height: 24px;
+		z-index: 1;
+		// 2.子绝
+		position: absolute;
+		top:0px;
+		// 动态计算中间的宽度
+		left:calc(50% - 12px);
+		// 给当前css对象的top属性设置一个0.3秒的过度动画效果
+		transition: top 0.3s;
+	}
+	.pic.active{
+		top:-24px;
+	}
 }
+</style>
+
 ~~~
+
+
+
+
 
 #### 7.5 动画效果 @keyframes animation
 
@@ -1146,6 +1293,8 @@ transition：
             animation: rotate 2s;
         }
 ~~~
+
+
 
 ### 8 flex布局
 
@@ -1680,6 +1829,23 @@ white-space:nowrap;
 
 
 
+#### overflow
+
+处理溢出元素边框的部分 overflow:
+
+~~~css
+.box{
+    /* 溢出的部分隐藏起来 */
+    overflow: hidden;
+    /* 溢出的部分自动使用滚轮进行处理 */
+    overflow: auto;
+}
+~~~
+
+
+
+
+
 ## 项目案例
 
 ### 新闻项目效果图如下
@@ -1822,6 +1988,25 @@ white-space:nowrap;
 	-webkit-box-orient: vertical;
 }
 ~~~
+
+**使用注意：**
+
+~~~vue
+<view class="regularInvoiceTitle">
+    <view class="regularTitleFont overflowOmit">
+        {{ cur.description }}
+    </view>
+</view>
+~~~
+
+
+
+~~~
+1.设置父容器regularInvoiceTitle的宽度为一行文字的高度 如： height: 30%
+2.子容器regularTitleFont的高度也为一行文字的高度（会自动设置高度100%，即：等于父容器的高度）
+~~~
+
+
 
 2 https://www.cnblogs.com/tcyweb/p/16739241.html
 
@@ -1990,3 +2175,281 @@ res.data.content = res.data.content.replace(/<img/gi, '<img style="max-width:100
 	}
 ~~~
 
+
+
+## 鼠标变成手指头，提示用户可以点击
+
+~~~vue
+<image src="../../static/account/gt.svg" style="height: 35px;width: 81px;margin: 10px;" @click="previewInvoiceImage(index)"></image>
+实现一个效果，鼠标移动到这个图片上后，鼠标变成手指头，提示用户可以点击
+~~~
+
+
+
+你可以通过 CSS 和 `title` 属性来实现鼠标指针变为手指头以及提示用户可以点击的效果。
+
+### 代码示例：
+
+```html
+<image 
+  src="../../static/account/gt.svg" 
+  style="height: 35px; width: 81px; margin: 10px; cursor: pointer;" 
+  @click="previewInvoiceImage(index)" 
+  title="点击查看发票详情">
+</image>
+```
+
+### 解释：
+
+1. **`cursor: pointer;`**：当鼠标悬停在图片上时，指针会变成手形。
+2. **`title="点击查看发票详情"`**：鼠标悬停时，会显示提示文本“点击查看发票详情”。
+
+这样用户在悬停时就能知道该图片是可点击的。
+
+
+
+
+
+## 1）css单位与响应式布局
+
+
+
+### 不同单位的使用场景与比较
+
+参考：https://juejin.cn/post/7229712382297014327
+
+
+
+gpt:
+
+是的，`vw` 和 `vh` 可以同时在 PC 端和小程序端使用。虽然它们在不同平台的表现略有差异，但在响应式设计上具有良好的兼容性。
+
+### 在 PC 端和小程序端使用 `vw` 和 `vh`
+
+1. **PC 端**：
+   - 在大部分现代浏览器中，`vw` 和 `vh` 已被广泛支持，适合响应式设计需求。
+   - 可以直接通过 CSS 设置 `vw` 和 `vh`，确保在不同分辨率的 PC 屏幕上实现自适应布局。
+
+2. **小程序端（如微信小程序、Uniapp 等）**：
+   - 小程序端也支持 `vw` 和 `vh`，它们在小程序内根据设备视口宽度和高度进行缩放。
+   - Uniapp 使用 `vw` 和 `vh` 直接在各平台上生成适配代码，所以可以在代码中直接使用。
+
+### 注意事项
+
+- **不同设备的效果可能略有差异**：PC 和移动端设备的屏幕比例、像素密度不同，导致使用相同的 `vw` 或 `vh` 时显示效果可能稍有不同。通常小屏幕（如手机）会显得较大，而 PC 显示效果会较小。
+  
+- **小程序平台建议优先使用 `rpx`**：对于小程序开发，尤其是微信小程序，`rpx` 是推荐的单位，因为它是专门为小程序环境设计的，可以更好地处理屏幕适配。如果要确保小程序端的一致性，可以在小程序内使用 `rpx` 代替 `vw` 和 `vh`。
+
+### 结合使用 `vw`、`vh` 和 `rpx` 的建议
+
+- **PC 端和移动网页**：优先使用 `vw` 和 `vh`，确保布局能自适应不同分辨率。
+- **小程序端**：对于小程序中所有元素，建议尽量使用 `rpx`，确保跨设备的效果一致。如果有需要适配屏幕的全屏或背景区域，可以考虑结合 `vh` 或 `vw`。
+  
+
+这样就能在不同平台间获得较好的适配效果，同时保持代码结构的简洁和维护性。
+
+
+
+### 响应式布局 vw + vh + rem
+
+参考：https://blog.csdn.net/qq_35546787/article/details/107635368
+
+vw是可视窗口的宽度单位，和百分比有点一样，1vw = 可视窗口的宽度的百分之一。
+
+比如窗口宽度大小是1800px，那么1vw = 18px。和百分比不一样的是，vw始终相对于可视窗口的宽度，而百分比和其父元素的宽度有关。
+
+vh就是可视窗口的高度了。
+
+vmin和vmax，vmin是指选择vw和vh中最小的那个，而vmax是选择最大的那个
+
+
+
+
+`rpx`和`rem`都是相对单位，常用于响应式布局。它们各有优缺点，在不同场景下发挥不同的作用：
+
+### 1. `rpx`（Responsive Pixel）
+
+`rpx` 是小程序开发中（例如微信小程序和 Uniapp）常用的单位，可以根据设备宽度自适应。其主要特点是：
+
+- 在屏幕宽度为 750px 时，1rpx 等于 1px。
+- 在更大或更小的屏幕上，1rpx 会等比例缩放，以保证不同设备上的显示效果一致。
+
+例如，在手机屏幕宽度为 375px（iPhone 6/7/8 的屏幕宽度）时，1rpx 相当于 0.5px。这种缩放方式可以在不同分辨率下实现视觉上的一致性。
+
+**使用示例：**
+
+```css
+.container {
+   width: 200rpx;
+   height: 100rpx;
+}
+```
+
+**适用场景**：
+- 小程序开发或基于小程序框架（如 Uniapp）的开发，因为它们会自动根据屏幕宽度缩放 `rpx`。
+- 当需要不同屏幕上尽量一致的显示效果时，`rpx` 是一个很好的选择。
+
+### 2. `rem`（Root em）
+
+`rem` 是基于根元素（一般是`html`标签）字体大小的相对单位，**1 rem 等于根元素字体大小的 1 倍**。通常，浏览器的默认根字体大小是 16px，因此 **1rem 等于 16px**，不过可以通过 CSS 重置根字体大小来调整。
+
+**使用示例**：
+```css
+html {
+   font-size: 16px; /* 设置根元素字体大小 */
+}
+
+.container {
+   width: 10rem; /* 相当于 10 * 16px = 160px */
+   padding: 1rem; /* 相当于 1 * 16px = 16px */
+}
+```
+
+**适用场景**：
+- `rem` 常用于需要兼容多种设备且不依赖小程序环境的网页开发中。
+- 在响应式设计中，`rem` 的优势是可以通过修改根元素的字体大小来实现整体页面的缩放。例如，在小屏幕上设置根字体为12px，而大屏幕为16px。
+
+**动态缩放示例**：
+使用媒体查询，可以更灵活地设置不同屏幕的 `rem` 比例：
+```css
+html {
+   font-size: 16px;
+}
+
+@media (max-width: 768px) {
+   html {
+      font-size: 14px;
+   }
+}
+
+@media (max-width: 480px) {
+   html {
+      font-size: 12px;
+   }
+}
+```
+
+这样在不同设备上，通过调整`html`的字体大小，`rem`会相应变化，实现响应式设计。
+
+### `rpx` 和 `rem` 的对比
+
+| 特性           | `rpx`                        | `rem`                          |
+| -------------- | ---------------------------- | ------------------------------ |
+| 适用场景       | 小程序或类似小程序的开发框架 | HTML 和网页开发                |
+| 依赖设备宽度   | 是                           | 否                             |
+| 依赖根字体大小 | 否                           | 是（依赖`html`的`font-size`）  |
+| 响应式调节     | 自动缩放                     | 需要通过媒体查询调整根字体大小 |
+
+选择 `rpx` 或 `rem` 可以根据项目需求和目标平台决定。
+
+
+
+
+
+## 2）`@media` 和 `calc()` 适配笔记本、大屏显示器
+
+`@media` 查询和 `calc()` 是两种实现样式动态调整的方法，但它们的应用场景和机制不同。以下是对两种方法的详细解释和对比：
+
+------
+
+### **1. `@media` 查询**
+
+#### **机制**
+
+`@media` 查询基于 **媒体条件**（如屏幕宽度）应用特定的样式规则。它可以为不同的屏幕宽度定义完全不同的样式。
+
+#### **代码解释**
+
+```css
+@media (max-width: 1366px) {
+    .VAT-invoiceHead-edit[data-v-1992a8a7] {
+        width: 20%; /* 当视口宽度小于等于 1366px 时，设置宽度为 20% */
+    }
+}
+@media (min-width: 1920px) {
+    .VAT-invoiceHead-edit[data-v-1992a8a7] {
+        width: 15%; /* 当视口宽度大于等于 1920px 时，设置宽度为 15% */
+    }
+}
+```
+
+#### **特点**
+
+1. **固定的断点样式**：根据屏幕宽度范围定义样式，适合分辨率明显不同的设备。
+2. **明确的样式逻辑**：开发者可以为不同的屏幕尺寸单独设计样式，容易维护。
+3. **断点不连续**：在不同断点之间，可能出现样式跳跃的情况。
+
+#### **适用场景**
+
+- 样式需要显著变化（例如调整布局）。
+- 适配不同的设备（如移动设备、平板、桌面显示器）。
+- 需要针对分辨率设置完全不同的规则。
+
+------
+
+### **2. 使用 `calc()` 动态计算尺寸**
+
+#### **机制**
+
+`calc()` 是一种 CSS 函数，用于根据数学表达式动态计算属性值。它会在渲染时实时计算宽度或高度，支持多种单位混合计算（如百分比、像素、`vw`）。
+
+#### **代码解释**
+
+```css
+.VAT-invoiceHead-edit[data-v-1992a8a7] {
+    width: calc(15% + 5px); /* 宽度基于父级宽度的15%，并加上固定的5像素偏移量 */
+    height: calc(100% - 20px); /* 高度为父级100%，减去20像素 */
+}
+```
+
+#### **特点**
+
+1. **实时计算**：在渲染时计算样式，能更精准地适配动态变化。
+2. **连续变化**：属性值会随屏幕尺寸连续变化，避免跳跃式调整。
+3. **数学操作**：可以混合使用不同单位（如百分比和像素），满足复杂设计需求。
+
+#### **适用场景**
+
+- 样式需要随视口尺寸平滑调整。
+- 单一属性（如宽度）需要动态变化，而不涉及整体布局的改变。
+- 需要结合多种单位进行复杂的计算。
+
+------
+
+### **3. 两者的对比**
+
+| 特性         | `@media` 查询          | `calc()` 动态计算      |
+| ------------ | ---------------------- | ---------------------- |
+| **应用场景** | 适用于显著样式切换     | 适用于平滑调整单一属性 |
+| **调整方式** | 按断点跳跃调整         | 连续动态调整           |
+| **复杂性**   | 简单易维护             | 计算复杂，适合特定场景 |
+| **设备适配** | 适配不同设备的屏幕尺寸 | 适配同一设备的动态变化 |
+| **性能**     | 样式切换消耗较低       | 实时计算，性能开销略高 |
+
+------
+
+### **4. 综合推荐**
+
+- **需要显著样式调整时：使用 `@media` 查询**
+   比如小屏幕设备需要改变布局（从左右排列改为上下堆叠）。
+
+- **需要连续调整属性时：使用 `calc()`**
+   比如需要动态调整宽度，同时平滑过渡。
+
+- **结合使用**
+   在复杂场景下，可以结合两者。例如，在大范围断点下使用 `@media` 定义大致布局，在小范围调整中使用 `calc()` 进行微调：
+
+  ```css
+  @media (max-width: 1366px) {
+      .VAT-invoiceHead-edit[data-v-1992a8a7] {
+          width: calc(15% + 10px); /* 小屏幕微调宽度 */
+      }
+  }
+  @media (min-width: 1920px) {
+      .VAT-invoiceHead-edit[data-v-1992a8a7] {
+          width: 15%; /* 大屏幕使用固定比例 */
+      }
+  }
+  ```
+
+这种组合方式可以同时兼顾连续变化和断点适配的需求。

@@ -115,18 +115,6 @@ new Vue创建一个Vue实例
 
 
 
-#### v-bind实现使用动态切换class
-
-
-
-![image-20240825121126136](E:\alwaysUse\notes\myNotes\frontend note\vue\vue.assets\image-20240825121126136.png)
-
-
-
-![image-20240825122116978](E:\alwaysUse\notes\myNotes\frontend note\vue\vue.assets\image-20240825122116978.png)
-
-
-
 #### 计数器例子：
 
 ~~~html
@@ -896,7 +884,7 @@ Brother.vue:
 			Brother.vue
 		<button @click="changeData">改变共享数据</button>
 		</h1>
-		<!-- 4 使用 -->
+		<!-- 4 使用数据，自定义的data.属性名 -->
 		<p>{{ state.message }}</p>
 	</div>
 </template>
@@ -915,6 +903,7 @@ Brother.vue:
 		methods:{
 			changeData(){
 				console.log("准备改变")
+                 // 调用方法： 文件变量.方法名
 				store.setStateMessage("change")
 				console.log("准备完成")
 				console.log("结果: " + this.state.message)
@@ -1114,6 +1103,40 @@ computed使用场景：
 使用computed:计算属性
 
 ![image-20240804213612022](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240804213612022.png)
+
+
+
+作用：
+
+在 Vue 中，计算属性（computed property）是基于数据状态动态计算并缓存的属性。与方法不同，计算属性的结果会被缓存，当依赖的数据发生变化时才会重新计算，因此更适合处理复杂的计算或频繁访问的值。
+
+### 计算属性的特点
+1. **缓存**：计算属性的结果会被缓存，只有在依赖的数据发生变化时才会重新计算。这可以减少不必要的计算，提高性能。
+2. **响应式**：计算属性是响应式的，当依赖的数据改变时，计算属性的值也会更新。
+
+### 示例解释
+在这个例子中，我们通过计算属性 `computedTotalNum` 来计算 `allInvoiceArray` 数组中的总金额。
+
+```javascript
+computedTotalNum() {
+    let total = this.allInvoiceArray.reduce((accumulator, currentItem) => {
+        // 使用 BigNumber 进行精确的浮点运算
+        return new BigNumber(accumulator).plus(new BigNumber(currentItem.totalMoney));
+    }, new BigNumber(0));
+    // 返回保留两位小数的字符串
+    return total.toFixed(2);
+}
+```
+
+#### 代码解析
+1. **reduce 方法**：`reduce` 是 JavaScript 数组的方法，用于对数组中的每一项进行累加操作。在这个例子中，`accumulator` 是累加器，`currentItem` 是当前数组项，即每个发票的金额。
+   
+2. **BigNumber**：使用 `BigNumber` 是为了避免 JavaScript 中的浮点数运算精度问题，尤其在金额计算中更为重要。每个金额都转换为 `BigNumber` 类型，然后相加以获得精确结果。
+
+3. **保留小数**：`toFixed(2)` 将总金额格式化为保留两位小数的字符串，以便在显示时符合货币格式的要求。
+
+#### 优势
+通过计算属性 `computedTotalNum`，我们可以直接在模板中使用 `{{ computedTotalNum }}` 来显示总金额值，而无需每次都重新计算；当 `allInvoiceArray` 中的数据发生变化时，`computedTotalNum` 会自动更新，实现响应式数据绑定。
 
 
 
@@ -1744,6 +1767,10 @@ ElementUl： https://element.eleme.cn/#/zh-CN
 
 
 
+
+
+
+
 # Vue的使用例子
 
 **会查看官方文档完成需求即可。**
@@ -1856,4 +1883,86 @@ ElementUl： https://element.eleme.cn/#/zh-CN
        });
    </script>
 ~~~
+
+
+
+
+
+## 动态类Class绑定
+
+
+
+## 例子
+
+```
+vue如何实现当isWhole是false时，就让<view class="invoiceCards">中的invoiceCards类的background-color属性改为rgb(252, 195, 31);
+```
+
+
+
+
+
+在 Vue 中，可以通过绑定 `class` 或使用 `:style` 动态绑定 `background-color` 样式来实现这一效果。假设你的 `isWhole` 是一个 Boolean 值，可以使用如下代码实现条件样式变化：
+
+### 方案1: 动态绑定类
+
+
+
+#### 动态绑定单个class:
+
+动态绑定id也是相同做法。
+
+~~~vue
+<view :class="isShowInvoiceCategorize ? 'haveInvoiceNumberContent' : 'haveInvoiceNumberContent-categorize'">
+</view>
+~~~
+
+
+
+
+
+#### 动态绑定多个class:
+
+```html
+<!-- :class指令也可以与普通的class共存 -->
+<view class="test" :class="{'invoiceCards': true, 'highlight-background': !isWhole}">
+  <!-- 其他内容 -->
+</view>
+```
+
+```css
+.invoiceCards {
+  /* 默认样式 */
+  background-color: initial;
+}
+
+.highlight-background {
+  background-color: rgb(252, 195, 31);
+}
+
+.test{
+    color: black;
+}
+```
+
+
+
+#### 总结：
+
+![image-20240825122116978](Vue2.assets/image-20240825122116978.png)
+
+
+
+### 方案2: 动态绑定内联样式
+
+```html
+<view class="invoiceCards" :style="{ backgroundColor: !isWhole ? 'rgb(252, 195, 31)' : 'w' }">
+  <!-- 其他内容 -->
+</view>
+```
+
+
+
+![image-20240825121126136](Vue2.assets/image-20240825121126136.png)
+
 

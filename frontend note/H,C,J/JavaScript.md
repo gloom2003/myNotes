@@ -185,7 +185,102 @@ var:声明变量(ES2015中使用let声明变量)
 </body>
 ~~~
 
+
+
+#### map的使用例子
+
+map的返回值：
+
+~~~js
+function joinFieldByComma(arr, field) {
+    // map()返回的是数组： [37,44,48] join后返回字符串：37,44,48
+    return arr.map(obj => obj[field]).join(',');
+}
+
+// 示例使用
+const data = [
+    { id: 37, name: "Alice" },
+    { id: 44, name: "Bob" },
+    { id: 48, name: "Charlie" }
+];
+
+const result = joinFieldByComma(data, 'id');
+console.log(result);  // 输出: "37,44,48"
+
+~~~
+
+**`map` 方法：**
+
+- `arr.map(obj => obj[field])` 遍历数组 `arr` 中的每个对象 `obj`，并对每个对象执行 `obj[field]` 操作。
+- `obj[field]` 获取当前对象 `obj` 中的字段 `field` 的值。比如对象 `{ id: 37, name: "Alice" }`，指定字段 `id` 时就会获取值 `37`。
+- 最终 `map` 会返回一个新数组，数组中的每个元素是对象中提取出的字段值。
+
+对于例子 `data = [{ id: 37, name: "Alice" }, { id: 44, name: "Bob" }, { id: 48, name: "Charlie" }]`，执行 `arr.map(obj => obj[field])` 会返回 `[37, 44, 48]`。
+
+**`join` 方法：**
+
+- `join(',')` 将数组中的元素以逗号 `,` 作为分隔符拼接成一个字符串。
+- 对 `[37, 44, 48]` 调用 `join(',')` 将会返回字符串 `"37,44,48"`。
+
+
+
+### forEach遍历不能return中断
+
+1. **`return` 只退出当前函数**
+   `return` 只能退出当前的函数，而你在 `forEach` 回调函数中使用了 `return`，它只退出当前的迭代（即当前的 `forEach` 回调函数），不会停止整个 `forEach` 的执行，也不会退出 `subSaveContent()` 函数。
+2. **`forEach` 无法被中途终止**
+   `forEach` 是数组的一个遍历方法，它设计上不支持通过 `return` 或其他方式中途退出整个遍历。因此，后面的逻辑仍然会继续执行。
+
+------
+
+### 解决方法
+
+为了能够在满足条件时中止遍历并退出 `subSaveContent`，你需要替换 `forEach` 为其他支持中断的遍历方式，比如 `for...of`。
+
+
+
+###  **总结 `for...of` 和 `for...in` 的区别**：
+
+- `for...of`
+
+  ：
+
+  - 适用于遍历数组、字符串、Map、Set 等可迭代对象。
+  - 直接访问集合中的值。
+
+- `for...in`
+
+  ：
+
+  - 适用于遍历对象的可枚举属性（键）。
+  - 访问对象的键名，并通过 `对象[key]` 形式访问对应的值。
+
+例子：
+
+在这段代码中，`for...of` 用于遍历数组中的每个对象，`for...in` 则用于遍历对象中的每个属性。
+
+~~~js
+			// 判断数组中的每个对象的字段是否都填了值，是否所有信息都填完了
+			hasEmptyValues(data) {
+			    for (let item of data) {
+                    // item就是数组中的每一个对象
+			        for (let key in item) {
+                        // key就是每个对象属性，字符串类型
+			            if (item[key] === null || item[key] === undefined || item[key] === '' || item[key].length == 0) {
+			                return true; // 发现空值，返回 true
+			            }
+			        }
+			    }
+			    return false; // 所有值都不为空，返回 false
+			},
+~~~
+
+
+
+
+
 #### 1.5.2 数组的常用方法(map,push,sort,filter,join)
+
 - map 遍历
 - push 增
 
@@ -553,6 +648,43 @@ isHandLate(log,create) {
     </script>
 </body>
 ~~~
+
+
+
+#### Map的使用
+
+~~~js
+			submitForm(){
+				let invoice = this.allInvoiceMsg[this.showIncoiceIndex];
+				let invoiceType = invoice.invoiceType;
+				// 验证必填字段是否填写
+				
+				// 验证差旅报销下火车票的必填字段
+				if(this.reimbursementCategory == 1 && invoiceType == 1){
+					
+					// 使用 Map 存储待验证字段的英文名（key）和中文名（value）
+					let needFieldMap = new Map([
+					    ['startTime', '开始时间'],
+					    ['endTime', '结束时间'],
+					    ['totalMoney', '金额']
+					]);
+					
+					for (let [key, value] of needFieldMap) {
+					    if (invoice[key] == undefined || invoice[key] == '' || invoice[key].length == 0) {
+							uni.showModal({
+								title: '消息提示',
+								content: `请填写${value} ！`,
+								showCancel : false
+							});
+							return;
+					    }
+					}
+					
+				}
+            }
+~~~
+
+
 
 
 
@@ -2561,6 +2693,100 @@ my版本：
 
 ### 5 计时器方法
 
+
+
+`setInterval` 和 `setTimeout` 都是 JavaScript 中用于定时执行代码的函数，但它们在行为上有一些关键区别：
+
+### 5.0 setTimeout与setInterval的主要区别
+
+1. **执行次数**
+   - `setTimeout`: 只执行一次定时器中的代码。
+   - `setInterval`: 按固定的时间间隔反复执行代码，直到被清除。
+2. **清除机制**
+   - `setTimeout`: 如果不再需要，可以通过 `clearTimeout(timeoutId)` 来清除。
+   - `setInterval`: 如果不再需要，可以通过 `clearInterval(intervalId)` 来清除。
+3. **触发间隔**
+   - `setTimeout`: 间隔时间后执行一次。
+   - `setInterval`: 间隔时间是任务完成间隔时间，而不是任务开始时间的间隔。
+
+------
+
+### 示例代码
+
+#### 使用 `setTimeout`
+
+以下是一个延迟 2 秒后执行的代码示例：
+
+```javascript
+console.log("开始...");
+setTimeout(() => {
+  console.log("2 秒后执行");
+}, 2000);
+console.log("结束...");
+```
+
+**输出**：
+
+```
+开始...
+结束...
+2 秒后执行
+```
+
+------
+
+#### 使用 `setInterval`
+
+以下是每隔 1 秒打印一次的代码示例：
+
+```javascript
+let count = 0;
+const intervalId = setInterval(() => {
+  console.log(`每隔 1 秒执行：第 ${++count} 次`);
+  if (count === 5) {
+    console.log("清除定时器");
+    clearInterval(intervalId); // 清除定时器
+  }
+}, 1000);
+```
+
+**输出**：
+
+```
+每隔 1 秒执行：第 1 次
+每隔 1 秒执行：第 2 次
+每隔 1 秒执行：第 3 次
+每隔 1 秒执行：第 4 次
+每隔 1 秒执行：第 5 次
+清除定时器
+```
+
+------
+
+### 应用场景
+
+- **`setTimeout`**: 用于延时执行某些任务。例如：
+  - 页面加载后延迟弹出提示框。
+  - 某些任务需要在指定时间后执行一次。
+- **`setInterval`**: 用于定时重复执行任务。例如：
+  - 实现一个时钟，定时更新时间显示。
+  - 轮询服务器状态，定时刷新页面内容。
+
+### 注意事项
+
+1. 如果任务执行时间比定时器的间隔时间长，`setInterval` 会有任务堆积问题，可能导致性能问题。
+2. 如果需要保证间隔时间严格控制，推荐用 `setTimeout` 实现循环代替 `setInterval`：
+
+```javascript
+function repeatTask() {
+  console.log("执行任务");
+  setTimeout(repeatTask, 1000); // 再次设置延迟
+}
+repeatTask();
+```
+
+
+
 #### 5.1 setInterval 与 clearlnterval 例子:(一个简单的计时器)：
 
 设置定时任务与取消定时任务
@@ -2884,6 +3110,72 @@ windowx对象是全局对象，所有在浏览器可以直接使用的方法，�
 
 
 
+#### `async/await` 的工作机制
+
+##### 1） 使用await时，async要加在最近的函数上（包括箭头函数）
+
+
+
+##### 2） 调用async函数就要await，保证代码同步执行：
+
+注意：
+
+~~~js
+async onLoad(e){
+    this.folderId = e.folderId;
+    if(e.isOnlyRead == "true"){
+        this.isOnlyRead = true;
+    }else if(e.isOnlyRead == "false"){
+        this.isOnlyRead = false;
+    }else{
+        this.isOnlyRead = false;
+    }
+    console.log(`this.allInvoiceMsg = ${JSON.stringify(this.allInvoiceMsg)}`);
+    // 这里要使用await，不然代码就不是同步执行的了
+    await this.getInvoiceFolderContentAndSet(this.folderId);
+    if(this.allInvoiceMsg[0] == undefined){
+				
+				console.log(`当前文件夹没有内容了！`);
+				return;
+			}
+}
+// methods{}中
+async getInvoiceFolderContentAndSet(folderId){
+				
+				let getFolderParam = {
+					folderId : folderId
+				}
+				// 查询发票文件夹的内容 以及 所属的报销类别   (网络请求天然就是异步async的)
+				let res = await getInvoicesByFolderId(getFolderParam);
+				// console.log(`res = ${JSON.stringify(res)}`);
+				let isSuccess = res.body.success;
+				let message = res.body.message;
+				if(!isSuccess){
+					uni.showToast({
+						title: message,
+						icon: 'error'
+					});
+					return;
+				}
+				console.log(`res.body.data = ${JSON.stringify(res.body.data)}`);
+				this.allInvoiceMsg = res.body.data;
+				this.allInvoiceMsg.sort((a,b) => {
+					let aType = a.invoiceType;
+					let bType = b.invoiceType;
+					if(aType != bType){
+						return aType - bType;
+					}
+					return b.totalMoney - a.totalMoney;
+				});
+				this.allInvoiceForShow = this.allInvoiceMsg;
+				store.setAllInvoiceMsg(this.allInvoiceMsg);
+			}
+~~~
+
+
+
+
+
 ### 9 自定义属性
 
 #### 常用api
@@ -3038,6 +3330,78 @@ H5新增的获取自定义属性的方法：ie 11才支持
     </script>
 </body>
 </html>
+~~~
+
+
+
+### 10 常用字符串api
+
+#### slice 截取字符串
+
+例：
+
+~~~js
+
+				if(invoiceType == 1){
+                      // nvoice.startTime = "2023-11-20 18:00:39"
+
+					invoice.onlyDateStart = invoice.startTime.split(" ")[0];// "2023-11-20"
+					invoice.onlyTimeStart = invoice.startTime.split(" ")[1].slice(0, 5);// "18:00"
+					invoice.onlyDateEnd = invoice.arrivalTime.split(" ")[0];
+					invoice.onlyTimeEnd = invoice.arrivalTime.split(" ")[1].slice(0, 5);
+                }
+~~~
+
+
+
+### 11 处理浮点数
+
+1
+
+~~~js
+// parseFloat: 将字符串转换为浮点数。
+// isNaN: 检查是否转换成功，确保输入是一个有效的数字。
+// toFixed(2): 将数字格式化为保留两位小数的字符串。
+formatNumber(numberDesc) {
+			    // 将 numberDesc 转换为浮点数
+			    let number = parseFloat(numberDesc);
+			    
+			    if (isNaN(number)) {
+			        throw new Error("输入必须是一个有效的数字");
+			    }
+			
+			    // 使用 toFixed 来保留两位小数并返回字符串
+			    return number.toFixed(2);
+			},
+~~~
+
+2
+
+~~~js
+// 计算总金额
+			computedTotalNum() {
+				let total = this.allInvoiceArray.reduce((accumulator, currentItem) => {
+				    // 使用 BigNumber 进行精确的浮点运算
+					if(currentItem.totalMoney == undefined || currentItem.totalMoney.length == 0){
+						return new BigNumber(accumulator).plus(new BigNumber(0));
+					}
+				    return new BigNumber(accumulator).plus(new BigNumber(currentItem.totalMoney));
+				  }, new BigNumber(0));
+				  // 返回保留两位小数的字符串
+				  return total.toFixed(2);
+			}
+~~~
+
+
+
+#### 保留两位小数
+
+1
+
+~~~js
+					// 总金额保留两位小数
+					// invoice.totalMoney = this.formatNumber(invoice.totalMoney);
+					invoice.totalMoney = new BigNumber(invoice.totalMoney).toFixed(2);
 ~~~
 
 

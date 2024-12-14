@@ -1,5 +1,17 @@
 #### SVN
 
+
+
+#### IDEA配置SVN：
+
+**防止提交时后端有文件漏提交，添加文件后自动加入版本控制中。**
+
+前端待配置...
+
+参考：https://blog.csdn.net/qq_45656077/article/details/129555680
+
+
+
 参考链接：https://www.bilibili.com/video/BV1k4411m7mP/?spm_id_from=333.337.search-card.all.click&vd_source=d6367c1fc21883823f1fb738f86ef26e
 
 
