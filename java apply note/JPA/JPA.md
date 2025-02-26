@@ -295,6 +295,62 @@ https://blog.csdn.net/nanhuaibeian/article/details/107295124
 
 ![image-20240809150542031](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240809150542031.png)
 
+
+
+使用方法名来实现根据条件统计数量
+
+~~~java
+@Repository
+public interface InvoiceOrFolderDao extends JpaRepository<InvoiceOrFolder,Long{
+
+    /**
+     * 根据 发票号码 列表查询所有匹配的 InvoiceOrFolder
+     * @param invoiceNumberList
+     * @return
+     */
+    List<InvoiceOrFolder> findByInvoiceNumberIn(List<String> invoiceNumberList);
+
+    /**
+     * 统计在指定时间段内相应的报销类别有多少个发票根文件夹
+     * @param startTime
+     * @param endTime
+     * @return
+     */
+    Integer countByCreateAtBetweenAndParentIdIsNullAndReimbursementCategory(Date startTime, Date endTime,Integer reimbursementCategory);
+
+}
+
+~~~
+
+使用：
+
+~~~java
+    private Integer countRootFolderNumber(Date dateNow,Integer reimbursementCategory) {
+    try {
+        // 获取dateNow这个月的0点时间
+        LocalDateTime startTimeLocal = LocalDateTime.ofInstant(dateNow.toInstant(), ZoneId.systemDefault()).with(LocalTime.MIN);
+        // 获取下个月的0点时间
+        LocalDateTime endTimeLocal = startTimeLocal.plusMonths(1);
+
+        // 查询数据库中指定的时间段内相应报销分类的根文件夹数量
+        Integer count = invoiceOrFolderDao.countByCreateAtBetweenAndParentIdIsNullAndReimbursementCategory(Date.from(startTimeLocal.atZone(ZoneId.systemDefault()).toInstant()), Date.from(endTimeLocal.atZone(ZoneId.systemDefault()).toInstant()),reimbursementCategory);
+        return count != null ? count : 0;
+    } catch (Exception e) {
+        throw new RuntimeException("查询根文件夹数量时发生异常", e);
+    }
+~~~
+
+
+
+执行的sql：
+
+~~~mysql
+~~~
+
+
+
+
+
 ## 其他
 
 

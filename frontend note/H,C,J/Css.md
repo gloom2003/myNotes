@@ -75,7 +75,7 @@
 </style>
 ~~~
 
-#### 1.1.2 伪元素选择器(增加元素):
+## 1.1.2 伪元素选择器(增加元素):
 
 ~~~html
 <!DOCTYPE html>
@@ -96,6 +96,79 @@
 </body>
 </html>
 ~~~
+
+
+
+伪元素（Pseudo-element）是 CSS 提供的一种特殊机制，用来通过 CSS 生成一些在文档流中并不实际存在的内容，或者对某些特定部分的元素进行样式化。伪元素不是文档的实际一部分，但可以让你通过 CSS 操作它们的外观。
+
+### 常见的伪元素：
+
+1. **`::before`**：
+
+   - 在元素内容之前插入内容。通常用于在元素前面添加装饰性内容，如图标或符号。
+
+   - 示例：
+
+     ```css
+     .example::before {
+       content: "★"; /* 在元素内容之前插入星号 */
+       color: gold;
+     }
+     ```
+
+2. **`::after`**：
+
+   - 在元素内容之后插入内容。与 `::before` 类似，但它是在元素的末尾插入内容。
+
+   - 示例：
+
+     ```css
+     .example::after {
+       content: " ✔"; /* 在元素内容之后插入勾号 */
+       color: green;
+     }
+     ```
+
+3. **`::placeholder`**：
+
+   - 用于选择和样式化表单控件（如 `<input>` 和 `<textarea>`) 中的占位符文本。
+
+   - 示例：
+
+     ```css
+     .passwordInput::placeholder {
+       color: gray; /* 设置占位文字的颜色 */
+     }
+     ```
+
+4. **`::first-letter`**：
+
+   - 选择元素的第一个字母，并允许你对它进行单独的样式设置。
+
+   - 示例：
+
+     ```css
+     p::first-letter {
+       font-size: 2em;
+       font-weight: bold;
+     }
+     ```
+
+5. **`::first-line`**：
+
+   - 选择元素的第一行文本，并允许你对其样式进行单独设置。
+
+   - 示例：
+
+     ```css
+     p::first-line {
+       color: blue;
+     }
+     ```
+
+
+
+
 
 #### 1.1.3 只选择子级不选择孙级的选择器:
 
@@ -416,6 +489,14 @@ a{
 
 ## 3浮动布局：实现两个div在同一行显示:
 
+
+
+实际使用：
+
+![image-20250102112712082](Css.assets/image-20250102112712082.png)
+
+
+
 在两个div中分别指定：
 
 ~~~html
@@ -464,6 +545,8 @@ float: left;元素会向左边靠
     浮动div集合
 </div>
 ~~~
+
+
 
 ## 4常用css成品与属性
 
@@ -953,6 +1036,141 @@ float: left;元素会向左边靠
 父级 position: relative;
 
 子级 position: absolute;
+
+
+
+~~~
+在你给出的代码中，`#login-wrap` 和 `#login-wrap >>> .loginBackgroundBox` 使用了不同的定位方式，分别是 `relative` 和 `absolute`。这两种定位方式的组合会影响元素的位置和布局，下面是它们的原理解释：
+
+### 1. **`position: relative;`**（相对定位）
+当你对 `#login-wrap` 设置 `position: relative;` 时，意味着它相对于其原始位置进行定位，但不会脱离文档流。相对定位的元素会保留原本占据的空间（即仍然占据布局中的位置），但是你可以通过 `top`、`left`、`right`、`bottom` 属性来调整元素相对于其原始位置的位置。
+
+- **作用**：`#login-wrap` 元素的位置是相对于它自己原来的位置来调整的。
+- **特点**：它仍然占据原来的空间，因此不会影响其他元素的布局。
+
+### 2. **`position: absolute;`**（绝对定位）
+`#login-wrap >>> .loginBackgroundBox` 使用 `position: absolute;`，意味着这个元素会脱离正常的文档流，并且相对于最近的已定位父元素进行定位。如果没有找到已定位的父元素（即 `position` 不为 `static`），它会相对于页面的 `<html>` 或 `<body>` 元素进行定位。
+
+由于 `#login-wrap` 使用了 `position: relative;`，它变成了 `#login-wrap >>> .loginBackgroundBox` 的“定位上下文”。这意味着 `#login-wrap >>> .loginBackgroundBox` 的 `top`、`left`、`right` 和 `bottom` 属性会相对于 `#login-wrap` 的位置进行计算，而不是相对于页面的默认位置。
+
+### **原理总结：**
+- `position: relative;` 设置在父容器上（`#login-wrap`）时，它为子元素提供了定位的参考点。
+- `position: absolute;` 设置在子元素上（`#login-wrap >>> .loginBackgroundBox`）时，它会相对于最近的具有定位的祖先元素（在此案例中是 `#login-wrap`）进行定位。
+
+### 举个例子：
+假设 `#login-wrap` 的位置是在页面的 `(100px, 100px)`，然后设置 `#login-wrap >>> .loginBackgroundBox` 的 `top: 50px; left: 50px;`，那么 `#login-wrap >>> .loginBackgroundBox` 会被定位到 `(150px, 150px)`，即相对于 `#login-wrap` 元素的位置，而不是页面的绝对位置。
+
+通过这种方式，你可以精确地控制子元素的位置，而不需要考虑其他元素的影响，适用于需要精准布局的场景。
+
+如果有更多问题，欢迎继续询问！
+~~~
+
+
+
+实际使用例子：
+
+~~~vue
+<template>
+	<div id="login-wrap">
+		
+			<img src="../../../assets/img/LoginHeaderPage.png" class="LoginHeaderPicture"/>
+		
+			<div class="loginBackgroundBox"></div>
+			
+			<div>
+				<img src="../../../assets/img/bri_logo.png" class="bri_logo" />
+				<div class="box_title">用{{'       '}}户{{'       '}}登{{'       '}}录</div>
+				<img src="../../../assets/img/wuhan_train_logo.png" class="wuhan_train_logo"/>
+			</div>
+			
+			
+			<img src="../../../assets/img/ball.png" class="login_box_ball"/>
+			
+			<div>
+				<span class="usernameText">用户名：</span>
+				<img class="usernameIcon" src="../../../assets/img/userNameInput.png"/>
+				<!-- div作为二级包裹着el-autocomplete也可以实现相同效果，不一定父级下面必须是直接子级 -->
+				<el-autocomplete
+						class="usernameInput"
+						v-model="username"
+						:fetch-suggestions="queryHistoryUserAccounts"
+						placeholder="请输入用户名"
+						@select="handleSelectUser"
+						@keyup.enter.native="handleLogin"
+						>
+				
+					<template slot-scope="{ item  }">
+						<span style="font-style:italic;">{{item.name}}</span>
+						<span style="float:right;font-weight:bold;">{{item.dispName}}</span>
+					</template>
+				
+				</el-autocomplete>
+
+				
+			</div>
+
+			<div>
+				<span class="passwordText">密码：</span>
+				<img class="passwordIcon" src="../../../assets/img/passwordInput.png"/>
+				<input type="password" placeholder="  请输入您的密码" @keyup.enter="handleLogin" class="passwordInput" v-model="password"/>
+			</div>
+			
+			<div>
+				<div class="rememberPasswordBox">
+					<input type="checkbox" v-model="passwordRemember" id="passwordRemember">
+					<label for="passwordRemember">记住密码</label>
+				</div>
+				
+				<div class="forgetPassword" @click="handleForgetPassword">忘记密码？</div>
+			</div>
+			
+			<button class="loginButton" @click="handleLogin">登录</button>
+
+	</div>
+
+</template>
+
+<script>
+export default {
+    data: function(){
+        return {};
+    },
+    methods: {}
+}
+</script>
+
+<style scoped>
+#login-wrap {
+	position: relative;
+	left: 0px;
+	top: 0px;
+	width: 1920px;
+	height: 1080px;
+    background-image: url(../../../assets/img/login-bk.png);
+
+}
+
+.usernameInput {
+	position: absolute;
+    left: 980px;
+    top: 370px;
+    width: 379px;
+    height: 55px;
+    line-height: 26px;
+    border-radius: 5px 5px 5px 5px;
+    background-color: rgba(3,1,36,0.69);
+    color: rgba(159,159,159,1);
+    font-size: 18px;
+    text-align: left;
+    font-family: PingFangSC-regular;
+    border: 1px solid rgba(159,159,159,1);
+}
+
+</style>
+
+~~~
+
+
 
 
 
@@ -1854,7 +2072,7 @@ white-space:nowrap;
 
 ![image-20240828154104096](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828154104096.png)
 
-### 让内容显示在同一行或同一列
+## 一、让内容显示在同一行或同一列
 
 #### 1）flex
 
@@ -1952,7 +2170,7 @@ white-space:nowrap;
 
 
 
-### css两行后显示省略号
+## 二、css两行后显示省略号
 
 ![image-20240828152457667](E:\alwaysUse\notes\myNotes\frontend note\H,C,J\Css.assets\image-20240828152457667.png)
 
@@ -2058,7 +2276,7 @@ res.data.content = res.data.content.replace(/<img/gi, '<img style="max-width:100
 
 
 
-## 设置两个元素在页面最下面的中间处紧挨着显示
+## 三、设置两个元素在页面最下面的中间处紧挨着显示
 
 
 
@@ -2132,7 +2350,7 @@ res.data.content = res.data.content.replace(/<img/gi, '<img style="max-width:100
 
 
 
-## 设置子元素在超过容器宽度时自动换行
+## 四、设置子元素在超过容器宽度时自动换行
 
 要使 `search-container` 中的子元素在超过容器宽度时自动换行，可以将 `display: flex` 的 `flex-wrap` 属性设置为 `wrap`。这样，当子元素超过容器宽度时，就会自动换行显示。
 
@@ -2158,7 +2376,7 @@ res.data.content = res.data.content.replace(/<img/gi, '<img style="max-width:100
 
 
 
-## 设置文本不换行，居中显示
+## 五、设置文本不换行，居中显示
 
 ~~~css
 	.uploadPictureButtonMP{
@@ -2177,7 +2395,7 @@ res.data.content = res.data.content.replace(/<img/gi, '<img style="max-width:100
 
 
 
-## 鼠标变成手指头，提示用户可以点击
+## 六、鼠标变成手指头，提示用户可以点击
 
 ~~~vue
 <image src="../../static/account/gt.svg" style="height: 35px;width: 81px;margin: 10px;" @click="previewInvoiceImage(index)"></image>
@@ -2208,9 +2426,54 @@ res.data.content = res.data.content.replace(/<img/gi, '<img style="max-width:100
 
 
 
+## 七、把元素放到页面的最右边
+
+要把分页放到页面的最右边，你可以通过以下方式设置：
+
+1. **使用 CSS 样式**： 给包含 `<el-pagination>` 的父容器加上 `text-align: right;` 或者使用 Flexbox 来对齐元素。
+
+   如果 `<el-pagination>` 包裹在一个父容器中，可以直接应用如下 CSS：
+
+   ```css
+   .pagination-container {
+       text-align: right;
+   }
+   ```
+
+   然后在 HTML 结构中，确保 `<el-pagination>` 在 `.pagination-container` 内：
+
+   ```html
+   <div class="pagination-container">
+       <el-pagination
+           @size-change="handleSizeChange"
+           @current-change="handleCurrentChange"
+           :current-page="1"
+           :page-sizes="[20, 50, 100]"
+           :page-size="20"
+           layout="total, sizes, prev, pager, next, jumper"
+           :total="totalCount">
+       </el-pagination>
+   </div>
+   ```
+
+2. **使用 Flexbox**： 如果你希望使用更灵活的布局方式，可以通过 Flexbox 来实现：
+
+   ```css
+   .pagination-container {
+       display: flex;
+       justify-content: flex-end;
+   }
+   ```
+
+   这样就可以确保分页始终对齐到父容器的右侧。
+
+以上两种方法都可以达到将分页放到页面最右边的效果，你可以根据具体的布局选择适合的方式。
 
 
-## 1）css单位与响应式布局
+
+
+
+## 八、css单位与响应式布局
 
 
 
@@ -2346,7 +2609,7 @@ html {
 
 
 
-## 2）`@media` 和 `calc()` 适配笔记本、大屏显示器
+## 九、`@media` 和 `calc()` 适配笔记本、大屏显示器
 
 `@media` 查询和 `calc()` 是两种实现样式动态调整的方法，但它们的应用场景和机制不同。以下是对两种方法的详细解释和对比：
 
@@ -2453,3 +2716,100 @@ html {
   ```
 
 这种组合方式可以同时兼顾连续变化和断点适配的需求。
+
+
+
+### **实际使用**：
+
+
+
+~~~css
+	.airInvoiceTitle{
+		width: 100%;
+		height: 70%;
+		display: flex;
+	}
+	
+	.trainInvoiceTitle{
+		margin: 7px;
+		width: 100%;
+		height: 70%;
+		display: flex;
+	}
+	
+	@media (max-width: 1366px) {
+	    /* 当视口宽度小于等于 1366px 时，调整相应的样式的值 */
+	    .trainInvoiceTitle {
+	    margin: 7px 30px; 
+		}
+		
+		.trainTitleFont {
+			width: 80%;
+		}
+        
+		.vatTitleFont {
+		    margin-left: 3.4vw;
+		}
+		
+		.taxiTitleFont {
+		    margin-left: 1.3vw;
+		}
+		
+		
+	}
+	
+	.taxiInvoiceTitle{
+		margin: 7px 5px;
+		width: 100%;
+		height: 70%;
+		display: flex;
+	}
+~~~
+
+
+
+
+
+## 十、css展示背景图片
+
+
+
+~~~vue
+	<div id="login-wrap">
+			
+			<div>
+				<img src="../../../assets/img/bri_logo.png" class="bri_logo" />
+				<div class="box_title">用{{'       '}}户{{'       '}}登{{'       '}}录</div>
+
+				<div class="train_logo">
+					<div class="commonTrainLogo"></div>
+					<span>武汉动车段</span>
+				</div>
+				
+			</div>
+
+	</div>
+
+<style scoped>
+#login-wrap {
+	position: relative;
+	left: 0px;
+	top: 0px;
+	width: 1920px;
+	height: 1080px;
+    background-image: url(../../../assets/img/login-bk.png);
+}
+
+
+.commonTrainLogo{
+	  width: 100%;
+	  height: 50%; /* 只显示图片的上半部分，保留透明背景:效果相当于把原图的上半部分进行截取后再进行展示，正常使用img的话还是会展示整个图片，只是把完整的图片变小了 */
+	  background-image: url('../../../assets/img/wuhan_train_logo.png');
+	  background-size: 100% auto;
+	  background-position: top;
+}
+
+</style>
+
+~~~
+

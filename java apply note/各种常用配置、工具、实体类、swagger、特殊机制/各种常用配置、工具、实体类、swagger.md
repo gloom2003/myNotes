@@ -2784,7 +2784,11 @@ void testDateCompare() throws ParseException {
 
 参考：https://xyzghio.xyz/DateTimeFormatAndJsonFormat/
 
-##### JSON 格式转Date：反序列化
+
+
+#### （1）反序列化
+
+##### @DateTimeFormat 反序列化
 
 @DateTimeFormat,@JsonFormat都可以
 
@@ -2798,63 +2802,9 @@ class Pc{   
 }
 ~~~
 
-1
-
-~~~~java
-@Data
-// 默认json中有但是这个dto中没有的话，转换时就会报错，即：必须把整个json的全部字段全部接收，不管有没有用
-// 在反序列化时会忽略相应的字段
-@JsonIgnoreProperties(ignoreUnknown = true) // 
-public class SaveInvoiceDTO implements Serializable {
-    // 非实体类中的字段 
-    private Integer isFlicker;
-	@JsonProperty("passengerName") // 指定对应json的n字段名称
-    private String passengerName;
-
-    private Boolean showMergeNum;
-
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
-    private Date onlyDateStart;
-
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
-}
-~~~~
 
 
-
-
-
-##### Date转JSON @JsonFormat 序列化
-
-使用阿里的Jackson进行json转对象，用@JsonFramat指定日期格式 默认没有YYYY-MM-dd HH-mm-ss格式,需要手动指定后才可以，就能够把指定日期格式的字符串 反序列化为日期对象
-
-~~~java
-class Pc{    
-  
-    private String name;
-    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd") // 此为 Jackson 框架提供的注解，将 Date 对象数据解析转换为 JSON 格式，该注解用于 Date 字段即可，同时指定期望 JSON 日期的格式 (pattern)
-    @JsonProperty("birthday") // 指定对应json的n字段名称
-    private Date birthday;
-
-}
-~~~
-
-##### BigDecimal转JSON 序列化
-
-~~~java
-	/**
-     * 发票金额（总金额）
-     * 指定将 BigDecimal 序列化为字符串格式，并保留两位小数。
-     */
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "0.00")
-    private BigDecimal totalMoney;
-~~~
-
-
-
-
-
-#### @DateTimeFormat 把字符串转换为Date类
+##### @DateTimeFormat 把字符串转换为Date类 queryString请求的情况下正常
 
 ~~~java
     /**
@@ -2883,6 +2833,96 @@ class Pc{   
         return submitAccountService.getInvoiceFolder(userId,departmentName,userName,startTime,endTime,isOver,reimbursementCategory);
     }
 ~~~
+
+
+
+**注意：**
+
+使用@RequestBody的DTO类中的日期要从字符串反序列化为Date时，只能使用@JsonFormat
+
+~~~java
+@RestController
+@RequestMapping("/afterService")
+@Slf4j(topic = "AfterServiceController")
+public class AfterServiceController {
+
+    @Autowired
+    private AfterServiceService afterServiceService;
+
+    @PostMapping("/save")
+    public ResultVO<Void> saveAfterServiceData(@RequestBody SaveAfterServiceDTO saveAfterServiceDTO){
+        return afterServiceService.saveAfterServiceData(saveAfterServiceDTO);
+    }
+}
+
+public class SaveAfterServiceDTO {
+
+    /**
+     * 故障报修时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
+    private Date faultReportTime;
+
+}
+~~~
+
+
+
+1
+
+~~~~java
+@Data
+// 默认json中有但是这个dto中没有的话，转换时就会报错，即：必须把整个json的全部字段全部接收，不管有没有用
+// 在反序列化时会忽略相应的字段
+@JsonIgnoreProperties(ignoreUnknown = true) // 
+public class SaveInvoiceDTO implements Serializable {
+    // 非实体类中的字段 
+    private Integer isFlicker;
+	@JsonProperty("passengerName") // 指定对应json的n字段名称
+    private String passengerName;
+
+    private Boolean showMergeNum;
+
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+    private Date onlyDateStart;
+
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+}
+~~~~
+
+
+
+##### @JsonFormat 反序列化
+
+使用阿里的Jackson进行json转对象，用@JsonFramat指定日期格式 默认没有YYYY-MM-dd HH-mm-ss格式,需要手动指定后才可以，就能够把指定日期格式的字符串 反序列化为日期对象
+
+~~~java
+class Pc{    
+  
+    private String name;
+    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd") // 此为 Jackson 框架提供的注解，将 Date 对象数据解析转换为 JSON 格式，该注解用于 Date 字段即可，同时指定期望 JSON 日期的格式 (pattern)
+    @JsonProperty("birthday") // 指定对应json的n字段名称
+    private Date birthday;
+
+}
+~~~
+
+
+
+#### （2）序列化
+
+##### BigDecimal转JSON 序列化
+
+~~~java
+	/**
+     * 发票金额（总金额）
+     * 指定将 BigDecimal 序列化为字符串格式，并保留两位小数。
+     */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "0.00")
+    private BigDecimal totalMoney;
+~~~
+
+
 
 
 
@@ -3066,3 +3106,46 @@ System.out.println(l.compareTo(LocalDate.parse("2021-11-28"))); //1
 System.out.println(l.compareTo(LocalDate.parse("2021-11-30"))); //-1
 System.out.println(l.compareTo(l)); //01.2.3.4.
 ```
+
+
+
+
+
+### 实际使用Date与LocalDate的转换
+
+~~~java
+    /**
+     * 统计在指定时间段内相应报销类别的发票根文件夹数量
+     *
+     * @param dateNow              当前日期
+     * @param reimbursementCategory 报销类别
+     * @return 发票根文件夹数量
+     */
+    private Integer countRootFolderNumber(Date dateNow, Integer reimbursementCategory) {
+        try {
+            // 获取 dateNow 这个月的第一天 0 点时间
+            LocalDateTime startTimeLocal = LocalDateTime.ofInstant(dateNow.toInstant(), ZoneId.systemDefault())
+                    .withDayOfMonth(1) // 设置为当月第一天
+                    .with(LocalTime.MIN); // 设置为 0 点 0 分 0 秒
+
+            // 获取下个月的第一天 0 点时间
+            LocalDateTime endTimeLocal = startTimeLocal.plusMonths(1);
+
+            // 将 LocalDateTime 转换为 Date
+            Date startTime = Date.from(startTimeLocal.atZone(ZoneId.systemDefault()).toInstant());
+            Date endTime = Date.from(endTimeLocal.atZone(ZoneId.systemDefault()).toInstant());
+
+            // 查询数据库中指定时间段和报销类别的根文件夹数量
+            Integer count = invoiceOrFolderDao.countByCreateAtBetweenAndParentIdIsNullAndReimbursementCategory(
+                    startTime, endTime, reimbursementCategory);
+
+            // 返回结果，避免空指针
+            return count != null ? count : 0;
+
+        } catch (Exception e) {
+            // 捕获异常并包装为运行时异常
+            throw new RuntimeException("查询根文件夹数量时发生异常", e);
+        }
+    }
+~~~
+

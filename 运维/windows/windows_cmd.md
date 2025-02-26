@@ -244,6 +244,14 @@ win10:
   
   
   
+  如：
+  
+  ![image-20250225091257283](windows_cmd.assets/image-20250225091257283.png)
+  
+  
+  
+  
+  
   禁止win7 红蜘蛛：
   
   修改 ： C:/用户/System32下面的  checkrs 文件的名称，并在任务管理器中结束红蜘蛛任务。
@@ -259,3 +267,76 @@ win10:
 - `jstack <PID>` 查看某个 Java 进程（PID）的所有线程状态 
 
 - `jconsole` 来查看某个 Java 进程中线程的运行情况（图形界面）
+
+
+
+## 自动清理c盘脚本
+
+
+
+~~~sh
+rem code begin
+ @echo off echo ???????????????????????......
+del /f /s /q %systemdrive%\*.tmp
+del /f /s /q %systemdrive%\*._mp
+del /f /s /q %systemdrive%\*.log
+del /f /s /q %systemdrive%\*.gid
+del /f /s /q %systemdrive%\*.chk
+del /f /s /q %systemdrive%\*.old
+del /f /s /q %systemdrive%\recycled\*.*
+del /f /s /q %windir%\*.bak
+del /f /s /q %windir%\prefetch\*.*
+rd /s /q %windir%\temp & md %windir%\temp
+del /f /q %userprofile%\recent\*.*
+del /f /s /q %userprofile%\AppData\Local\Temp\*.*"
+del /f /s /q "%userprofile%\recent\*.*"
+echo ?????LJ????
+echo. & pause
+rem   code end
+~~~
+
+
+
+
+
+Windows 命令 `del /f /s /q C:\*.gid` 的含义如下：
+
+### 命令结构
+
+1. **`del`**
+    用于删除指定的文件。
+2. **参数**：
+   - **`/f`**
+      强制删除只读文件。
+   - **`/s`**
+      在当前目录及其所有子目录中搜索匹配的文件并删除。
+   - **`/q`**
+      静默模式删除文件，不提示用户确认。
+3. **路径和文件类型**：
+   - **`C:\*.gid`**
+      在 C: 盘根目录及其所有子目录中查找扩展名为 `.gid` 的文件。
+
+### 整体意思
+
+该命令的作用是：
+
+- 在 C: 盘及其所有子目录中，
+- 强制删除扩展名为 `.gid` 的所有文件，
+- 过程中不会提示确认。
+
+### 注意事项
+
+1. **`.gid` 文件**
+    `.gid` 是 Windows 帮助系统生成的索引文件，用于加速帮助文件的访问。删除这些文件不会对系统造成严重影响，但可能导致帮助系统稍慢，因为这些文件会在需要时重新生成。
+
+2. **风险**
+    由于 `/f /s /q` 是强制删除操作，一旦执行，删除的文件无法通过回收站恢复，需谨慎使用。建议在确认无重要数据后执行。
+
+3. **建议**
+    如果需要测试，先在某个文件夹中执行类似命令：
+
+   ```cmd
+   del /f /s /q D:\Test\*.gid
+   ```
+
+   以确保命令效果符合预期。

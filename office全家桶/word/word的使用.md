@@ -41,3 +41,11 @@ https://jingyan.baidu.com/article/3052f5a1e89d6397f31f86ac.html
 参考： https://jingyan.baidu.com/article/e6c8503c3909efa44f1a18cd.html
 
 ![image-20241114210420986](word的使用.assets/image-20241114210420986.png)
+
+
+
+### word中插入图片显示不全或不能任意移动怎么办？
+
+参考：https://jingyan.baidu.com/article/ff42efa933ccdec19f22027a.html
+
+![image-20241216154213940](word的使用.assets/image-20241216154213940.png)

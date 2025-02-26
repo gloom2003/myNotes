@@ -980,6 +980,8 @@ git fetch origin bar~1:bugFix # 表示下载到远程仓库bar分支的前一个
 git merge bugFix
 ```
 
+
+
 #### clone操作
 
 clone会做如下操作。1、pull操作 拉取代码。2、初始化本地仓库(创建main分支与本地的远程分支)。3、创建远仓别名(origin)
@@ -1131,6 +1133,108 @@ git push origin feature
 结果：
 
 ![](img/main4.png)
+
+
+
+
+
+## 三、 `non-fast-forward` 错误
+
+~~~
+git pull origin develop:develop
+From https://ip:8443/r/robot-web 
+ ! [rejected]        develop    -> develop  (non-fast-forward) 解决
+~~~
+
+当你遇到 `non-fast-forward` 错误时，说明本地的 `develop` 分支落后于远程的 `develop` 分支，可能是远程分支有新的提交，而本地分支没有同步这些更新。
+
+你可以按照以下步骤解决这个问题：
+
+1. **保存当前的本地修改**（如果有未提交的修改）：
+
+   ```bash
+   git stash
+   ```
+
+2. **拉取远程 `develop` 分支的最新更新**，并使用 `--rebase` 参数，避免直接合并，而是将本地的提交应用到远程提交之上：
+
+   ```bash
+   git pull --rebase origin develop
+   ```
+
+3. 如果在拉取过程中遇到合并冲突，Git 会停止并要求你手动解决冲突。解决冲突后，继续执行：
+
+   ```bash
+   git rebase --continue
+   ```
+
+4. 当 rebase 完成后，你可以将本地的更新推送到远程仓库：
+
+   ```bash
+   git push origin develop
+   ```
+
+5. 如果之前有使用 `git stash` 保存修改，你可以通过以下命令恢复：
+
+   ```bash
+   git stash pop
+   ```
+
+这样就可以解决 `non-fast-forward` 错误。如果在过程中有任何问题，随时告诉我！
+
+
+
+~~~
+我当前是在develop分支，为什么使用 git pull origin develop:develop不行，使用--rebase就可以
+
+在 Git 中，`git pull origin develop:develop` 这个命令的意思是将远程仓库的 `develop` 分支拉取并且直接合并到本地的 `develop` 分支上。遇到 `non-fast-forward` 错误时，说明本地的 `develop` 分支比远程的 `develop` 分支滞后了，可能存在远程分支的一些新的提交，你的本地分支没有这些提交。如果直接合并（merge）时，Git 不能自动完成，因为本地和远程之间有历史差异。
+
+### 为什么 `git pull --rebase` 能解决？
+`git pull --rebase origin develop` 通过 `--rebase` 参数来避免传统的合并（merge）。`rebase` 会把你的本地修改“搬到”远程分支的最新提交之后，相当于把远程的提交先应用在本地，再将你本地的提交应用在这些远程提交之上。
+
+使用 `rebase` 有以下好处：
+- 它能够保持清晰的提交历史，避免产生不必要的合并提交。
+- 如果你的本地提交和远程分支有重叠或冲突，`rebase` 会要求你解决冲突，然后继续应用本地的提交。
+
+### `git pull origin develop:develop` 为什么会失败？
+如果你当前的 `develop` 分支和远程的 `develop` 分支有差异，直接使用 `git pull origin develop:develop` 会尝试进行合并操作，而这时候本地和远程的历史不一致，就可能出现 `non-fast-forward` 错误。Git 会阻止这种合并操作，以避免丢失历史提交。
+
+### 总结：
+- `git pull --rebase` 会尝试将本地提交重放到远程提交之后，是一种顺序的合并方式。
+- `git pull origin develop:develop` 会尝试直接合并本地和远程的分支，遇到冲突时无法自动解决，就会报 `non-fast-forward` 错误。
+
+因此，在本地和远程有提交历史差异时，使用 `--rebase` 比较安全且常见。如果你不想让本地历史产生复杂的合并提交，`rebase` 是一个更好的选择。
+
+
+git pull是包含git fetch 和 git merge的，git fetch之后本地的远程分支不就和远程仓库同步了吗，本地的远程分支再与develop分支合并，为什么会不行
+
+你说得对，`git pull` 实际上是包含了 `git fetch` 和 `git merge` 两个步骤的。那么，如果你在执行 `git pull` 时遇到 `non-fast-forward` 错误，为什么在执行 `git fetch` 后还会出现这种问题呢？
+
+### 分析：
+- **`git fetch`** 是从远程仓库获取最新的提交，更新本地的远程分支（例如，`origin/develop`）。这一步不会修改本地的工作分支。
+- **`git merge`** 是将远程的 `develop` 分支与当前本地的 `develop` 分支合并。
+
+在执行 `git pull` 时，实际上是先执行了 `git fetch`，然后尝试执行 `git merge`，将更新的远程分支合并到当前分支。如果本地 `develop` 分支和远程的 `origin/develop` 分支之间有冲突或本地分支落后于远程分支，Git 就会遇到 `non-fast-forward` 错误。
+
+### 为什么会发生 `non-fast-forward` 错误？
+当你执行 `git fetch` 时，本地的远程分支（`origin/develop`）已经更新为远程仓库的最新状态。但是，本地的 `develop` 分支并没有自动跟随更新。此时，如果你执行 `git merge origin/develop`，Git 会发现你本地的 `develop` 分支与远程的 `origin/develop` 分支有不兼容的历史（例如，本地有独立提交，远程也有独立提交）。
+
+如果 Git 认为这两个分支的历史不能直接合并（例如，远程 `develop` 有提交而本地 `develop` 分支的提交已经改变历史），就会抛出 `non-fast-forward` 错误。这是因为 Git 无法找到一种“快速前进”的方式来合并这两个分支。
+
+### `git pull --rebase` 为什么有效？
+使用 `git pull --rebase` 时，Git 会将本地的提交“暂时移开”，然后把远程的提交应用到本地，再把本地的提交重新应用到这些更新后的提交上，形成一个线性的提交历史。这样可以避免 `merge` 操作时的冲突，从而解决 `non-fast-forward` 问题。
+
+### 总结：
+1. **`git fetch`** 只是更新了远程跟踪分支（例如 `origin/develop`），并不会改变本地的 `develop` 分支。
+2. **`git pull`** 在 `fetch` 后，会自动执行 `merge`，如果本地和远程的历史无法合并（例如本地有不同的提交，远程也有提交），就会出现 `non-fast-forward` 错误。
+3. **`git pull --rebase`** 会把本地的提交“暂时移开”，然后在远程更新之后重新应用本地的提交，避免了冲突。
+
+因此，`git pull` 会报错，是因为合并操作不成功；而 `git pull --rebase` 会通过重放本地提交来解决历史冲突，避免了合并过程中的问题。
+~~~
+
+
+
+
 
 
 

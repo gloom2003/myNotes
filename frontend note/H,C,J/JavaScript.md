@@ -492,6 +492,40 @@ d.getTime(0);//时间戳是指格林威治时间1970年01月01日00时00分00秒
 
 
 
+##### 格式化为字符串
+
+你可以使用 `Date` 对象的 `toLocaleString` 方法或者 `Date` 的 `getFullYear`、`getMonth` 等方法将日期格式化为你需要的字符串格式。假设你想把 `createAt` 字段格式化为 `"yyyy-MM-dd HH:mm:ss"` 格式，可以这样做：
+
+```javascript
+this.addAfterServiceFrom.afterServiceMaterialList.push({
+    materialName: '',
+    materialQuantity: '',
+    createAt: formatDate(new Date()),
+});
+
+// 格式化函数
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+```
+
+这样，`createAt` 字段会被格式化为 `yyyy-MM-dd HH:mm:ss` 形式的字符串。
+
+### 解释：
+
+- `padStart(2, '0')` 用来保证每个日期部分（如月、日、小时等）是两位数，前面补充 `0`。
+- `formatDate` 函数将日期转换为你需要的格式。
+
+
+
+
+
 解释代码：	setHours()		
 
 ```js
@@ -592,12 +626,16 @@ isHandLate(log,create) {
 - \d:数字 相当于[0-9]
 - \w:匹配数字、字母、下划线，相当于[a-z0-9A-Z_]
 - \s:空格或换行
+- **`(\\S+站)`**:
+  - `\\S+`：匹配一个或多个非空白字符。
+  - `站`：匹配站点关键字。
+  - 整体匹配站点名称。
 - g:表示全局匹配  /[a-zA-Z]/g:表示匹配所有的字母,没有g只会匹配第一个字母
 
 组合：
 
 ~~~java
-// .*表示匹配任意的字符串（包括空字符""） 
+// .*表示匹配任意的字符串（包括空字符""） 是贪婪的，会尽可能多地匹配
 // .*? 表示尽可能少的匹配任意的字符串，非贪婪匹配
 // ^$表示匹配空字符""
 
@@ -683,6 +721,33 @@ isHandLate(log,create) {
 				}
             }
 ~~~
+
+
+
+#### Set的使用
+
+如果需要在删除 `id` 之前进行去重，可以使用 `Set` 数据结构来实现。`Set` 自动去重，是处理数组重复项的简洁方法。
+
+以下是你的代码的优化版本：
+
+### 优化后的代码
+
+```javascript
+// 去重后删除
+const uniqueIdList = [...new Set(newUploadedIdList)]; // 使用 Set 去重
+
+for (let id of uniqueIdList) {
+  await deleteIllegalFile(id); // 执行删除操作
+}
+```
+
+### 详细说明：
+
+1. **`new Set()`**：
+   - 将数组转换为 `Set`，自动去除重复项。
+   - 使用 `[...new Set(array)]` 可将 `Set` 再转回数组。
+2. **去重后处理**：
+   - 保证每个 `id` 只被删除一次，避免重复调用 `deleteIllegalFile`。
 
 
 
@@ -3174,6 +3239,423 @@ async getInvoiceFolderContentAndSet(folderId){
 
 
 
+#### uni.showLoading 一闪而过问题
+
+
+
+改动前：
+
+~~~js
+			takePhoto() {
+				let that = this;
+				
+				// #ifdef H5
+				uni.chooseImage({
+					count: 100,
+					sizeType: ['original', 'compressed'], //可以指定是原图还是压缩图，默认二者都有
+					camera: 'back',
+					// 设置后的效果为：默认展示全部的(*.*)文件
+					extension : ['*.pdf','*.png','*.jpg'],
+					success: async function(res) {
+						uni.showLoading({ // 一闪而过
+							mask:true,
+							title:'文件上传中',
+						});
+						console.log(`文件上传中`);
+						for (var i = 0; i < res.tempFilePaths.length; i++) {
+							try{
+								await that.uploadImage(i,res);
+							}catch(e){
+								console.error(`第 ${i + 1} 个文件上传失败: ${e.message}`);
+								console.log("takePhoto()::uni.chooseImage失败!========"+e);
+							}
+						};
+						console.log(`文件上传完成`);
+						uni.hideLoading();
+					},
+					fail: (err) => {
+						console.log(err);
+					}
+				
+				});
+				// #endif
+            }
+
+// uploadImage的代码实现是这样子的：			
+uploadImage(index,res){
+				let that = this;
+				const adminToken = "Bearer " + uni.getStorageSync("auth").token;
+				// uni.showLoading({
+				// 	mask:true,
+				// 	title:'文件上传中',
+				// });
+				uni.uploadFile({
+				    url: utils.uriToUrl("/infra-service/files/list"), //服务器接口地址
+					
+					// #ifdef H5
+				    filePath: res.tempFilePaths[index], //要上传的文件路径
+					// #endif
+					
+					// #ifdef MP
+					filePath: res.filePaths[index], //要上传的文件路径
+					// #endif
+					
+				    name: 'file',
+					header:{
+						Authorization:adminToken,
+					},
+				    formData: { //上传的其他参数
+				        docType: "发票附件-图片",
+						
+						// #ifdef H5
+				        docName: res.tempFiles[index].name,
+						// #endif
+						
+						// #ifdef MP
+						docName: res.files[index].path,
+						// #endif
+						
+				        upLoaderId: uni.getStorageSync("auth").user.id,
+				        access: '',
+						// 生成策略
+						thumbnailStrategy : 'allPages',
+						
+				    },
+				    success: async function (uploadRes) {
+						if (uploadRes!=null && uploadRes!="" && !(uploadRes instanceof Array)) {
+							uni.hideLoading();
+							let data = JSON.parse(uploadRes.data);
+							// 只支持上传图片与pdf格式的附件
+							if(!data.mimeType.includes('image') && !data.mimeType.includes('pdf')){
+								uni.hideLoading();
+								uni.showModal({
+									title:'文件格式不支持',
+									content:'只支持上传图片格式与pdf格式的附件',
+									showCancel:false,
+								})
+								// 删除不支持的文件
+								await deleteIllegalFile(data.id);
+								return;
+							}
+							// 默认使用缩略图
+							let resUrl = data.thumbnail;
+							// 根据大小（460KB） 选择使用原图还是缩略图
+							if(data.bytes <= 460 * 1024){
+								resUrl = data.url;
+							}
+							// pdf格式则一定使用缩略图
+							if(data.mimeType == 'application/pdf'){
+								resUrl = data.thumbnail;
+							}
+							let attachmentObj = {
+								id : data.id,
+								fileName : data.docName,
+								url : resUrl,
+							};
+							that.covertInvoiceEnclosureUrl(attachmentObj);
+							// 对附件根据文件名称进行排序
+							that.invoiceAttachmentList.sort((a, b) => a.fileName.localeCompare(b.fileName));
+							// uni.hideLoading();
+						} else {
+							uni.showToast({
+							    title: '图片uploadRes为空!',
+							    icon: 'none',
+								duration:700
+							});
+						}
+				    },
+				    fail: function (e) {
+						// uni.hideLoading();
+						console.log(e);
+				        uni.showToast({
+				            title: '上传失败，请联系管理员',
+				            icon: 'none',
+							duration:700
+				        });
+				    }
+				});
+			},
+~~~
+
+
+
+从提供的代码来看，`uploadImage` 中的问题主要在于它并没有返回一个 `Promise`，因此调用该方法时，`await` 不会起到阻塞效果，导致 `uni.hideLoading()` 提示框提前关闭。
+
+以下是改进的 `uploadImage` 方法代码：
+
+### 改进后的 `uploadImage`
+
+将 `uni.uploadFile` 包装为一个 `Promise`，以便在调用时能够正确使用 `await`：
+
+```javascript
+uploadImage(index, res) {
+    let that = this;
+    const adminToken = "Bearer " + uni.getStorageSync("auth").token;
+
+    return new Promise((resolve, reject) => {
+        uni.uploadFile({
+            url: utils.uriToUrl("/infra-service/files/list"), // 服务器接口地址
+            
+            // #ifdef H5
+            filePath: res.tempFilePaths[index], // H5 要上传的文件路径
+            // #endif
+            
+            // #ifdef MP
+            filePath: res.filePaths[index], // 小程序要上传的文件路径
+            // #endif
+            
+            name: 'file',
+            header: {
+                Authorization: adminToken,
+            },
+            formData: { // 上传的其他参数
+                docType: "发票附件-图片",
+                
+                // #ifdef H5
+                docName: res.tempFiles[index].name,
+                // #endif
+                
+                // #ifdef MP
+                docName: res.files[index].path,
+                // #endif
+                
+                upLoaderId: uni.getStorageSync("auth").user.id,
+                access: '',
+                thumbnailStrategy: 'allPages',
+            },
+            success: async function(uploadRes) {
+                try {
+                    if (uploadRes && uploadRes.data) {
+                        let data = JSON.parse(uploadRes.data);
+
+                        // 检查文件格式
+                        if (!data.mimeType.includes('image') && !data.mimeType.includes('pdf')) {
+                            await deleteIllegalFile(data.id); // 删除不支持的文件
+                            uni.showModal({
+                                title: '文件格式不支持',
+                                content: '只支持上传图片格式与pdf格式的附件',
+                                showCancel: false,
+                            });
+                            reject(new Error('Unsupported file format.'));
+                            return;
+                        }
+
+                        // 根据逻辑处理 URL
+                        let resUrl = data.thumbnail;
+                        if (data.bytes <= 460 * 1024) {
+                            resUrl = data.url;
+                        }
+                        if (data.mimeType === 'application/pdf') {
+                            resUrl = data.thumbnail;
+                        }
+
+                        // 构造附件对象
+                        let attachmentObj = {
+                            id: data.id,
+                            fileName: data.docName,
+                            url: resUrl,
+                        };
+                        that.covertInvoiceEnclosureUrl(attachmentObj);
+                        that.invoiceAttachmentList.sort((a, b) => a.fileName.localeCompare(b.fileName));
+                        resolve(attachmentObj); // 成功时 resolve 附件信息
+                    } else {
+                        uni.showToast({
+                            title: '上传结果为空!',
+                            icon: 'none',
+                            duration: 700,
+                        });
+                        reject(new Error('Empty upload result.'));
+                    }
+                } catch (err) {
+                    console.error('文件上传处理失败:', err);
+                    reject(err);
+                }
+            },
+            fail: function(err) {
+                console.error('文件上传失败:', err);
+                uni.showToast({
+                    title: '上传失败，请联系管理员',
+                    icon: 'none',
+                    duration: 700,
+                });
+                reject(err); // 上传失败时 reject
+            },
+        });
+    });
+}
+```
+
+### 改动说明
+
+1. **包装 `uni.uploadFile` 为 `Promise`**
+   - 使用 `new Promise`，并在成功时调用 `resolve`，在失败或异常时调用 `reject`。
+   - 这样可以确保 `await` 能正确阻塞，等待上传完成。
+2. **处理文件格式检查逻辑**
+   - 检查文件格式，如果格式不符合要求，删除文件并弹窗提示，同时调用 `reject` 以便跳过错误文件。
+3. **明确的错误处理**
+   - 在上传失败或处理逻辑出错时，清晰地抛出错误，便于上层调用捕获问题。
+4. **返回上传结果**
+   - 成功时通过 `resolve` 返回上传结果，供调用者进一步使用。
+
+### 调用改进后的 `uploadImage`
+
+你在主逻辑中可以这样调用：
+
+```javascript
+for (var i = 0; i < res.tempFilePaths.length; i++) {
+    try {
+        await that.uploadImage(i, res); // 等待每个文件上传完成
+    } catch (e) {
+        console.error(`第 ${i + 1} 个文件上传失败: ${e.message}`);
+    }
+}
+```
+
+改进后，文件上传完成后，`uni.hideLoading()` 才会被调用，从而解决提示“一闪而过”的问题。
+
+
+
+
+
+`resolve` 和 `reject` 是用于创建和控制 JavaScript 中 **Promise** 的两个核心函数，它们分别代表**完成（fulfilled）**和**拒绝（rejected）**的状态。
+
+当你需要处理异步操作（如网络请求、文件上传等）时，`Promise` 是一种可以更好地组织代码并确保异步逻辑流畅的机制。以下是它们的作用和为什么要使用它们的解释：
+
+------
+
+### 1. **什么是 `resolve` 和 `reject`？**
+
+#### `resolve(value)`
+
+- **作用**：表示异步操作成功，并将结果（`value`）传递给后续处理函数（`.then()`）。
+- **用法**：当异步操作完成且没有错误时调用。
+
+#### `reject(reason)`
+
+- **作用**：表示异步操作失败，并将错误原因（`reason`）传递给后续的错误处理函数（`.catch()`）。
+- **用法**：当异步操作出现错误或需要中止时调用。
+
+------
+
+### 2. **为什么要用 `resolve` 和 `reject`？**
+
+在没有 `Promise` 的情况下，你需要通过回调函数来处理异步操作的成功或失败，但回调函数可能会导致 **回调地狱** 或 **代码混乱** 的问题。
+
+使用 `resolve` 和 `reject` 能让你：
+
+1. **更易读的代码结构**：通过 `.then()` 和 `.catch()` 统一管理成功和失败的处理逻辑。
+2. **清晰的错误处理**：`Promise` 会捕获异步操作中的错误，你可以统一用 `.catch()` 来处理。
+3. **支持 `await` 语法**：`Promise` 是异步处理的基础，配合 `async/await` 让代码逻辑更接近同步执行的写法。
+
+------
+
+### 3. **如何使用 `resolve` 和 `reject`？**
+
+以下是一个创建 `Promise` 的简单示例：
+
+#### 示例 1：手动创建一个 `Promise`
+
+```javascript
+function asyncOperation(success) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            if (success) {
+                resolve("操作成功！");
+            } else {
+                reject("操作失败！");
+            }
+        }, 1000); // 模拟 1 秒延迟
+    });
+}
+
+// 调用
+asyncOperation(true)
+    .then((result) => {
+        console.log(result); // 输出 "操作成功！"
+    })
+    .catch((error) => {
+        console.error(error); // 如果失败，会输出 "操作失败！"
+    });
+```
+
+#### 示例 2：配合 `async/await`
+
+```javascript
+async function run() {
+    try {
+        const result = await asyncOperation(true); // 等待操作完成
+        console.log(result); // 输出 "操作成功！"
+    } catch (error) {
+        console.error(error); // 如果失败，会输出 "操作失败！"
+    }
+}
+
+run();
+```
+
+------
+
+### 4. **你的场景中为什么需要 `resolve` 和 `reject`？**
+
+在你的代码中，`uni.uploadFile` 是一个异步操作（文件上传），它不会直接返回一个 `Promise`，而是依赖回调函数（`success` 和 `fail`）来处理上传结果。为了让你能够在调用 `uploadImage` 时使用 `await` 或链式调用 `.then()` 和 `.catch()`，你需要用 `Promise` 包装它。
+
+- **`resolve` 的作用**：当文件上传成功时，将结果返回给调用者。
+- **`reject` 的作用**：当文件上传失败或出现问题时，将错误信息传递给调用者。
+
+------
+
+### 5. **你的代码中的 `resolve` 和 `reject` 用法**
+
+#### 改进后的代码
+
+```javascript
+uploadImage(index, res) {
+    return new Promise((resolve, reject) => {
+        uni.uploadFile({
+            url: utils.uriToUrl("/infra-service/files/list"), // 上传接口
+            filePath: res.tempFilePaths[index], // 上传文件路径
+            name: 'file',
+            success: function(uploadRes) {
+                try {
+                    let data = JSON.parse(uploadRes.data);
+                    resolve(data); // 成功时返回数据
+                } catch (err) {
+                    reject(new Error('解析上传结果失败')); // JSON 解析失败
+                }
+            },
+            fail: function(err) {
+                reject(err); // 上传失败
+            },
+        });
+    });
+}
+```
+
+#### 调用时的代码
+
+```javascript
+try {
+    const uploadResult = await uploadImage(0, res); // 等待上传完成
+    console.log("上传成功：", uploadResult);
+} catch (error) {
+    console.error("上传失败：", error);
+}
+```
+
+------
+
+### 6. **总结**
+
+- **`resolve`**：用来返回异步操作的成功结果。
+- **`reject`**：用来返回异步操作的错误信息。
+- **好处**：统一异步逻辑管理，支持 `async/await` 写法，更清晰的错误处理机制。
+
+通过 `resolve` 和 `reject` 包装异步回调，可以让你的代码更加简洁和易于维护。
+
+
+
+
+
 
 
 ### 9 自定义属性
@@ -3403,6 +3885,143 @@ formatNumber(numberDesc) {
 					// invoice.totalMoney = this.formatNumber(invoice.totalMoney);
 					invoice.totalMoney = new BigNumber(invoice.totalMoney).toFixed(2);
 ~~~
+
+
+
+
+
+
+### 12 **`localStorage` 和 `sessionStorage` 介绍**
+
+`localStorage` 和 `sessionStorage` 都是 **Web Storage API** 的一部分，用于在浏览器中存储数据。它们的主要区别如下：
+
+| 存储类型         | 作用域           | 过期时间                                         | 适用场景                                                |
+| ---------------- | ---------------- | ------------------------------------------------ | ------------------------------------------------------- |
+| `localStorage`   | 整个网站（同源） | **永久存储**，即使刷新或关闭浏览器后数据仍然存在 | 适用于需要长期存储的用户数据，如 **用户设置、记住密码** |
+| `sessionStorage` | 单个标签页       | **会话级别**，关闭浏览器或标签页后数据会自动清除 | 适用于临时数据，如 **验证码、临时表单数据**             |
+
+------
+
+## **`localStorage` 例子：记住用户偏好设置**
+
+这个例子演示如何使用 `localStorage` 让用户切换 **深色模式**，并在刷新页面后仍然保持选择。
+
+### **1️⃣ HTML + Vue 代码**
+
+```vue
+<template>
+  <div :class="{ dark: isDarkMode }" class="container">
+    <h2>LocalStorage 示例 - 记住深色模式</h2>
+    <button @click="toggleDarkMode">
+      {{ isDarkMode ? "切换到亮色模式" : "切换到深色模式" }}
+    </button>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      isDarkMode: false
+    };
+  },
+  created() {
+    // 页面加载时检查 localStorage 中是否有保存的模式
+    const savedMode = localStorage.getItem("darkMode");
+    this.isDarkMode = savedMode === "true"; // 转换为布尔值
+  },
+  methods: {
+    toggleDarkMode() {
+      this.isDarkMode = !this.isDarkMode;
+      localStorage.setItem("darkMode", this.isDarkMode); // 存储到 localStorage
+    }
+  }
+};
+</script>
+
+<style scoped>
+.container {
+  padding: 20px;
+  text-align: center;
+  transition: background 0.3s, color 0.3s;
+}
+.dark {
+  background: black;
+  color: white;
+}
+button {
+  padding: 10px 20px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+</style>
+```
+
+------
+
+### **2️⃣ 功能说明**
+
+1. **当用户点击按钮** 切换深色模式，并将状态保存到 `localStorage`。
+2. **刷新页面后**，仍然保持上次选择的模式（**localStorage 持久化存储**）。
+3. **样式动态绑定**：Vue 通过 `:class="{ dark: isDarkMode }"` 绑定深色模式。
+
+------
+
+## **`sessionStorage` 例子：存储临时表单数据**
+
+如果希望 **用户填写表单后刷新页面不会丢失**，但关闭浏览器后自动清除数据，可以使用 `sessionStorage`。
+
+```vue
+<template>
+  <div>
+    <h2>SessionStorage 示例 - 记住表单数据</h2>
+    <input type="text" v-model="username" placeholder="输入用户名">
+    <button @click="saveData">保存</button>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      username: ""
+    };
+  },
+  created() {
+    // 页面加载时从 sessionStorage 读取数据
+    this.username = sessionStorage.getItem("username") || "";
+  },
+  methods: {
+    saveData() {
+      sessionStorage.setItem("username", this.username);
+      alert("数据已保存（刷新后仍在，但关闭浏览器会清除）");
+    }
+  }
+};
+</script>
+
+<style scoped>
+input {
+  padding: 8px;
+  margin-right: 10px;
+}
+</style>
+```
+
+------
+
+### **总结**
+
+| 存储方式     | `localStorage`            | `sessionStorage`         |
+| ------------ | ------------------------- | ------------------------ |
+| 数据范围     | 整个网站（跨页面）        | 仅当前标签页             |
+| 数据存活时间 | 永久                      | 仅当前会话，关闭页面清除 |
+| 适用场景     | 用户设置、记住密码、Token | 临时表单数据、验证码     |
+
+如果你希望 **长期存储数据**（如深色模式、用户设置），使用 `localStorage`。
+ 如果你只需要 **临时存储**（如表单数据），使用 `sessionStorage` 更合适。
+
+🚀 **快试试看吧！**
 
 
 

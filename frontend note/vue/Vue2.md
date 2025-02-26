@@ -1966,3 +1966,356 @@ vue如何实现当isWhole是false时，就让<view class="invoiceCards">中的in
 ![image-20240825121126136](Vue2.assets/image-20240825121126136.png)
 
 
+
+实际使用：
+
+~~~vue
+<view class="oneColumn" :style="{ transform: invoiceFolderObj.over == false ? 'translate(-7vw, 0vh)' : getClickedFinishButtonStyle(invoiceFolderObj.totalMoney) }">
+</view>
+~~~
+
+
+
+js:
+
+~~~js
+			// 根据发票金额计算移动端发票金额与已完结按钮布局所需要的大小
+			getClickedFinishButtonStyle(totalMoney){
+				if (!totalMoney) return `translate(0vw, 0vh)`; // 处理空值或未定义的情况
+				let strLen = totalMoney.length;
+				let baseNum = strLen < 8 ? (8 - strLen) * 2 : 0;
+				return `translate(-${baseNum}vw, 0vh)`;
+			},
+~~~
+
+
+
+
+
+
+
+
+
+## 一、 使用scoped 
+
+
+
+为什么要使用scoped ，举一个例子说明
+
+
+
+使用 `scoped` 样式的主要原因是 **局部化样式**，即保证样式只作用于当前组件，避免样式泄漏或影响到其他组件。这在开发大型应用时非常有用，特别是当组件化开发时，能够确保每个组件的样式不会互相干扰。
+
+### 举个例子，说明 `scoped` 的作用：
+
+假设我们有两个组件：`Header.vue` 和 `Footer.vue`，它们分别代表页面的头部和底部。在这两个组件中，我们都要使用 `.title` 类来设置标题的样式。假设没有 `scoped`，如果两者都使用 `.title`，它们的样式可能会互相干扰，导致不可预期的效果。
+
+### 1. **没有 `scoped` 的情况**：
+
+#### `Header.vue`：
+
+```vue
+<template>
+  <div class="header">
+    <h1 class="title">页面头部</h1>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'Header',
+};
+</script>
+
+<style>
+.title {
+  color: blue;
+}
+</style>
+```
+
+#### `Footer.vue`：
+
+```vue
+<template>
+  <div class="footer">
+    <h1 class="title">页面底部</h1>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'Footer',
+};
+</script>
+
+<style>
+.title {
+  color: red;
+}
+</style>
+```
+
+### 结果：
+
+- 由于没有 `scoped`，`Header.vue` 中的 `.title` 和 `Footer.vue` 中的 `.title` 都是全局样式，它们会互相影响。
+- 最终，你可能看到头部标题是红色的（`Footer.vue` 的样式覆盖了 `Header.vue` 的样式），而不是蓝色的，这显然不是你希望的效果。
+
+### 2. **使用 `scoped` 的情况**：
+
+现在我们给每个组件的样式加上 `scoped`，这样每个组件的样式就会局部作用于该组件，不会影响到其他组件。
+
+#### `Header.vue`（使用了 `scoped`）：
+
+```vue
+<template>
+  <div class="header">
+    <h1 class="title">页面头部</h1>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'Header',
+};
+</script>
+
+<style scoped>
+.title {
+  color: blue;
+}
+</style>
+```
+
+#### `Footer.vue`（使用了 `scoped`）：
+
+```vue
+<template>
+  <div class="footer">
+    <h1 class="title">页面底部</h1>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'Footer',
+};
+</script>
+
+<style scoped>
+.title {
+  color: red;
+}
+</style>
+```
+
+### 结果：
+
+- 使用了 `scoped` 后，`Header.vue` 和 `Footer.vue` 中的 `.title` 类不会互相影响。它们分别会显示为蓝色和红色，完全按照各自组件的样式来渲染。
+- `scoped` 保证了样式仅作用于当前组件，避免了样式冲突。
+
+### 为什么使用 `scoped`：
+
+- **局部化样式**：确保样式只作用于当前组件，不会影响到其他组件，避免样式污染。
+- **可维护性**：在开发复杂项目时，每个组件都可以独立管理自己的样式，减少样式间的冲突。
+- **增强可读性**：使用 `scoped` 后，样式只影响当前组件的 HTML 结构，便于其他开发人员理解和修改。
+
+### 总结：
+
+使用 `scoped` 主要是为了 **局部化样式**，确保样式只作用于当前组件，避免不同组件之间的样式干扰。当你需要在 Vue 组件中封装样式，使得它们与其他组件的样式互不干扰时，`scoped` 是非常有用的。
+
+
+
+
+
+## 二、 深度选择器 >>>
+
+举个例子来帮助你更好地理解 `>>>` 选择器的用途。
+
+
+
+好的，举个例子来帮助你更好地理解 `>>>` 选择器的用途。
+
+### 场景描述：
+
+假设你有一个父组件，它包含了一个子组件。在父组件中，你想给子组件的内部元素应用一些样式，但是父组件的样式被 `scoped` 限制了，无法影响到子组件的元素。
+
+### 例子：
+
+#### 1. **父组件 (`Parent.vue`)**：
+
+```vue
+<template>
+  <div class="parent">
+    <h1>欢迎来到管理平台</h1>
+    <!-- 引入子组件 -->
+    <ChildComponent />
+  </div>
+</template>
+
+<script>
+import ChildComponent from './ChildComponent.vue';
+
+export default {
+  components: {
+    ChildComponent,
+  },
+};
+</script>
+
+<style scoped>
+/* 父组件样式 */
+.parent h1 {
+  color: blue;
+}
+
+/* 尝试给子组件的内部元素应用样式 */
+.parent >>> .child-button {
+  background-color: red; /* 希望子组件的按钮背景是红色 */
+}
+</style>
+```
+
+#### 2. **子组件 (`ChildComponent.vue`)**：
+
+```vue
+<template>
+  <div class="child">
+    <button class="child-button">点击我</button>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'ChildComponent',
+};
+</script>
+
+<style scoped>
+/* 子组件样式 */
+.child-button {
+  background-color: green; /* 子组件的按钮背景是绿色 */
+}
+</style>
+```
+
+### 解释：
+
+- 在父组件 `Parent.vue` 中，我们希望给子组件中的 `.child-button` 元素应用样式，改变它的背景颜色为红色。
+- 由于父组件使用了 `scoped`，它的样式默认只会影响父组件中的元素，不能直接影响到子组件的 `.child-button` 元素。
+- 使用 `>>>` 选择器后，父组件的样式就能够突破 `scoped` 限制，直接作用于子组件中的 `.child-button` 元素。
+
+### 结果：
+
+- 子组件 `ChildComponent.vue` 中的 `.child-button` 默认是绿色的。
+- 但在父组件 `Parent.vue` 中，我们通过 `>>>` 选择器强制给子组件 `.child-button` 设置了红色背景。
+
+如果不使用 `>>>`，父组件的样式将无法影响到子组件，`.child-button` 仍然会保持绿色背景。
+
+### 总结：
+
+- **父组件样式无法影响子组件**：如果子组件的样式被 `scoped` 限制了，父组件的样式默认是无法穿透的。
+- **使用 `>>>` 可以突破作用域**：通过 `>>>` 选择器，父组件可以影响到子组件的元素样式，即使子组件使用了 `scoped` 限制。
+
+这样，在实际开发中，如果你需要让父组件控制子组件的样式，就可以使用 `>>>`。
+
+
+
+
+
+## 三、全局监听回车事件
+
+
+
+是的，你可以全局监听回车事件来实现这个功能。通过在页面加载时绑定全局的 `keyup` 事件来监听回车键，无论焦点在哪个输入框上，都能够触发相应的登录操作。
+
+你可以在 Vue 的生命周期钩子 `mounted` 中添加全局的 `keyup` 事件监听，在回车键被按下时执行登录操作。
+
+### 实现步骤：
+
+1. **在 `mounted` 生命周期中添加全局监听器。**
+2. **判断回车是否被按下，并执行登录逻辑。**
+
+以下是实现代码：
+
+```html
+<div>
+    <span class="usernameText">用户名：</span>
+    <img class="usernameIcon" src="../../../assets/img/userNameInput.png"/>
+
+    <el-autocomplete
+        class="usernameInput"
+        v-model="username"
+        :fetch-suggestions="queryHistoryUserAccounts"
+        placeholder="请输入用户名"
+        @select="handleSelectUser"  <!-- 选择用户名时触发 -->
+    >
+        <template slot-scope="{ item }">
+            <span style="font-style:italic;">{{item.name}}</span>
+            <span style="float:right;font-weight:bold;">{{item.dispName}}</span>
+        </template>
+    </el-autocomplete>
+</div>
+
+<div>
+    <span class="passwordText">密码：</span>
+    <img class="passwordIcon" src="../../../assets/img/passwordInput.png"/>
+    <input type="password" placeholder="请输入您的密码" class="passwordInput" v-model="password"/>
+</div>
+```
+
+然后在 JavaScript 中，使用 `mounted` 钩子来全局监听回车事件：
+
+```javascript
+data() {
+    return {
+        username: '',
+        password: '',
+        selectedUser: false  // 标记是否选择了用户名
+    };
+},
+methods: {
+    handleSelectUser(item) {
+        // 选择用户名时，将用户名存储到 v-model
+        this.username = item.name;
+        this.selectedUser = true;  // 标记用户名已选择
+    },
+    handleLogin() {
+        console.log('用户名:', this.username);
+        console.log('密码:', this.password);
+        // 在此处调用实际的登录 API 或逻辑
+    }
+},
+mounted() {
+    // 全局监听回车键
+    window.addEventListener('keyup', this.handleKeyUp);
+},
+beforeDestroy() {
+    // 移除全局监听
+    window.removeEventListener('keyup', this.handleKeyUp);
+},
+methods: {
+    handleKeyUp(event) {
+        // 只处理回车键（Enter键的keyCode是13）
+        if (event.key === 'Enter') {
+            // 如果用户名已选择或密码框已经填写，调用登录方法
+            if (this.username && this.password) {
+                this.handleLogin();
+            }
+        }
+    }
+}
+```
+
+### 关键点：
+
+1. **全局监听回车事件：** `window.addEventListener('keyup', this.handleKeyUp)` 在 `mounted` 钩子中注册监听，`beforeDestroy` 中移除监听，确保不会在组件销毁后仍然监听事件。
+2. **`handleKeyUp` 方法：** 判断按下的键是否是回车键（`event.key === 'Enter'`），并且确保用户名和密码都不为空后执行 `handleLogin`。
+3. **手动触发登录：** 当回车键被按下时，调用 `handleLogin` 进行登录。
+
+### 优点：
+
+- **全局监听回车事件**，不依赖输入框是否失去焦点，确保回车键的事件始终能被捕获并执行。
+- **适用于复杂场景**，例如多个输入框或组件中用户进行操作时，都能通过全局事件监听触发相应的处理函数。
+
+这样实现后，无论用户选择了用户名并点击了回车，还是直接在密码框输入并点击回车，都会触发 `handleLogin` 函数，确保登录操作的顺利进行。

@@ -41,13 +41,25 @@ ul: unordered list, ol: ordered list
 
 ~~~html
 <a href="http链接或者路径"></a>
+
+<a class="forgetPassword" href="http://www.baidu.com">忘记密码？</a>
 ~~~
 
 ### 1.5图片标签 img:
 
+
+
 ~~~html
 <img src="图片路径" alt="src指定的图片加载失败时显示">
+
+如：第一个..表示当前目录的上一级目录
+<img
+     class="usernameIcon"
+     src="../../../assets/img/userNameInput.png">
+</img>
 ~~~
+
+
 
 ### 1.6 划分区域的div,span标签：
 
