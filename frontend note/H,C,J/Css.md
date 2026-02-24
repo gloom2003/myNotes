@@ -2527,8 +2527,47 @@ vmin和vmax，vmin是指选择vw和vh中最小的那个，而vmax是选择最大
 
 
 
-
 `rpx`和`rem`都是相对单位，常用于响应式布局。它们各有优缺点，在不同场景下发挥不同的作用：
+
+
+
+### 实际使用：
+
+绝对定位px转百分比布局（%、vw、vh）,1vw = 屏幕宽度的1%，1vh = 屏幕高度的1%
+
+原始(原型中给的绝对定位 px)：
+
+基于 1920 x 1080的显示器屏幕，要做到可拉伸：
+
+~~~css
+.bri_logo{
+	position: absolute;
+	left: 577px;
+	top: 243px;
+	width: 106px;
+	height: 37px;
+}
+~~~
+
+
+
+修改后：
+
+~~~css
+.bri_logo[data-v-1aff4fe6] {
+    position: absolute;
+    left: calc((577 / 1920)* 100vw);
+    top: calc((243 / 1080)* 100vh);
+    width: calc((106 / 1920)* 100vw);
+    height: calc((37 / 1080)* 100vh);
+}
+~~~
+
+
+
+
+
+
 
 ### 1. `rpx`（Responsive Pixel）
 
@@ -2812,4 +2851,539 @@ html {
 </style>
 
 ~~~
+
+
+
+## 十一、居中、炫酷、可双击全屏的标题栏
+
+
+
+~~~vue
+				<div class="digisc-title-container">
+					<div class="digisc-title-area" @dblclick="toggleFullscreen">{{ title }}</div>
+				</div> 
+
+~~~
+
+
+
+~~~css
+.digisc-title-container {
+    position: absolute;
+    top: 2%;
+    left: 0;
+    right: 0;
+    height: 7%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}  .digisc-title-area[data-v-1aff4fe6] { 
+    color: #00FCFF;
+    font-size: calc(1.8vw + 0.5vh);
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 8px;
+    text-shadow: 0 0 10px rgba(0, 252, 255, 0.7);
+    pointer-events: auto;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: "Microsoft YaHei", sans-serif;
+}
+~~~
+
+
+
+
+
+这段代码包含了 HTML 和 CSS，定义了一个标题区域的显示样式和交互行为。我们来逐段解析它的作用：
+
+------
+
+### ✅ HTML 部分：
+
+```html
+<div class="digisc-title-container">
+    <div class="digisc-title-area" @dblclick="toggleFullscreen">{{ title }}</div>
+</div>
+```
+
+#### 含义：
+
+- 外层容器 `.digisc-title-container` 用来定位和包裹标题区域。
+- 内层 `.digisc-title-area` 是具体显示标题文本的区域，支持双击操作。
+- `@dblclick="toggleFullscreen"`：这是 Vue 的语法，表示当用户 **双击** 标题时，会触发组件中定义的 `toggleFullscreen` 方法。
+- `{{ title }}` 是 Vue 的插值语法，用来动态展示组件中定义的 `title` 数据。
+
+------
+
+### ✅ CSS 部分（1）：`.digisc-title-container`
+
+```css
+.digisc-title-container {
+    position: absolute;
+    top: 2%;
+    left: 0;
+    right: 0;
+    height: 7%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+```
+
+#### 含义：
+
+- `position: absolute;`：绝对定位，基于最近的定位祖先元素定位。
+- `top: 2%; height: 7%;`：垂直方向从顶部偏移 2%，容器高度为整个页面高度的 7%。
+- `left: 0; right: 0;`：横向撑满整个屏幕。
+- `display: flex; justify-content: center; align-items: center;`：使用 Flex 布局，使内部标题水平居中、垂直居中。
+- `pointer-events: none;`：整个容器不会响应鼠标事件（如点击或悬停），**但**内部的 `.digisc-title-area` 会单独设置为可响应。
+
+------
+
+### ✅ CSS 部分（2）：`.digisc-title-area`
+
+```css
+.digisc-title-area[data-v-1aff4fe6] {
+    color: #00FCFF;
+    font-size: calc(1.8vw + 0.5vh);
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 8px;
+    text-shadow: 0 0 10px rgba(0, 252, 255, 0.7);
+    pointer-events: auto;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: "Microsoft YaHei", sans-serif;
+}
+```
+
+#### 含义：
+
+- `color: #00FCFF;`：文字颜色是荧光蓝。
+- `font-size: calc(1.8vw + 0.5vh);`：自适应字体大小，`vw` 是相对于视口宽度，`vh` 是相对于视口高度。
+- `letter-spacing: 8px;`：文字之间的间距拉开，营造科技感。
+- `text-shadow`：发光效果，使标题文字更有立体感。
+- `pointer-events: auto; cursor: pointer;`：标题区域可以接收鼠标事件，鼠标悬停会变成点击手型。
+- `white-space: nowrap;`：不换行。
+- `font-family: "Microsoft YaHei", sans-serif;`：使用微软雅黑字体。
+
+------
+
+### 🔍 总结：
+
+这个代码段实现了一个 **居中、炫酷、可双击全屏的标题栏**，常见于大屏可视化界面中。
+
+- 外层容器用于定位和居中对齐；
+- 内层标题元素具备炫酷文字样式和交互事件；
+- 通过 Vue 实现动态标题内容和全屏功能。
+
+
+
+## 十二、opacity实现淡入淡出的动画效果： 鼠标移到摄像区域（比如视频窗口）时，在角落显示“点击进入全屏”之类的小提示
+
+
+
+~~~css
+解释代码：“/* 全屏提示样式 */
+.fullscreen-tip {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #03A9F4;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.camera-box:hover .fullscreen-tip {
+    opacity: 1;
+}”尤其是opacity
+
+
+
+~~~
+
+
+
+
+
+这段 CSS 是一个用于“全屏提示”的样式。我们来一行一行解释，尤其是你关心的 `opacity` 的作用。
+
+------
+
+### 📦 `.fullscreen-tip` 样式详解：
+
+```css
+.fullscreen-tip {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+```
+
+- `position: absolute`：绝对定位，通常相对于最近的定位父元素（比如 `.camera-box`）定位。
+- `bottom: 10px; right: 10px;`：元素定位在右下角，距离底部和右侧各 10px。
+
+```css
+    background-color: rgba(0, 0, 0, 0.6);
+```
+
+- 背景颜色是黑色，`0.6` 的透明度，让背景有点半透明的感觉。
+
+```css
+    color: #03A9F4;
+```
+
+- 文字颜色是蓝色（Material Blue）。
+
+```css
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+```
+
+- 添加了内边距、圆角和较小的字体。
+
+```css
+    opacity: 0;
+    transition: opacity 0.3s;
+```
+
+- `opacity: 0`：默认是**完全透明**的，看不见。
+- `transition: opacity 0.3s`：当 `opacity` 值发生变化时，**平滑过渡动画**持续 0.3 秒（即淡入/淡出效果）。
+
+------
+
+### 🚀 下面这段是触发显示的关键：
+
+```css
+.camera-box:hover .fullscreen-tip {
+    opacity: 1;
+}
+```
+
+意思是：当鼠标**悬停在 `.camera-box` 元素上时**，它内部的 `.fullscreen-tip` 元素会变得**不透明**（`opacity: 1`），显示出来。
+
+------
+
+### 💡 总结一下 `opacity`：
+
+- `opacity: 0` → 看不见
+- `opacity: 1` → 完全显示
+- 配合 `transition`，就能做出**淡入淡出的动画效果**
+
+------
+
+这段代码通常用于鼠标移到摄像区域（比如视频窗口）时，在角落显示“点击进入全屏”之类的小提示。
+
+
+
+## 十三、全屏js代码
+
+
+
+### 直接全屏：
+
+~~~js
+        toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                // 如果当前不是全屏状态，则请求全屏
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) { // Safari
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) { // IE11
+                    document.documentElement.msRequestFullscreen();
+                }
+            } else {
+                // 如果当前是全屏状态，则退出全屏
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) { // Safari
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE11
+                    document.msExitFullscreen();
+                }
+            }
+        },
+~~~
+
+使用
+
+~~~vue
+<div class="digisc-title-container">
+    <div class="digisc-title-area" @dblclick="toggleFullscreen"> {{ title }} </div>
+</div>
+~~~
+
+
+
+### 让某一个元素（图片）全屏
+
+~~~js
+        toggleFullscreen(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            // 没有元素在全屏状态
+            if (!document.fullscreenElement) {
+                // 把找到的元素设置为全屏模式
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.webkitRequestFullscreen) { // Safari
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) { // IE11
+                    element.msRequestFullscreen();
+                }
+            } else {
+                // 有元素在全屏状态
+                // 退出全屏模式
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) { // Safari
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE11
+                    document.msExitFullscreen();
+                }
+            }
+        },
+~~~
+
+使用：
+
+~~~vue
+<!-- webSocket的摄像头画面区域 -->
+<div v-else class="monitoringBoxWide">
+    <div class="camera-container">
+
+        <div class="camera-box left-camera" @dblclick="toggleFullscreen('leftCamera')">
+            <img id="leftCamera" style="width: 100%; height: 100%; object-fit: cover;" />
+            <div class="fullscreen-tip">双击全屏</div>
+        </div>
+
+        <div class="camera-box right-camera" @dblclick="toggleFullscreen('rightCamera')">
+            <img id="rightCamera" style="width: 100%; height: 100%; object-fit: cover;" />
+            <div class="fullscreen-tip">双击全屏</div>
+        </div>
+
+    </div>
+</div>
+~~~
+
+
+
+
+
+## 十五、皮肤相关的呈现方案要支持全局动态皮肤切换的能力
+
+
+
+~~~
+“css的编写建议皮肤相关的呈现方案要支持全局动态皮肤切换的能力”这句话如何理解，举一个例子进行说明
+~~~
+
+好的，我们来详细解读一下“CSS的编写建议皮肤相关的呈现方案要支持全局动态皮肤切换的能力”这句话，并用一个实例来说明。
+
+### 这句话如何理解？
+
+这句话的核心思想是：在编写前端样式（CSS）时，不要将颜色、字体、边框等决定“皮肤”外观的具体数值（如 `#FFFFFF`、`14px`）硬编码到各个组件的样式中。而是应该将这些值抽离出来，定义成一组“主题变量”。然后，所有组件都通过引用这些变量来设置自己的样式。
+
+这样做的好处是，当需要更换整个应用的皮肤（比如从白天模式切换到夜间模式，或者更换品牌主题色）时，我们 **不需要去修改成百上千个组件的CSS代码**，而 **只需要改变这些全局变量的值**，整个应用的外观就会立刻、统一地发生变化。
+
+这就是所谓的 **“全局动态皮肤切换能力”**。
+
+**总结一下关键点：**
+
+1.  **分离关注点**：将应用的结构（HTML）和布局样式与皮肤（颜色、字体等）样式分离开。
+2.  **抽象化**：使用变量（如 `主要背景色`、`主要文字颜色`）而不是具体值（如 `#FFF`、`#333`）。
+3.  **全局控制**：通过一个集中的地方来定义和修改这些变量，从而影响整个应用。
+
+### 举一个例子进行说明
+
+最现代且兼容性良好（兼容到 Chrome 49+）的实现方式是使用 CSS 自定义属性（CSS Variables）。下面我们用一个简单的 Vue 组件作为例子。
+
+假设我们有两个主题：`亮色主题 (light-theme)` 和 `暗色主题 (dark-theme)`。
+
+**第一步：定义全局主题变量**
+
+通常在一个全局的 CSS 文件中（比如 `main.css` 或 `App.vue` 的 `<style>` 标签中）定义这些变量。我们会把变量定义在 `:root` 选择器下，作为默认主题。然后，通过一个特定的类名（例如 `.dark-theme`）来覆盖这些变量，实现主题切换。
+
+```css
+/* src/assets/css/theme.css (或者其他全局CSS文件) */
+
+/* 1. 定义亮色主题（默认主题）的变量 */
+:root {
+  --bg-color: #ffffff; /* 背景色 */
+  --text-color: #303133; /* 主要文字颜色 */
+  --primary-color: #409EFF; /* 主题色 */
+  --border-color: #dcdfe6; /* 边框颜色 */
+  --card-bg-color: #f7f9fc; /* 卡片背景色 */
+}
+
+/* 2. 定义暗色主题的变量 */
+.dark-theme {
+  --bg-color: #1a1a1a;
+  --text-color: #e0e0e0;
+  --primary-color: #2a6fdb;
+  --border-color: #555555;
+  --card-bg-color: #2c2c2c;
+}
+
+/* 3. 为了让切换更平滑，可以给所有元素加上过渡效果 */
+* {
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+```
+
+**第二步：在组件中使用这些变量**
+
+现在，我们创建一个 `ThemeExample.vue` 组件。在组件的样式中，我们不再使用具体的颜色值，而是使用 `var()` 函数来引用我们定义的全局变量。
+
+```vue
+<!-- components/ThemeExample.vue -->
+<template>
+  <div class="card">
+    <h1 class="card-title">主题切换示例</h1>
+    <p class="card-content">
+      这是一段示例文本。点击下方的按钮，可以动态切换整个应用的亮色/暗色主题。
+    </p>
+    <button class="card-button" @click="toggleTheme">
+      切换主题
+    </button>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'ThemeExample',
+  methods: {
+    toggleTheme() {
+      // 获取 <html> 或 <body> 元素
+      const rootElement = document.documentElement; // 或者 document.body
+      // 切换 'dark-theme' 类
+      rootElement.classList.toggle('dark-theme');
+    }
+  }
+}
+</script>
+
+<style scoped>
+.card {
+  /* 使用变量来设置样式 */
+  background-color: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+  /* 使用变量来设置样式 */
+  color: var(--text-color);
+  margin-top: 0;
+}
+
+.card-content {
+  /* 使用变量来设置样式 */
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.card-button {
+  /* 使用变量来设置样式 */
+  background-color: var(--primary-color);
+  color: #ffffff; /* 按钮文字通常是白色，也可以设为变量 */
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+</style>
+```
+
+**第三步：在应用主入口加载**
+
+确保你的全局 CSS 文件被加载，并且在你的主应用文件（如 `App.vue`）中，页面的根元素（通常是 `<body>` 或一个 id 为 `app` 的 `<div>`）的背景也使用变量。
+
+```vue
+<!-- App.vue -->
+<template>
+  <div id="app">
+    <ThemeExample />
+  </div>
+</template>
+
+<script>
+import ThemeExample from './components/ThemeExample.vue';
+
+export default {
+  name: 'App',
+  components: {
+    ThemeExample
+  }
+}
+</script>
+
+<style>
+/* 引入全局主题样式 */
+@import './assets/css/theme.css';
+
+body {
+  font-family: sans-serif;
+  padding: 40px;
+  /* body 的背景也使用变量 */
+  background-color: var(--bg-color);
+}
+</style>
+```
+
+### 效果
+
+-   **初始状态**：页面加载时，`<html>` 元素没有 `.dark-theme` 类，所有变量都使用 `:root` 中定义的亮色主题值。页面显示为白底黑字。
+-   **点击按钮后**：`toggleTheme` 方法给 `<html>` 元素添加了 `.dark-theme` 类。CSS 规则 `.dark-theme` 的优先级更高，所以所有变量的值被覆盖为暗色主题的值。由于所有组件的颜色都来自于这些变量，整个应用的界面瞬间（或在0.3秒的过渡中）变成了黑底白字，实现了全局动态换肤。
+
+这个例子完美地诠释了如何通过抽离主题变量，让CSS支持全局动态皮肤切换的能力，大大提高了代码的可维护性和扩展性。
+
+
+
+## 16 1. CSS 书写顺序会影响优先级吗？
+
+**会影响，而且非常关键。**
+
+在 CSS 中，如果两个选择器的**权重（特异性）相同**，那么**写在后面的会覆盖写在前面的**。
+
+在你刚才的代码中：
+*   `.track-tab.active`（选中状态，两个类名，权重为 20）
+*   `.track-tab.has-job`（有作业状态，两个类名，权重为 20）
+
+它们的权重是一样的。
+*   **修改前**：`active` 写在前面，`has-job` 写在后面。当一个按钮同时具备这两个状态时，后面的 `has-job`（黄色）覆盖了前面的 `active`（蓝色），导致选中的股道也显示黄色。
+*   **修改后**：我把 `active` 移到了最后。这样当冲突时，蓝色（选中）就会覆盖黄色（有作业），实现了“选中即变蓝”的效果。
+
+---
+
+### 2. 为什么是 `.track-tab.has-job` 而不是 `.track-tab .has-job`？
+
+这两个写法的含义完全不同：
+
+*   **`.track-tab.has-job`（中间无空格）：**
+    *   **含义**：选择**同一个元素**，这个元素必须**同时**拥有 `track-tab` 和 `has-job` 这两个类名。
+    *   **对应的 HTML**：`<div class="track-tab has-job">...</div>`
+    *   **你的场景**：你的代码中，`active` 和 `has-job` 都是动态绑定在同一个 `<span class="track-tab ...">` 标签上的，所以必须用这种写法。
+
+*   **`.track-tab .has-job`（中间有空格）：**
+    *   **含义**：**后代选择器**。选择 `.track-tab` 元素**内部的子孙元素**，且该子孙元素拥有 `.has-job` 类名。
+    *   **对应的 HTML**：
+        ```html
+        <div class="track-tab">
+           <span class="has-job">...</span> <!-- 选中这个内部元素 -->
+        </div>
+        ```
+
+**结论**：你的代码中，状态类名是加在同一个容器上的，所以目前的写法 `.track-tab.has-job` 是正确的。
 

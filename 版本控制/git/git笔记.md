@@ -957,10 +957,10 @@ git pull origin main
 从远程下载到本地：
 
 ~~~sh
-git fetch origin 远程分支：本地分支
+git fetch origin 要拉取的远程分支（默认是拉取全部的提交）：本地分支
 ~~~
 
-
+**例子：**
 
 `git pull origin foo` 相当于：`git pull origin foo:o/foo`
 
@@ -968,15 +968,15 @@ git fetch origin 远程分支：本地分支
 
 ```shell
 git fetch origin foo;  # 拉取远程仓库的foo分支来更新本地的o/foo分支
-git merge o/foo # 把当前分支与更新后的o/foo分支进行合并 注意：是当前分支与o/foo分支进行合并而不是创建一个foo分支然后与o/foo分支进行合并
+git merge o/foo # 把当前分支与更新后的o/foo分支进行合并 注意：是当前分支与o/foo分支进行合并而不是创建一个foo分支然后与o/foo分支进行合并，所以不是合并两个分支的情况下，记得先自己切换到foo分支再进行pull
 ```
 
-还有...
+还有：
 
 `git pull origin bar~1:bugFix` 相当于：
 
 ```sh
-git fetch origin bar~1:bugFix # 表示下载到远程仓库bar分支的前一个的提交为止，下载到本地的bugFix分支
+git fetch origin bar~1:bugFix # 表示下载远程仓库bar分支的前一个的提交为止来更新本地的o/bar分支，最后把o/bar分支合并到本地的bugFix分支
 git merge bugFix
 ```
 
@@ -1146,7 +1146,7 @@ From https://ip:8443/r/robot-web
  ! [rejected]        develop    -> develop  (non-fast-forward) 解决
 ~~~
 
-当你遇到 `non-fast-forward` 错误时，说明本地的 `develop` 分支落后于远程的 `develop` 分支，可能是远程分支有新的提交，而本地分支没有同步这些更新。
+当你遇到 `non-fast-forward` 错误时，说明本地的 `develop` 分支落后于远程的 `develop` 分支，可能是远程分支有新的提交，而本地分支没有同步这些更新。**（乌龟中：是有未提交的修改，git怕给你覆盖了，所以会让你先提交才能够pull）**
 
 你可以按照以下步骤解决这个问题：
 
@@ -1181,6 +1181,17 @@ From https://ip:8443/r/robot-web
    ```
 
 这样就可以解决 `non-fast-forward` 错误。如果在过程中有任何问题，随时告诉我！
+
+**实际上:**
+
+（本地没有未提交的修改的话）执行下面两个命令就好了:
+
+~~~sh
+git pull --rebase origin develop
+git push origin develop
+~~~
+
+
 
 
 
@@ -1392,3 +1403,121 @@ git commit --amend
 git cherry-pick c3
 ```
 
+
+
+## 本地前端依赖文件的修改导致pull不了代码
+
+从错误信息来看，当你尝试执行 `git pull origin huaihua` 命令时，Git 检测到你的本地存在未提交的更改（具体是 `package-lock.json` 和 `package.json` 文件），这些更改将会被来自远程分支 `huaihua` 的更改覆盖。因此 Git 阻止了这次合并以避免数据丢失。
+
+这里有几种解决方案可以解决这个问题：
+
+### 方案一：暂存当前更改
+
+如果你希望保留当前工作目录下的更改，并且稍后再处理它们，可以使用 `git stash` 来暂存你的更改：
+
+```bash
+git stash
+```
+
+然后你可以安全地进行 `git pull` 操作：
+
+```bash
+git pull origin huaihua
+```
+
+完成后，如果你想恢复之前的工作，可以使用：
+
+```bash
+git stash pop
+```
+
+### 方案二：提交或放弃本地更改
+
+1. **如果想保留本地更改**：首先将你的更改提交：
+
+    ```bash
+    git add .
+    git commit -m "保存本地更改"
+    ```
+
+   然后执行 `git pull`。可能会遇到需要合并的情况，根据提示操作即可。
+
+2. **如果不需要本地更改**：可以先丢弃本地的修改：
+
+    ```bash
+    git reset --hard HEAD
+    ```
+   
+   这会撤销所有未提交的更改，请谨慎使用。之后你就可以安全地执行 `git pull` 了。
+
+
+
+### 5.4 修改已经提交的commit信息
+
+是的，可以修改已经提交（commit）的提交信息。根据您要修改的提交是最近一次提交还是较早的历史提交，方法有所不同。
+
+### 1. 修改最近一次的提交信息
+
+如果想修改的提交是最新的一次提交，并且还**没有推送（push）**到远程仓库，这是最简单的情况。
+
+您可以使用 `git commit --amend` 命令：
+
+```bash
+git commit --amend
+```
+
+执行此命令后，Git 会打开您的默认文本编辑器，并显示最近一次的提交信息。您可以直接修改这个信息，然后保存并关闭编辑器。新的提交信息就会覆盖旧的。
+
+如果您只是想修改提交信息，而不想修改任何文件内容，这个命令非常方便。如果您在上次提交后又修改了一些文件，并想将这些修改包含在同一次提交中，可以先 `git add` 这些文件，然后再执行 `git commit --amend`。
+
+**注意**：如果这个提交已经被推送到了远程仓库，修改后您需要使用强制推送来更新远程分支：
+
+```bash
+git push --force <remote-name> <branch-name>
+```
+
+### 2. 修改历史中的某次或多次提交信息
+
+如果您想修改的不是最近一次提交，而是更早的历史提交，您需要使用交互式变基（interactive rebase）。
+
+**步骤如下：**
+
+1.  首先，确定您要修改的提交范围。例如，如果您要修改最近3个提交中的某一个，可以使用 `HEAD~3`。或者，您也可以找到您要修改的那个提交的父提交的哈希值。
+
+2.  运行交互式 rebase 命令：
+
+    ```bash
+    # N 是您要回顾的提交数量
+    git rebase -i HEAD~N
+    
+    # 或者使用特定提交的哈希值（注意是目标提交的父提交）
+    git rebase -i <commit-hash>
+    ```
+
+3.  执行命令后，会打开一个文本编辑器，里面列出了您选定范围内的所有提交，每行一个，格式如下：
+
+    ```
+    pick f7f3f6d commit message 1
+    pick 310154e commit message 2
+    pick a5f4a0d commit message 3
+    ```
+
+4.  找到您想要修改信息的那一行或多行，将其前面的 `pick` 关键字改为 `reword` (或者简写为 `r`)。
+
+    ```
+    pick f7f3f6d commit message 1
+    reword 310154e commit message 2  <-- 将 pick 改为 reword
+    pick a5f4a0d commit message 3
+    ```
+
+5.  保存并关闭编辑器。
+
+6.  之后，Git 会按照顺序逐个地为您标记为 `reword` 的提交打开一个新的编辑器，让您重新输入提交信息。
+
+7.  修改完毕后，保存并关闭编辑器。Git 会继续处理下一个，直到所有标记的提交都处理完毕。
+
+**重要警告：**
+
+修改历史提交会改变这些提交以及其后所有提交的 SHA-1 哈希值。如果您已经将这些提交推送到了远程仓库，您需要**强制推送** (`git push --force` 或更安全的 `git push --force-with-lease`) 来更新远程分支。
+
+**强制推送会重写远程仓库的历史记录，这可能会严重影响正在与您协作的其他人**。在执行此操作之前，请务必与您的团队成员沟通，确保他们知道您要重写历史记录。

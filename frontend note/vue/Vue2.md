@@ -4,7 +4,7 @@
 
 ## 入门案例
 
-### 环境配置：
+### node环境配置，npm下载依赖：
 
 vscode插件：https://blog.csdn.net/weixin_38203203/article/details/93124390
 
@@ -23,6 +23,76 @@ npm install -g cnpm@5.1 --registry=http://registry.npm.taobao.org
 安装node：略
 
 使用nvm管理node版本：https://blog.csdn.net/m0_62173728/article/details/131992891  ，https://blog.csdn.net/ThisEqualThis/article/details/125893548
+
+
+
+## 下载依赖速度慢处理(镜像或代理)
+
+管理员运行后：配置镜像、配置代理（使用规则模式快很多）、使用cnpm替换npm
+
+~~~
+只回答我的问题，“E:\BRI\SafetyLinkNovoItem\SafetyLinkNovo\SafetyLinkNovo\DoorSysPlatform\web-client-admin>npm config list
+; cli configs
+metrics-registry = "https://registry.npmmirror.com/"
+scope = ""
+user-agent = "npm/6.14.18 node/v14.21.3 win32 x64"
+
+; userconfig C:\Users\Gloom\.npmrc
+proxy = "http://127.0.0.1:7890/"
+registry = "https://registry.npmmirror.com/"
+sass_binary_site = ""
+
+; node bin location = C:\Program Files\nodejs\node.exe
+; cwd = E:\BRI\SafetyLinkNovoItem\SafetyLinkNovo\SafetyLinkNovo\DoorSysPlatform\web-client-admin
+; HOME = C:\Users\Gloom
+; "npm config ls -l" to show all defaults.
+
+”这样子是没有设置镜像源是吗，如何设置镜像源
+~~~
+
+
+
+根据你提供的 `npm config list` 输出信息，你 **已经成功设置了镜像源**。
+
+请看这一行：
+
+```
+registry = "https://registry.npmmirror.com/"
+```
+
+`https://registry.npmmirror.com/` 就是淘宝 NPM 镜像源的地址。当你执行 `npm install` 等命令时，npm 会从这个镜像地址下载包，而不是从国外的官方源 `https://registry.npmjs.org/` 下载，这通常会大大提高下载速度。
+
+所以，你不需要再进行额外的设置了。
+
+如果你想更换为其他的镜像源，可以使用以下命令：
+
+例如，换回官方源：
+
+```bash
+npm config set registry https://registry.npmjs.org/
+```
+
+再例如，换回淘宝镜像源（和你当前的一样）：
+
+```bash
+npm config set registry https://registry.npmmirror.com/
+```
+
+另外，我注意到你还设置了代理：
+
+```
+proxy = "http://127.0.0.1:7890/"
+```
+
+请确保这个代理服务正在你的电脑上运行，否则即使设置了正确的镜像源，npm 也可能因为无法通过代理连接到网络而导致安装失败。如果你没有在使用代理，或者不确定它是什么，可以考虑将其移除：
+
+```bash
+npm config delete proxy
+```
+
+
+
+
 
 **Vue语法检编译查规则配置**：
 
@@ -753,6 +823,45 @@ https://uniapp.dcloud.net.cn/tutorial/vue-components.html#%E5%8D%95%E5%90%91%E6%
 
 
 
+#### ref使用子组件的方法来实现
+
+1）父组件
+
+~~~vue
+<!-- 故障相册 -->
+<el-dialog title="提示" :visible.sync="isShowFaultAlbum" width="80%"  :append-to-body="true">
+    <div style="height: 600px;">
+        <FaultPhotoAlbum ref="faultAlbumRef"></FaultPhotoAlbum>
+    </div>
+</el-dialog>
+~~~
+
+2）
+
+~~~js
+// 跳转到故障列表页面
+        skipFault(index, row, tag) {
+            this.isShowFaultAlbum = true;
+            this.$nextTick(() => {
+                // 等待组件渲染完成，每次打开都主动调用
+                this.$refs.faultAlbumRef.setInspectionTaskNum(row.inspectionTaskNum);
+            });
+        },
+~~~
+
+3）子组件
+
+~~~js
+    methods: {
+		setInspectionTaskNum(inspectionTaskNum){
+			this.inspectionTaskNum = inspectionTaskNum;
+			this.isView = true;
+		},
+}
+~~~
+
+
+
 
 
 #### 子级向父级传递数据:$emit方法 + 使用自定义事件传值
@@ -824,7 +933,7 @@ export default {
 		methods:{
 			sendData(){
 				console.log("hello.vue: " + this.childData)
-				// 4.调用$emit方法，实现子级向父级发送数据
+				// 4.调用$emit方法，触发父级的myevent事件，实现子级向父级发送数据
 				this.$emit("myevent",this.childData);
 			}
 			
@@ -1079,6 +1188,531 @@ Counter.vue:
 
 
 
+# 一、通用的参数传递方式VueX
+
+
+
+## **Vuex 介绍**
+
+Vuex 是 Vue.js 官方提供的 **全局状态管理库**，用于在 Vue 组件之间共享和管理应用的状态。它遵循 **集中式状态管理** 的思想，将应用的所有组件共享的数据存储在一个全局的 `store`（仓库）中，并提供了 **响应式的、可预测的数据流**。
+
+------
+
+## **Vuex 的核心概念**
+
+Vuex 主要由以下几个部分组成：
+
+1. **State（状态）**：存储应用的全局数据，所有组件都可以访问。
+2. **Mutations（同步修改状态）**：定义修改 `state` 的方法，必须是同步操作。
+3. **Actions（异步操作）**：用于处理异步请求，然后提交 `mutations` 来更新 `state`。
+4. **Getters（计算属性）**：类似 Vue 组件中的 `computed`，用于从 `state` 派生出数据。
+5. **Modules（模块化）**：Vuex 支持将 `store` 按模块拆分，方便管理。
+
+------
+
+## **Vuex vs 直接使用对象和方法**
+
+|              | Vuex                                                     | 直接使用对象和方法                             |
+| ------------ | -------------------------------------------------------- | ---------------------------------------------- |
+| **数据存储** | 统一存储在 `state` 中                                    | 组件的 `data` 或 `sessionStorage/localStorage` |
+| **数据修改** | 通过 `mutations` 进行修改，保证可追踪性                  | 直接修改对象，难以追踪                         |
+| **数据获取** | 组件通过 `this.$store.state.xxx` 获取数据                | 组件间通过 `props` 传递或 `$emit/$on` 事件     |
+| **数据共享** | 所有组件都能访问 `state`                                 | 需要手动传递数据                               |
+| **异步操作** | 通过 `actions` 处理异步，再调用 `mutations` 修改 `state` | 直接使用 `axios` 请求并修改数据                |
+| **调试能力** | Vue DevTools 允许查看 `state` 变化                       | 需手动打印调试                                 |
+
+------
+
+## **Vuex 代码示例**
+
+### **1. 创建 Vuex Store**
+
+```javascript
+import Vue from 'vue';
+import Vuex from 'vuex';
+
+Vue.use(Vuex);
+
+const store = new Vuex.Store({
+  state: {
+    count: 0, // 共享的状态
+  },
+  mutations: {
+    increment(state) {
+      state.count++; // 只能在 mutations 里修改 state
+    },
+  },
+  actions: {
+    asyncIncrement({ commit }) {
+      setTimeout(() => {
+        commit('increment'); // 异步操作后调用 mutation
+      }, 1000);
+    },
+  },
+  getters: {
+    doubleCount(state) {
+      return state.count * 2; // 计算属性
+    },
+  },
+});
+
+export default store;
+```
+
+### **2. 在组件中使用 Vuex**
+
+#### **例子1：keep-alive缓存组件**
+
+index.js:
+
+~~~js
+import Vue from 'vue';
+import Vuex from 'vuex';
+
+import {swapArrayItem} from '../components/common/utils';
+
+Vue.use(Vuex);
+
+const store = new Vuex.Store({
+    state: {
+		common: {
+		  resetCacheMark: false, // 是否重新加载缓存组件的标志
+           reCacheMark : false, // 是否缓存组件的标志
+		},
+
+    },
+
+    mutations: {
+		setResetCacheMark(state, resetCacheMark) {
+		  state.common.resetCacheMark = resetCacheMark;
+		},
+        setReCacheMark(state,reCacheMark){
+			state.common.reCacheMark = reCacheMark;
+		},
+});
+
+
+export default store;
+~~~
+
+
+
+app.vue中：
+
+~~~vue
+<template>
+    <div id="app">
+		<keep-alive include="digital-screen" :exclude="excludedComponents">
+		    <router-view v-if="isRouterAlive"></router-view>
+		</keep-alive>
+    </div>
+</template>
+<script>
+	
+    export default {
+        name: 'App',
+        provide () {
+            return {
+                reload: this.reload
+            }
+        },
+        data () {
+            return {
+                isRouterAlive: true,
+				excludedComponents: [], // 存放要排除的组件
+            }
+        },
+		watch : {
+			// 监听 Vuex 中 resetCacheMark 的变化
+			'$store.state.common.resetCacheMark': function(newValue) {
+				  if(newValue == true){
+					console.log(`清空缓存`);
+					this.resetCache();
+				  }
+			},
+			// 登录后重新设置digital-screen可缓存
+			'$store.state.common.reCacheMark': function(newValue) {
+				  if(newValue == true){
+					console.log(`开启缓存`);
+					this.startCache();
+				  }
+			}
+		},
+        methods: {
+            reload () {
+                this.isRouterAlive = false
+                this.$nextTick(function () {
+                    this.isRouterAlive = true
+                })
+            },
+			resetCache() {
+                // 排除的优先级比include="digital-screen"要大！
+				this.excludedComponents = ["digital-screen"]; // 注销时清除相应组件的缓存
+			},
+			startCache(){
+				this.excludedComponents = [];
+			},
+        }
+    }
+</script>
+~~~
+
+
+
+缓存2：父页面中的子组件切换缓存，
+
+~~~vue
+<div class="digisc-main">
+    <keep-alive include="task-list"> // 展示的组件name为task-list时才进行缓存
+        <component
+                   :is="currentComponent"
+                   ref="bodyComponent"
+                   @switch-component="sonPageSwitchComponent"
+                   :initData="initData"
+                   ></component>
+    </keep-alive>
+</div>
+~~~
+
+被缓存的组件task-list中：
+
+~~~js
+	// keep-alive相关的钩子函数
+	activated() {
+	    // console.log("B 组件被激活了！");
+	},
+	deactivated() {
+       
+	    if (this.$route.path !== '/login') {
+			// console.log("B 组件被缓存，但暂时隐藏");
+         // 跳转到登录界面了，说明是注销
+	    } else {
+			// console.log("注销时，清空 B 组件缓存");
+			this.$destroy(); // 销毁组件，防止登出清除缓存时再次缓存
+	    }
+	},
+~~~
+
+
+
+注销时：
+
+~~~js
+        loginOut() {
+            this.$confirm('确定退出系统?', '提示', {type:'warning'}).then(()=>{
+                logout().then(
+                    () => {
+                        sessionStorage.clear();
+						// 通知 App.vue 清空 keep-alive 缓存
+						this.$store.commit('setResetCacheMark', true);
+						this.$store.commit('setReCacheMark', false);
+                        this.$router.push('/login');
+                    },
+                    () => {
+                        sessionStorage.clear();
+						// 通知 App.vue 清空 keep-alive 缓存
+						this.$store.commit('setResetCacheMark', true);
+						this.$store.commit('setReCacheMark', false);
+                        this.$router.push('/login');
+                    }
+                );
+            });
+        },
+~~~
+
+登录时：
+
+~~~js
+		onLoginSucc(respBody, inputPasswd=null, jumpToDashBoard=true) {
+			// ...省略无关代码
+			// 登录成功，设置不清除缓存的组件
+			this.$store.commit('setResetCacheMark', false);
+			this.$store.commit('setReCacheMark', true);
+
+		},
+~~~
+
+
+
+
+
+#### 例子2：语法糖
+
+```vue
+<template>
+  <div>
+    <p>Count: {{ count }}</p>
+    <p>Double Count: {{ doubleCount }}</p>
+    <button @click="increment">增加</button>
+    <button @click="asyncIncrement">异步增加</button>
+  </div>
+</template>
+
+<script>
+import { mapState, mapMutations, mapActions, mapGetters } from 'vuex';
+
+export default {
+  computed: {
+    ...mapState(['count']), // 访问 state
+    ...mapGetters(['doubleCount']), // 访问 getters
+  },
+  methods: {
+    ...mapMutations(['increment']), // 访问 mutations
+    ...mapActions(['asyncIncrement']), // 访问 actions
+  },
+};
+</script>
+```
+
+------
+
+## **Vuex 的优势**
+
+✅ **集中管理状态**：所有组件共享的数据都存储在 `state`，避免了组件间数据混乱。
+ ✅ **易于调试**：Vue DevTools 提供了时间旅行调试，能清晰查看 `state` 变化。
+ ✅ **组件解耦**：不需要 `props` 逐级传递，任何组件都能直接访问 `state`。
+ ✅ **可预测性**：通过 `mutations` 进行修改，保证 `state` 变化可跟踪。
+
+------
+
+## **何时使用 Vuex？**
+
+### **适合使用 Vuex 的场景**
+
+- 需要 **多个组件共享** 相同的数据，比如用户信息、权限、主题设置等。
+- 组件之间通信 **过于复杂**，`props` 和 `emit` 不能很好地管理数据流。
+- 需要 **全局状态管理**，例如购物车、登录状态、后台管理等。
+
+### **不适合使用 Vuex 的场景**
+
+- 仅在 **单个组件内部** 维护数据的情况，比如 `isModalOpen` 这样的局部状态。
+- 小型项目，使用 `props` 和 `$emit` 足够传递数据，不需要 Vuex。
+
+------
+
+## **总结**
+
+1. Vuex 适用于 **需要在多个组件之间共享数据** 的场景，比如登录状态、用户权限等。
+2. Vuex 通过 `state` 统一管理数据，`mutations` 负责同步修改，`actions` 处理异步逻辑，`getters` 计算派生数据。
+3. 与普通对象和方法相比，Vuex 提供了 **更好的数据追踪、调试能力和组件解耦**，适用于复杂的前端项目。
+
+如果你的项目状态管理较复杂，使用 Vuex 是一个不错的选择！ 🚀
+
+
+
+这段代码是 Vue 组件中使用 Vuex 的写法，主要通过 `mapState`、`mapMutations`、`mapActions` 和 `mapGetters` 将 Vuex `store` 中的状态、方法等映射到组件的 `computed` 和 `methods` 里，方便在模板 (`template`) 中直接使用。
+ 下面我们来逐步解析这段代码的作用。
+
+------
+
+## **代码解析**
+
+```javascript
+import { mapState, mapMutations, mapActions, mapGetters } from 'vuex';
+```
+
+🔹 `mapState`、`mapMutations`、`mapActions` 和 `mapGetters` 是 Vuex 提供的辅助函数，用于简化 Vue 组件访问 `store` 的代码。
+
+```javascript
+export default {
+  computed: {
+    ...mapState(['count']), // 访问 Vuex state
+    ...mapGetters(['doubleCount']), // 访问 Vuex getters
+  },
+  methods: {
+    ...mapMutations(['increment']), // 访问 Vuex mutations
+    ...mapActions(['asyncIncrement']), // 访问 Vuex actions
+  },
+};
+```
+
+这部分代码是 Vue 组件的 `computed`（计算属性）和 `methods`（方法）部分，使用了 Vuex 的辅助函数来映射 `store` 中的数据和方法。
+
+------
+
+## **各个辅助函数的作用**
+
+### **1. `mapState` - 绑定 `state` 到组件的 `computed`**
+
+```javascript
+computed: {
+  ...mapState(['count'])
+}
+```
+
+👆 这行代码等价于：
+
+```javascript
+computed: {
+  count() {
+    return this.$store.state.count;
+  }
+}
+```
+
+💡 **作用**：
+
+- 让 `count` 直接变成组件的计算属性 (`computed`)，可以在 `template` 里 `{{ count }}` 直接使用。
+
+------
+
+### **2. `mapGetters` - 绑定 `getters` 到组件的 `computed`**
+
+```javascript
+computed: {
+  ...mapGetters(['doubleCount'])
+}
+```
+
+👆 这行代码等价于：
+
+```javascript
+computed: {
+  doubleCount() {
+    return this.$store.getters.doubleCount;
+  }
+}
+```
+
+💡 **作用**：
+
+- ```
+  doubleCount
+  ```
+
+   是 Vuex 
+
+  ```
+  getters
+  ```
+
+   中计算派生的数据，比如：
+
+  ```javascript
+  getters: {
+    doubleCount(state) {
+      return state.count * 2;
+    }
+  }
+  ```
+
+- 组件可以直接使用 `{{ doubleCount }}` 显示 `count` 的两倍。
+
+------
+
+### **3. `mapMutations` - 绑定 `mutations` 到组件的方法**
+
+```javascript
+methods: {
+  ...mapMutations(['increment'])
+}
+```
+
+👆 这行代码等价于：
+
+```javascript
+methods: {
+  increment() {
+    this.$store.commit('increment');
+  }
+}
+```
+
+💡 **作用**：
+
+- 让 `increment` 方法变成 Vue 组件的方法，点击按钮时可以 `this.increment()` 调用。
+
+- ```
+  increment
+  ```
+
+   方法实际上是触发 Vuex 的 
+
+  ```
+  mutations
+  ```
+
+  ：
+
+  ```javascript
+  mutations: {
+    increment(state) {
+      state.count++;
+    }
+  }
+  ```
+
+------
+
+### **4. `mapActions` - 绑定 `actions` 到组件的方法**
+
+```javascript
+methods: {
+  ...mapActions(['asyncIncrement'])
+}
+```
+
+👆 这行代码等价于：
+
+```javascript
+methods: {
+  asyncIncrement() {
+    this.$store.dispatch('asyncIncrement');
+  }
+}
+```
+
+💡 **作用**：
+
+- 让 `asyncIncrement` 方法变成 Vue 组件的方法，可以 `this.asyncIncrement()` 调用。
+
+- ```
+  asyncIncrement
+  ```
+
+   方法是 Vuex 
+
+  ```
+  actions
+  ```
+
+   里的异步操作，比如：
+
+  ```javascript
+  actions: {
+    asyncIncrement({ commit }) {
+      setTimeout(() => {
+        commit('increment'); // 延迟 1 秒后调用 mutations 修改 state
+      }, 1000);
+    }
+  }
+  ```
+
+
+
+------
+
+## **总结**
+
+| Vuex 方式                        | 作用                            | 对应 Vue 代码                                                |
+| -------------------------------- | ------------------------------- | ------------------------------------------------------------ |
+| `mapState(['count'])`            | 绑定 `state` 到组件的计算属性   | `computed: { count() { return this.$store.state.count } }`   |
+| `mapGetters(['doubleCount'])`    | 绑定 `getters` 到组件的计算属性 | `computed: { doubleCount() { return this.$store.getters.doubleCount } }` |
+| `mapMutations(['increment'])`    | 绑定 `mutations` 到组件的方法   | `methods: { increment() { this.$store.commit('increment') } }` |
+| `mapActions(['asyncIncrement'])` | 绑定 `actions` 到组件的方法     | `methods: { asyncIncrement() { this.$store.dispatch('asyncIncrement') } }` |
+
+🚀 **优势：**
+
+1. **代码简洁**：不需要手写 `this.$store.state.xxx`，用 `mapState` 直接映射。
+2. **增强可读性**：`mapMutations`、`mapActions` 让 `store` 逻辑更清晰。
+3. **方便扩展**：如果 `store` 里有多个 `state`、`mutations`，可以轻松映射多个。
+
+这样，你就能高效地使用 Vuex 了！🎯
+
+
+
+# 二、
+
 ### 计算属性与侦听器
 
 #### computed:计算属性
@@ -1148,6 +1782,25 @@ computedTotalNum() {
 
 
 
+~~~js
+    watch: {
+		// 新值与旧值都可获取到
+      value(newVal, oldVal) {
+        let param = {
+                    inspectionTaskNum: this.inspectionTaskNum ? this.inspectionTaskNum : '',
+                    failureType: newVal == true ? this.failureType : '',
+        };
+
+      },
+
+
+    },
+~~~
+
+
+
+
+
 ##### 监听路由路径的变化
 
 
@@ -1193,9 +1846,15 @@ export default{
 
 
 
+
+
 #### 比较
 
 ![image-20240804214656602](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240804214656602.png)
+
+
+
+
 
 
 
@@ -1309,6 +1968,8 @@ export default{
 ![image-20240804222343019](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240804222343019.png)
 
 ![image-20240804222517752](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20240804222517752.png)
+
+
 
 #### 具名插槽 v-slot
 
@@ -1956,7 +2617,7 @@ vue如何实现当isWhole是false时，就让<view class="invoiceCards">中的in
 ### 方案2: 动态绑定内联样式
 
 ```html
-<view class="invoiceCards" :style="{ backgroundColor: !isWhole ? 'rgb(252, 195, 31)' : 'w' }">
+<view class="invoiceCards" :style="{ backgroundColor: !isWhole ? 'rgb(252, 195, 31)' : '' }">
   <!-- 其他内容 -->
 </view>
 ```
@@ -2319,3 +2980,281 @@ methods: {
 - **适用于复杂场景**，例如多个输入框或组件中用户进行操作时，都能通过全局事件监听触发相应的处理函数。
 
 这样实现后，无论用户选择了用户名并点击了回车，还是直接在密码框输入并点击回车，都会触发 `handleLogin` 函数，确保登录操作的顺利进行。
+
+
+
+## 四、`@dblclick` 鼠标双击事件
+
+`@dblclick` 是一个鼠标双击事件（Double Click Event），用于监听用户在元素上双击鼠标的操作。通常，它用在需要响应用户双击行为的场景，比如打开某个项目、选中文本等。
+
+在 Vue.js 中，`@dblclick` 是事件监听的简写方式，等同于 `v-on:dblclick`，它会触发一个函数或方法来处理双击事件。
+
+例如：
+
+```html
+<template>
+  <div @dblclick="handleDoubleClick">双击我</div>
+</template>
+
+<script>
+export default {
+  methods: {
+    handleDoubleClick() {
+      alert('元素被双击了！');
+    }
+  }
+}
+</script>
+```
+
+这段代码中，`@dblclick="handleDoubleClick"` 表示监听 `dblclick` 事件，并在事件触发时调用 `handleDoubleClick` 方法。
+
+
+
+
+
+## 五、$emit,$on 事件通信
+
+~~~
+解释代码：bus.$emit('accDevTypeChanged')
+bus.$on('accDevTypeChanged')，业务为用户选择切换机器人、360的选项后，$emit + $on 进行广播通知，使页面展示用户选择的数据类型
+~~~
+
+
+
+这段代码使用了 **Vue 的事件总线（Event Bus）** 机制，利用 `$emit` 和 `$on` 在组件之间进行**事件通信**。
+
+### **代码解释**
+
+#### 1. `bus.$emit('accDevTypeChanged')`
+
+- `bus` 代表的是 Vue 实例，通常用作事件总线（`new Vue()` 或 `Vue.observable({})`）。
+- `$emit` 方法触发（广播）名为 `'accDevTypeChanged'` 的事件。
+- 当用户选择 **切换机器人或 360 选项** 后，该事件会被触发，通知页面更新。
+
+#### 2. `bus.$on('accDevTypeChanged')`
+
+- `$on` 监听 `'accDevTypeChanged'` 事件，一旦该事件被触发，就会执行相应的回调函数。
+- 监听到事件后，页面会更新，展示用户选择的设备类型（机器人或 360）。
+
+### **示例代码**
+
+#### **事件总线的实现**
+
+在 Vue 2.x 中，通常会创建一个全局的 `bus` 事件总线：
+
+```javascript
+// eventBus.js
+import Vue from 'vue';
+export const bus = new Vue();
+```
+
+#### **组件 A（触发事件，用户切换设备类型）**
+
+```javascript
+import { bus } from '@/eventBus';
+
+methods: {
+  changeDeviceType() {
+    // 用户选择了不同的设备（机器人或 360）
+    bus.$emit('accDevTypeChanged', this.selectedDeviceType);
+  }
+}
+```
+
+#### **组件 B（监听事件，更新页面展示）**
+
+```javascript
+import { bus } from '@/eventBus';
+
+created() {
+  bus.$on('accDevTypeChanged', (deviceType) => {
+    this.currentDeviceType = deviceType; // 更新页面数据
+  });
+}
+```
+
+### **总结**
+
+- `bus.$emit('accDevTypeChanged')`：触发事件（用户切换设备类型）。
+- `bus.$on('accDevTypeChanged')`：监听事件（页面组件接收并更新 UI）。
+- 事件总线 `bus` 让**非父子组件**之间也可以进行数据传递。
+
+如果你的项目是 Vue 3，建议使用 **`mitt`** 代替 `$emit/$on`，因为 Vue 3 已经移除了事件总线。
+
+
+
+~~~
+使用vueX也可以实现类似的效果吧，有什么区别
+~~~
+
+
+
+是的，**Vuex 也可以实现类似的效果**，但它与 **Event Bus（$emit / $on）** 在**使用场景和作用范围**上有很大区别。
+
+------
+
+## **📌 区别对比**
+
+| 方式                         | 适用场景                                 | 数据管理                                              | 作用范围                                                | 维护成本                             |
+| ---------------------------- | ---------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- | ------------------------------------ |
+| **Event Bus（$emit / $on）** | 组件间的临时、简单通信                   | **仅用于事件通知**，不存储数据                        | **局部（特定组件间）**，适用于 **兄弟组件或非父子组件** | **较低**（适用于小型项目或简单交互） |
+| **Vuex**                     | **全局状态管理**，适用于多个组件共享数据 | **集中管理状态（state）**，支持持久化、调试、插件扩展 | **全局（整个应用）**，适用于**多个组件共享数据**        | **较高**（适用于中大型项目）         |
+
+------
+
+## **📌 Vuex 实现 accDevTypeChanged**
+
+如果你想用 Vuex 来代替 Event Bus，可以这样实现：
+
+### **🔹 1. 在 Vuex store 里定义状态和 mutation**
+
+```javascript
+// store.js
+import Vue from 'vue';
+import Vuex from 'vuex';
+
+Vue.use(Vuex);
+
+export default new Vuex.Store({
+  state: {
+    deviceType: '' // 设备类型（机器人/360）
+  },
+  mutations: {
+    setDeviceType(state, type) {
+      state.deviceType = type;
+    }
+  }
+});
+```
+
+------
+
+### **🔹 2. 在触发事件的组件中（类似 `$emit`）**
+
+```javascript
+// 组件 A：用户切换设备类型
+methods: {
+  changeDeviceType(type) {
+    this.$store.commit('setDeviceType', type); // 提交 mutation 更新 state
+  }
+}
+```
+
+------
+
+### **🔹 3. 在监听事件的组件中（类似 `$on`）**
+
+```javascript
+// 组件 B：监听并更新 UI
+computed: {
+  currentDeviceType() {
+    return this.$store.state.deviceType; // 读取 Vuex state
+  }
+}
+```
+
+------
+
+## **📌 何时用 Event Bus，何时用 Vuex？**
+
+| **场景**                                       | **推荐方案**                     |
+| ---------------------------------------------- | -------------------------------- |
+| **组件之间简单的事件通知（点击切换、弹窗等）** | **Event Bus（$emit / $on）**     |
+| **全局共享数据，多个组件需要访问相同的状态**   | **Vuex**                         |
+| **项目较小，组件通信需求简单**                 | **Event Bus 或 Vue 3 的 `mitt`** |
+| **项目较大，需要状态管理、持久化、调试工具**   | **Vuex**                         |
+
+------
+
+## **📌 结论**
+
+- **Event Bus（$emit / $on）适用于轻量级的事件通信**，比如 **某个组件触发另一个组件的 UI 更新**，但数据不会长期存储。
+- **Vuex 适用于管理全局共享状态**，当多个组件需要访问同一个数据时，Vuex 可以确保数据**同步和一致性**。
+
+对于你的场景（**用户选择设备类型后通知页面更新**）：
+
+- **如果只是兄弟组件间传递一次性数据**，`Event Bus` 更简单。
+- **如果设备类型需要多个组件共享并长期管理**，`Vuex` 更合适。
+
+如果是 Vue 3，推荐使用 `mitt` 替代 Event Bus，或 `Pinia` 替代 Vuex。
+
+
+
+
+
+## 六、this.$nextTick的使用
+
+
+
+![image-20250414143250226](Vue2.assets/image-20250414143250226.png)
+
+
+
+
+
+## 七、混入（Mixin）实现代码复用
+
+
+
+~~~js
+解释代码：“import RobotMixin from '../api/mixin';
+
+export default {
+
+    mixins: [RobotMixin],        //切割车的型号
+    methods:{
+        formatTrainCodes(code) {
+
+            return this.calcTrainFullDispTag(code);
+        }
+    }
+        ”
+~~~
+
+
+
+![image-20250417113846323](Vue2.assets/image-20250417113846323.png)
+
+
+
+这段代码是一个 Vue 组件（或 JavaScript 模块）的一部分，主要作用是引入一个混入（Mixin）`RobotMixin`，并定义了一个方法 `formatTrainCodes`。下面是详细解释：
+
+------
+
+### ✅ 代码详解
+
+```js
+import RobotMixin from '../api/mixin';
+```
+
+- 这行代码引入了一个名为 `RobotMixin` 的混入模块。
+- 混入（Mixin）是 Vue 中的一种代码复用机制，通常包含一些组件中可以复用的方法、生命周期函数、计算属性等。
+- 路径 `'../api/mixin'` 指向该模块的位置。
+
+```js
+export default {
+    mixins: [RobotMixin],        // 切割车的型号
+```
+
+- `export default` 导出一个默认对象，也就是 Vue 组件的配置对象。
+- `mixins` 是 Vue 组件的一个选项，它接收一个混入对象的数组。
+- 把 `RobotMixin` 加入进来，说明当前组件会“继承” `RobotMixin` 中定义的方法、数据等。
+- 注释 `//切割车的型号` 可能是作者为了提示：这个 mixin 里有关于“切割车型号”的逻辑。
+
+```js
+    formatTrainCodes(code) {
+        return this.calcTrainFullDispTag(code);
+    }
+```
+
+- 定义了一个名为 `formatTrainCodes` 的方法。
+- 这个方法接收一个参数 `code`（可能是车次、车型编号等），并调用 `this.calcTrainFullDispTag(code)` 来处理它。
+- `calcTrainFullDispTag` 很可能是在 `RobotMixin` 中定义的方法（通过 `mixin` 继承进来）。
+- 这个方法的作用应该是“格式化车次代码”，比如把原始的 `code` 转换成一个完整的显示标签。
+
+------
+
+### 🧠 总结
+
+这个组件通过引入 `RobotMixin`，复用了其中的逻辑（尤其是 `calcTrainFullDispTag` 方法），并封装了一个本地方法 `formatTrainCodes` 来格式化传入的车次代码。这种写法让逻辑更清晰、复用性更高

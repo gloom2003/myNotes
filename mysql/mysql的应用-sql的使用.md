@@ -1526,6 +1526,8 @@ ORDER BY s1.salary DESC, s1.emp_no ASC
 
 ## 4 DCL 数据库控制语言
 
+
+
 ### 4.1 在windows上使用cmd操作数据库：
 
 从0开始，下载mysql，配置环境变量(mysql安装目录下的bin目录)到path中  或者 每次使用都在mysql的bin目录下面打开cmd
@@ -1636,6 +1638,219 @@ grant all privileges on *.* to root@"%" identified by ".";
 ```sql
 revoke all|权限1,权限2...(列1,...) on 数据库.表 from 用户
 ```
+
+
+
+好的，没有问题。这是一份详细的笔记，记录了在已安装MySQL 5.7的情况下，如何成功安装并配置MySQL 8.0在3308端口作为Windows服务运行的全过程。
+
+---
+
+### 4.2 **Windows下安装MySQL 8.0与5.7共存（使用3308端口），注册成服务**
+
+本笔记旨在记录在一台已运行MySQL 5.7（占用3306端口）的Windows服务器上，添加并配置MySQL 8.0（解压版）在3308端口上运行的完整步骤。
+
+#### **前提条件**
+*   操作系统：Windows
+*   已有MySQL 5.7作为服务运行在3306端口。
+*   MySQL 8.0已解压到指定目录，例如 `E:\mysql_3306\mysql-8.0.30-winx64`。
+
+---
+
+#### **第一步：检查目标端口是否被占用**
+
+在安装前，首先确认3308端口是空闲的。
+
+```powershell
+# 在PowerShell或CMD中运行，检查3308端口的监听情况
+netstat -ano | findstr ":3308"
+```
+*   **预期结果**：该命令无任何输出，表示端口未被占用，可以继续。
+
+---
+
+#### **第二步：为MySQL 8.0创建配置文件**
+
+在MySQL 8.0的根目录下 (`E:\mysql_3306\mysql-8.0.30-winx64`) 手动创建一个名为 `my.ini` 的文件，并填入以下内容。
+
+```ini
+[mysqld]
+# 设置MySQL的安装目录
+basedir=E:/mysql_3306/mysql-8.0.30-winx64
+# 设置MySQL数据库的数据存放目录
+datadir=E:/mysql_3306/mysql-8.0.30-winx64/data
+# 设置端口
+port=3308
+# 服务端使用的字符集默认为UTF8MB4
+character-set-server=utf8mb4
+# 创建新表时将使用的默认存储引擎
+default-storage-engine=INNODB
+
+[mysql]
+# 设置MySQL客户端默认字符集
+default-character-set=utf8mb4
+
+[client]
+# 设置MySQL客户端连接服务端时默认使用的端口
+port=3308
+# 设置MySQL客户端默认字符集
+default-character-set=utf8mb4
+```
+*   **注释**：此文件是MySQL服务的核心配置，指定了安装路径、数据路径和最重要的**运行端口3308**。
+
+---
+
+#### **第三步：初始化MySQL 8.0数据库**
+
+**重要提示**：此步骤会生成一个临时root密码，请务必留意并复制保存。
+
+1.  **准备工作**：如果 `E:\mysql_3306\mysql-8.0.30-winx64` 目录下已存在 `data` 文件夹，请先**手动将其删除**。
+
+2.  **执行初始化**：打开 **普通的PowerShell或CMD窗口**，进入 `bin` 目录并执行初始化命令。
+
+    ```powershell
+    # 切换到MySQL 8.0的bin目录
+    cd E:\mysql_3306\mysql-8.0.30-winx64\bin
+    
+    # 执行初始化命令
+    .\mysqld --initialize --console
+    ```
+
+3.  **记录临时密码**：命令执行成功后，会在输出日志的末尾找到类似下面的一行，`s+7WiEiiqPow` 就是生成的临时密码。
+
+    ```
+    A temporary password is generated for root@localhost: s+7WiEiiqPow
+    ```
+
+---
+
+#### **第四步：安装MySQL 8.0为Windows服务**
+
+此步骤必须在**管理员权限**的命令行中执行。
+
+1.  **以管理员身份**打开一个新的PowerShell或CMD窗口。
+
+2.  **执行安装命令**：
+
+    ```powershell
+    # 切换到MySQL 8.0的bin目录
+    cd E:\mysql_3306\mysql-8.0.30-winx64\bin
+    
+    # 将MySQL 8.0安装为名为"MySQL8"的服务
+    mysqld --install MySQL8
+    ```
+*   **预期结果**：提示 `Service successfully installed.`
+
+---
+
+#### **第五步：启动MySQL 8.0服务**
+
+继续在**管理员权限**的命令行窗口中执行。
+
+```powershell
+# 使用net start命令启动服务
+net start MySQL8
+```
+*   **预期结果**：提示 `MySQL8 服务已经启动成功。`
+
+**下面的可以登录数据库图形界面进行操作：**
+
+---
+
+#### **第六步：登录并修改root密码**
+
+服务已成功运行，最后一步是使用临时密码登录并设置一个新密码。
+
+1.  **登录MySQL**：
+
+    ```powershell
+    # 使用root用户登录到3308端口的MySQL实例
+    E:\mysql_3306\mysql-8.0.30-winx64\bin\mysql -h 127.0.0.1 -P 3308 -u root -p
+    ```
+    *   执行后会提示 `Enter password:`，此时输入第三步中记录的临时密码并回车。
+
+2.  **修改密码**：登录成功后，在 `mysql>` 提示符下执行以下SQL命令来修改密码。
+
+    ```sql
+    -- 将'YourNewPassword'替换为你的新密码
+    -- 使用mysql_native_password是为了兼容一些旧的数据库客户端
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourNewPassword';
+    
+    -- 刷新权限使密码生效
+    FLUSH PRIVILEGES;
+    
+    -- 退出
+    exit;
+    ```
+*   **注释**：至此，MySQL 8.0已配置完成，可以使用新密码通过3308端口正常访问。
+
+
+
+# 查看mysql的版本
+
+您好！您可以通过多种方式查看 MySQL 的版本。下面我将为您介绍几种常用的方法，并以笔记的形式进行总结，方便您后续查阅。
+
+### 方法一：通过命令行（无需登录MySQL）
+
+这是最直接的方法之一。打开您服务器的命令行终端（比如 Windows 的 CMD 或 PowerShell，或者 Linux 的 Terminal），然后输入以下命令：
+
+```bash
+mysql --version
+```
+
+或者使用缩写形式：
+
+```bash
+mysql -V
+```
+
+这个命令会直接输出 MySQL 客户端和服务器的版本信息，通常会是类似这样的内容：
+`mysql  Ver 8.0.27 for Win64 on x86_64 (MySQL Community Server - GPL)`
+
+### 方法二：登录MySQL后查询
+
+如果您已经登录到 MySQL 的命令行界面，可以使用 SQL 查询语句来获取版本信息。
+
+1.  首先，登录到 MySQL：
+    ```bash
+    mysql -u [您的用户名] -p
+    ```
+    执行后，系统会提示您输入密码。
+
+2.  登录成功后，可以执行以下任一命令：
+
+    *   使用 `SELECT` 语句查询版本函数：
+        ```sql
+        SELECT VERSION();
+        ```
+    *   查看服务器状态信息，其中也包含版本号：
+        ```sql
+        STATUS;
+        ```
+    *   显示所有与版本相关的变量：
+        ```sql
+        SHOW VARIABLES LIKE '%version%';
+        ```
+        这个命令会提供更详细的版本信息，包括主版本号、协议版本等。
+
+---
+
+### 总结笔记
+
+**快速查看MySQL版本的方法:**
+
+1.  **命令行（未登录时最快）:**
+    *   `mysql --version`
+    *   `mysql -V`
+
+2.  **SQL查询（已登录MySQL）:**
+    *   `SELECT VERSION();` (最常用)
+    *   `STATUS;` (信息更全面)
+    *   `SHOW VARIABLES LIKE '%version%';` (查看所有版本相关变量)
+
+3.  **在 C# 代码中获取:**
+    *   建立连接后，读取 `MySqlConnection` 对象的 `ServerVersion` 属性。
+
+希望这些信息能帮助到您！如果还有其他问题，请随时提出。
 
 
 
@@ -1978,4 +2193,820 @@ HAVING
 			FROM employees
     )
 ~~~
+
+
+
+
+
+
+
+## 九 **MySQL 视图（View）**
+
+**视图**（View）是一个虚拟表，它基于 SQL 查询的结果集，并不会存储数据，而是存储 SQL 查询逻辑。使用视图可以简化查询、提高安全性（限制访问特定列或行），以及提高代码可读性。
+
+------
+
+### **视图的基本语法**
+
+```sql
+CREATE VIEW 视图名称 AS
+SELECT 查询语句;
+```
+
+------
+
+### **示例**
+
+假设有一个 `employees`（员工表）：
+
+```sql
+CREATE TABLE employees (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50),
+    department VARCHAR(50),
+    salary DECIMAL(10,2)
+);
+```
+
+插入一些数据：
+
+```sql
+INSERT INTO employees (name, department, salary) VALUES
+('张三', '技术部', 8000),
+('李四', '市场部', 7500),
+('王五', '技术部', 8200),
+('赵六', '财务部', 7200);
+```
+
+------
+
+### **创建视图**
+
+如果我们只想让管理层看到 `技术部` 的员工信息，可以创建一个 `tech_employees` 视图：
+
+```sql
+CREATE VIEW tech_employees AS
+SELECT id, name, salary FROM employees WHERE department = '技术部';
+```
+
+------
+
+### **使用视图**
+
+我们可以像查询普通表一样查询视图：
+
+```sql
+SELECT * FROM tech_employees;
+```
+
+返回的结果：
+
+```
++----+------+--------+
+| id | name | salary |
++----+------+--------+
+| 1  | 张三  | 8000.00 |
+| 3  | 王五  | 8200.00 |
++----+------+--------+
+```
+
+------
+
+### **修改或删除视图**
+
+**修改视图**
+
+```sql
+CREATE OR REPLACE VIEW tech_employees AS
+SELECT id, name, department FROM employees WHERE department = '技术部';
+```
+
+**删除视图**
+
+```sql
+DROP VIEW tech_employees;
+```
+
+------
+
+### **总结**
+
+视图适用于简化复杂查询、限制数据访问、提高代码可读性，但由于其本质上是查询的封装，性能可能不如直接查询表。
+
+
+
+
+
+# 实际使用
+
+
+
+# mysql8的json存储与查询
+
+
+
+好的，我们来详细探讨一下 MySQL 8 中 JSON 的存储和查询，并提供一个完整的示例。
+
+在 MySQL 8.0 版本中，对 JSON 的支持得到了显著增强，引入了原生的 `JSON` 数据类型和一系列强大的函数，使得在关系型数据库中存储和操作半结构化数据变得非常高效和方便。
+
+### 1. JSON 数据存储
+
+你可以像使用其他数据类型（如 `INT`, `VARCHAR`）一样，在创建表时将列的类型指定为 `JSON`。
+
+**使用 `JSON` 类型的核心优势:**
+
+*   **自动验证:** 当你向 `JSON` 类型的列插入或更新数据时，MySQL 会自动检查其内容是否为合法的 JSON 格式。如果格式不正确，操作会失败并报错。这保证了数据的完整性。
+*   **优化存储格式:** JSON 数据不是以传统的纯文本字符串存储的，而是以一种优化的二进制格式进行内部存储。这种格式允许服务器快速地通过键（key）或索引（index）直接访问 JSON 文档中的元素，而无需读取和解析整个文档，大大提高了查询效率。
+
+### 2. JSON 数据查询和操作
+
+MySQL 提供了一套丰富的内置函数和操作符来处理 JSON 数据。
+
+*   **路径表达式 (Path Expressions):** 这是定位 JSON 文档中特定元素的方式。路径以 `$` 符号开头，代表整个 JSON 文档。
+    *   `.key_name`: 选择对象中指定键的值。
+    *   `[index]`: 选择数组中指定索引的元素 (索引从 0 开始)。
+    *   `.*`: 选择一个 JSON 对象中的所有值。
+    *   `[*]` : 选择一个 JSON 数组中的所有元素。
+
+*   **常用操作符和函数:**
+    *   `->` (列提取操作符): `column->path`，用于提取 JSON 中的值，等同于 `JSON_EXTRACT()` 函数。返回的结果是 JSON 格式的（例如，字符串会带引号）。
+    *   `->>` (内联路径操作符): `column->>path`，与 `->` 类似，但它会自动去除结果的引号，将其作为纯字符串返回。这在 `WHERE` 子句或 `ORDER BY` 子句中非常有用。
+    *   `JSON_SET(json_doc, path, val, ...)`: 更新或添加值。如果路径已存在，则更新其值；如果不存在，则添加新值。
+    *   `JSON_INSERT(json_doc, path, val, ...)`: 插入值。只有当路径不存在时，才会插入新值。
+    *   `JSON_REPLACE(json_doc, path, val, ...)`: 替换值。只有当路径存在时，才会替换其值。
+    *   `JSON_REMOVE(json_doc, path, ...)`: 删除 JSON 中的一个或多个元素。
+    *   `JSON_CONTAINS(target, candidate[, path])`: 判断 `candidate` JSON 是否被 `target` JSON 所包含。常用于检查数组中是否包含某个值。
+    *   `JSON_SEARCH(json_doc, one_or_all, search_str, ...)`: 在 JSON 文档中搜索指定的字符串，并返回匹配项的路径。
+
+### 3. 使用示例
+
+下面是一个完整的例子，模拟一个产品信息表，其中产品的规格属性用 JSON 存储。
+
+**步骤 1: 创建一个带有 JSON 列的表**
+
+我们创建一个 `products` 表，其中 `attributes` 列用来存储产品的各种属性。
+
+```sql
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    attributes JSON,
+    INDEX idx_brand ((attributes->>'$.brand')) -- 可以在JSON字段的特定路径上创建索引
+);
+```
+> **注意:** 在上面的例子中，我们在 `attributes` 的 `brand` 字段上创建了一个索引。这要求 `brand` 的值是字符串类型，并且我们使用了 `->>` 操作符来获取未加引号的值。这种索引可以极大地加速基于品牌的查询。
+
+**步骤 2: 插入 JSON 数据**
+
+向 `products` 表中插入几条记录，`attributes` 字段包含了复杂的嵌套对象和数组。
+
+```sql
+INSERT INTO products (name, attributes) VALUES
+('笔记本电脑', '{
+    "brand": "Apple", 
+    "model": "MacBook Pro 14", 
+    "specs": {"cpu": "M3", "ram_gb": 18, "storage_gb": 512}, 
+    "colors": ["深空灰", "银色"]
+}'),
+('智能手机', '{
+    "brand": "Huawei", 
+    "model": "Mate 60 Pro", 
+    "specs": {"cpu": "Kirin 9000s", "ram_gb": 12, "storage_gb": 512}, 
+    "colors": ["黑色", "白色", "绿色"]
+}'),
+('显示器', '{
+    "brand": "Dell", 
+    "model": "U2723QE", 
+    "size_inch": 27, 
+    "ports": ["HDMI", "DP", "USB-C"]
+}');
+```
+
+**步骤 3: 查询和操作 JSON 数据**
+
+**a) 提取基本信息 (演示 `->` 和 `->>` 的区别)**
+
+查询所有产品的品牌。
+
+```sql
+-- 使用 ->，结果是 JSON 字符串，带有引号
+SELECT name, attributes->'$.brand' AS brand FROM products;
+-- 结果:
+-- '笔记本电脑', '"Apple"'
+-- '智能手机', '"Huawei"'
+-- '显示器', '"Dell"'
+
+-- 使用 ->>，结果是普通字符串，没有引号
+SELECT name, attributes->>'$.brand' AS brand FROM products;
+-- 结果:
+-- '笔记本电脑', 'Apple'
+-- '智能手机', 'Huawei'
+-- '显示器', 'Dell'
+```
+
+**b) 提取嵌套对象的值**
+
+查询笔记本电脑的 CPU 型号和内存大小。
+
+```sql
+SELECT 
+    name, 
+    attributes->>'$.specs.cpu' AS cpu,
+    attributes->>'$.specs.ram_gb' AS ram
+FROM products 
+WHERE name = '笔记本电脑';
+-- 结果:
+-- '笔记本电脑', 'M3', '18'
+```
+
+**c) 在 `WHERE` 子句中使用 JSON 值进行过滤**
+
+查询内存（ram\_gb）大于 16 GB 的产品。
+
+```sql
+SELECT name, attributes->>'$.model' as model, attributes->'$.specs.ram_gb' AS ram
+FROM products
+WHERE CAST(attributes->>'$.specs.ram_gb' AS UNSIGNED) > 16;
+```
+> **重要提示:** `->>` 提取出的值本质上是字符串。当进行数值比较时，最好使用 `CAST` 函数（如 `CAST(... AS UNSIGNED)` 或 `CAST(... AS DECIMAL)`) 将其显式转换为数字类型，以确保比较的准确性，并能有效利用相关索引。
+
+**d) 查询 JSON 数组中的元素**
+
+查询所有包含“白色”外观选项的商品。
+
+```sql
+SELECT name, attributes->>'$.model' AS model
+FROM products
+WHERE JSON_CONTAINS(attributes->'$.colors', '["白色"]');
+-- 结果:
+-- '智能手机', 'Mate 60 Pro'
+```
+
+**e) 更新 JSON 数据 (`JSON_SET`)**
+
+将笔记本电脑的内存（ram\_gb）升级到 36GB，并添加一个新属性 `on_sale`。
+
+```sql
+UPDATE products
+SET attributes = JSON_SET(
+    attributes, 
+    '$.specs.ram_gb', 36,  -- 更新已有路径
+    '$.on_sale', true      -- 添加新路径
+)
+WHERE name = '笔记本电脑';
+```
+
+**f) 删除 JSON 中的元素 (`JSON_REMOVE`)**
+
+假设显示器的 `ports` 属性中 "HDMI" 端口描述有误，需要移除。
+
+```sql
+-- 首先找到 "HDMI" 在数组中的索引
+-- （假设我们已知 HDMI 是第一个，索引为 0）
+UPDATE products
+SET attributes = JSON_REMOVE(attributes, '$.ports[0]')
+WHERE name = '显示器';
+```
+
+### 总结
+
+MySQL 8 的原生 `JSON` 支持为处理非结构化或半结构化数据提供了强大的灵活性。它让你能够在保持关系型数据库事务性和一致性的同时，享受到类似 NoSQL 数据库的模式灵活性（Schema Flexibility）。对于需要存储配置信息、用户画像、标签、可变属性等场景，`JSON` 数据类型是一个非常理想的选择。
+
+
+
+## Mybatis-Plus或者JPA有对这个json的支持吗，只能写sql语句来实现吗，使用Json存储和添加字段相比有什么大优势
+
+当然，这是一个非常实际且重要的问题。直接写原生 SQL 并不是唯一的方法，现代的 ORM 框架（如 Mybatis-Plus 和 JPA）都提供了不同程度的支持。
+
+我们来分别看一下，并深入探讨 JSON 存储的核心优势。
+
+### Mybatis-Plus (MP) 对 JSON 的支持
+
+Mybatis-Plus 自身是构建在 Mybatis 之上的，它继承了 Mybatis 的所有特性，包括强大的类型处理器（TypeHandler）。因此，MP 对 JSON 的支持非常好，主要通过以下两种方式实现：
+
+**1. 查询：使用 `QueryWrapper` 包装原生 SQL 片段**
+
+对于 JSON 字段的查询条件，因为涉及到 `->`、`->>` 或 `JSON_CONTAINS` 等数据库原生函数，你无法直接使用 MP 提供的 `eq`, `gt` 等方法。但你可以使用 `apply` 方法来无缝嵌入这些 SQL 片段。
+
+**示例：**
+
+假设我们有上一节的 `Product` 实体，我们想查询品牌是 "Apple" 的产品。
+
+```java
+// Java 实体类
+@Data
+@TableName("products")
+public class Product {
+    private Integer id;
+    private String name;
+    // 关键点：JSON字段暂时映射为 String
+    private String attributes; 
+}
+
+// 查询代码
+@Autowired
+private ProductMapper productMapper;
+
+public List<Product> findByBrand(String brand) {
+    QueryWrapper<Product> queryWrapper = new QueryWrapper<>();
+    
+    // 使用 apply 方法来调用数据库原生函数
+    // 'attributes->>"$.brand"' 是 MySQL 8 的 JSON 路径语法
+    // {0} 是占位符，防止 SQL 注入
+    queryWrapper.apply("attributes->>'$.brand' = {0}", brand);
+    
+    return productMapper.selectList(queryWrapper);
+}
+```
+
+**2. 映射：使用自定义 `TypeHandler` 实现自动转换 (推荐)**
+
+每次都手动处理 `String` 类型的 JSON 很麻烦。更好的方式是定义一个 `TypeHandler`，让 Mybatis 在读写数据库时自动完成 **JSON 字符串** 与 **Java 对象** 之间的转换。
+
+好消息是，Mybatis-Plus 已经内置了基于 Jackson 的 `JacksonTypeHandler`，你几乎不需要自己写。
+
+**步骤：**
+
+**a) 添加 Jackson 依赖 (如果项目中没有的话)**
+
+```xml
+<dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-databind</artifactId>
+    <version>2.13.3</version> <!-- 请使用较新版本 -->
+</dependency>
+```
+
+**b) 创建用于映射 JSON 的 Java DTO**
+
+```java
+@Data
+public class ProductAttributes {
+    private String brand;
+    private String model;
+    private Specs specs;
+    private List<String> colors;
+    private Boolean onSale;
+
+    @Data
+    public static class Specs {
+        private String cpu;
+        private Integer ramGb;
+        private Integer storageGb;
+    }
+}
+```
+
+**c) 在实体类中指定 `TypeHandler`**
+
+```java
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+
+@Data
+@TableName(value = "products", autoResultMap = true) // autoResultMap = true 很重要，它会让 MP 自动处理 TypeHandler
+public class Product {
+    private Integer id;
+    private String name;
+
+    @TableField(typeHandler = JacksonTypeHandler.class) // 声明使用 JacksonTypeHandler
+    private ProductAttributes attributes; // 字段类型直接就是我们的 DTO
+}
+```
+
+**d) 启动类或配置中开启支持**
+
+确保你的 `@MapperScan` 能扫描到 Mapper，并且 MP 的配置是正确的。现在，你可以像操作普通 Java 对象一样操作 `attributes` 字段了，MP 会在背后为你完成所有转换工作！
+
+```java
+// 插入/更新时，直接设置对象
+Product p = new Product();
+p.setName("新产品");
+ProductAttributes attrs = new ProductAttributes();
+attrs.setBrand("NewBrand");
+p.setAttributes(attrs);
+productMapper.insert(p); // MP 会自动将 attrs 对象序列化为 JSON 字符串存入数据库
+
+// 查询时，直接获取对象
+Product dbProduct = productMapper.selectById(1);
+ProductAttributes dbAttrs = dbProduct.getAttributes(); // 直接就是 ProductAttributes 对象
+System.out.println(dbAttrs.getBrand()); 
+```
+
+### JPA / Hibernate 对 JSON 的支持
+
+JPA 是一个规范，它的实现（如 Hibernate）也提供了对原生 JSON 类型的强大支持。
+
+**1. 映射：使用 `@JdbcTypeCode` (Hibernate 6+) 或自定义 `UserType`**
+
+从 Hibernate 6 开始，支持变得非常简单直接。
+
+```java
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+@Entity
+@Table(name = "products")
+public class Product {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String name;
+
+    @JdbcTypeCode(SqlTypes.JSON) // 核心注解：告诉 Hibernate 这个字段要按 JSON 处理
+    @Column(columnDefinition = "json") // 告诉数据库这是 JSON 类型
+    private ProductAttributes attributes; 
+    
+    // Getters and Setters...
+}
+```
+有了这个配置，Hibernate 会自动使用 Jackson (如果它在 classpath 中) 来做序列化和反序列化，体验和 MP 的 `TypeHandler` 非常相似。
+
+**2. 查询：使用 `function` 调用原生函数 或 写 Native Query**
+
+JPQL (JPA Query Language) 是平台无关的，所以它没有 `->>` 这样的操作符。但你可以通过 `function()` 来调用数据库的原生函数。
+
+```java
+// 在你的 JpaRepository 中
+public interface ProductRepository extends JpaRepository<Product, Integer> {
+
+    // 使用 JPQL 的 function()
+    @Query("SELECT p FROM Product p WHERE function('JSON_EXTRACT', p.attributes, '$.brand') = :brand")
+    List<Product> findByBrandWithJpqlFunction(@Param("brand") String brand);
+
+    // 或者直接写原生 SQL 查询
+    @Query(value = "SELECT * FROM products WHERE attributes->>'$.brand' = :brand", nativeQuery = true)
+    List<Product> findByBrandWithNativeQuery(@Param("brand") String brand);
+}
+```
+`function()` 的方式更受推荐，因为它比完全原生的 SQL 稍微多了一层抽象。
+
+---
+
+### JSON 存储 vs 添加新字段的核心优势
+
+这是一个架构选择问题，两者各有优劣。
+
+**JSON 字段的核心优势在于 “灵活性” 和 “开发效率”：**
+
+1.  **极高的灵活性 (Schema on Read):** 这是最大的优势。假设你的产品属性一开始只有品牌和型号。后来，业务要求增加内存、CPU、颜色等。再后来，某些产品有“尺寸”，另一些有“端口类型”。
+    *   **JSON 方案:** 你只需要修改你的 Java DTO (`ProductAttributes`) 并重新部署应用即可。**数据库表结构完全不需要动 (`ALTER TABLE`)**。这对于快速迭代的业务和避免数据库锁表、迁移风险至关重要。
+    *   **传统字段方案:** 每增加一个新属性，你就需要执行 `ALTER TABLE products ADD COLUMN ...`。这会涉及数据库部署、数据迁移脚本，流程更重，尤其是在大型系统中。
+
+2.  **避免稀疏列 (Sparse Columns):** 如果你有几十个可能的属性，但每个产品只用到其中的几个，传统方案会导致表里有很多 `NULL` 值。这不仅浪费空间（虽然 `NULL` 占空间小），也让表结构显得臃肿。JSON 将所有这些可变、可选的属性聚合在一个字段里，结构更紧凑。
+
+3.  **开发模型更贴近:** 在代码中，这些属性本来就是一个内聚的对象 (`ProductAttributes`)。将它整体映射到一个 JSON 字段，比将它的每个属性拆分到不同的列中，更能反映业务对象的本来面貌。
+
+**然而，JSON 也有需要权衡的劣势：**
+
+*   **查询复杂性:** `WHERE attributes->>'$.brand' = 'Apple'` 比 `WHERE brand = 'Apple'` 更复杂，也更容易出错。
+*   **数据库强制约束变弱:** 你无法在数据库层面为 JSON 内部的某个字段（如 `ram_gb`）设置 `NOT NULL` 约束或外键。这些数据一致性的校验责任更多地转移到了应用层。
+*   **索引性能:** 虽然 MySQL 8 可以在 JSON 路径上创建索引，但对于频繁用作查询、过滤、排序和连接的核心字段，将其作为顶级列并建立传统索引，性能通常会更好。
+
+**最佳实践和结论：**
+
+通常采用一种**混合模式 (Hybrid Model)**：
+
+*   **用传统字段存储:** 那些**稳定、核心、几乎所有记录都有、且经常用于查询过滤 (`WHERE`)、排序 (`ORDER BY`) 或连接 (`JOIN`)** 的属性。例如 `id`, `name`, `price`, `category_id`，甚至 `brand`（如果品牌是非常核心的查询条件）。
+*   **用 JSON 字段存储:** 那些**不固定、多变、不同记录间差异很大、或者嵌套层次很深**的描述性属性。例如 `specs` (规格), `options` (选项), `tags` (标签), `features` (特性列表) 等。
+
+这样，你既能享受到关系型数据库的严谨和高性能，又能获得 JSON 带来的灵活性和开发便利。
+
+
+
+# 设计竖向拓展的数据库表：数据库设计模式:事件溯源（Event Sourcing）或活动流（Activity Stream）
+
+~~~
+-- 请基于下面我提供的表结构来进行改造,使用类似status的方式来改造数据库表,比如:用一个字段 opt_type表示操作类型: 0：空 1：分闸申请  2：分闸完成  3：降弓  4：挂杆  5：放电  6：登记  7：销记  8：进出门  9：摘杆  10：供电申请  11：供电完成,再添加time时间字段和people人员字段,每进行一个流程,比如进行登记后,添加一条opt_type = 6,time = 当前时间 (在这里的意思就是登记时间),people = 当前人员(在这里的意思就是登记人员)的数据即可,其他的字段也是这样子time和people的意思会根据opt_type的不同而不同,但是一个流程要保证他们可以联系起来,可以被当做一个整体查询出来形成报表.
+~~~
+
+
+
+好的，我完全理解您的设计思路。您希望将所有离散的操作步骤统一记录成一个标准的“事件流”或“操作日志”，而不是为每个步骤创建固定的字段。
+
+这是一种非常灵活和现代的设计模式，通常被称为**事件溯源（Event Sourcing）**或**活动流（Activity Stream）**。它的核心优势在于：
+
+*   **极高的灵活性**：未来如果业务流程增加或修改，比如在“断电完成”和“降弓”之间增加一个“安全检查”步骤，我们只需要定义一个新的 `opt_type` 即可，无需修改数据库表结构。
+*   **完整的审计追踪**：每一项操作都被完整、原子地记录下来，非常便于审计、回溯和故障排查。
+
+根据您的这个思路，并结合之前讨论的业务细节（如一个操作可能涉及监护员等多人），我对您提供的表结构进行了改造。
+
+我们只需要两张核心业务表：`work_orders`（作业工单主表）和 `operation_logs`（操作日志表），再加上一张 `employees`（员工表）来管理人员信息。
+
+---
+
+### 优化后的数据库表设计（事件流模式）
+
+#### 1. `employees` (员工表)
+这张表是基础，用于统一管理人员信息，方便在日志中引用。
+
+```sql
+DROP TABLE IF EXISTS employees;
+CREATE TABLE employees (
+    id INT PRIMARY KEY AUTO_INCREMENT COMMENT '员工ID',
+    employee_no VARCHAR(100) UNIQUE COMMENT '员工工号',
+    name VARCHAR(100) NOT NULL COMMENT '员工姓名',
+    department VARCHAR(100) COMMENT '所属部门'
+) COMMENT '员工信息表';
+```
+
+#### 2. `work_orders` (作业工单表)
+这张表作为“作业”的实体，聚合了一次完整作业流程中的所有日志。它存储的是整个作业期间不变的信息。
+
+```sql
+DROP TABLE IF EXISTS work_orders;
+CREATE TABLE work_orders (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '作业工单ID',
+    track_info VARCHAR(100) NOT NULL COMMENT '股道(列位)',
+    trainset_no VARCHAR(50) COMMENT '车组号',
+    operation_date DATE NOT NULL COMMENT '作业日期',
+    status VARCHAR(50) NOT NULL COMMENT '当前工单状态',
+    remarks TEXT COMMENT '备注',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT '作业工单主表';
+```
+**说明**:
+*   我仍然保留了 `operation_date` 和 `status` 字段。`operation_date` 是报表要求的业务日期。`status` 字段能极大地简化查询，让您能快速筛选出处于特定状态（如“断电完成，待登顶”）的工单，而无需每次都扫描分析日志表，这是非常重要的性能优化。
+
+#### 3. `operation_logs` (操作日志表) - **核心改造**
+这张表是您设计的精髓所在。它用统一的结构记录下每一次操作事件。
+
+```sql
+DROP TABLE IF EXISTS operation_logs;
+CREATE TABLE operation_logs (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '日志ID',
+    work_order_id BIGINT NOT NULL COMMENT '关联的作业工单ID',
+    
+    -- 核心字段，定义了操作的类型
+    opt_type INT NOT NULL COMMENT '操作类型 (1:断电申请, 2:断电操作完成, 3:降弓确认, 4:车组放电, 5:登顶登记, 6:下顶销记, 7:供电申请, 8:供电操作完成, 9:领用作业牌, 10:归还作业牌)',
+    
+    -- 核心字段，记录操作发生的时间
+    operation_time DATETIME NOT NULL COMMENT '操作时间',
+    
+    -- 核心字段，记录主要操作人
+    employee_id INT NOT NULL COMMENT '主要操作人ID',
+    
+    -- 辅助字段，用于记录监护员、确认人等第二相关人
+    secondary_employee_id INT COMMENT '次要操作人ID (如监护员)',
+    
+    -- 辅助字段，用于存储额外信息，如卡号
+    details VARCHAR(255) COMMENT '详情备注 (如作业牌卡号)',
+    
+    FOREIGN KEY (work_order_id) REFERENCES work_orders(id),
+    FOREIGN KEY (employee_id) REFERENCES employees(id),
+    FOREIGN KEY (secondary_employee_id) REFERENCES employees(id)
+) COMMENT '统一操作日志表';
+
+```
+
+**这张表是如何工作的？**
+
+*   **关联性**：所有属于同一次作业的日志，都有相同的 `work_order_id`，这样就能把一个完整流程串联起来。
+*   **灵活性**：
+    *   **断电申请**：插入一条记录 `opt_type = 1`, `operation_time = '2025-03-06 12:50'`, `employee_id = (申请人ID)`。
+    *   **断电操作完成**（含监护员）：插入一条记录 `opt_type = 2`, `operation_time = '2025-03-06 12:55'`, `employee_id = (操作员ID)`, `secondary_employee_id = (监护员ID)`。
+    *   **登顶登记**：张三来登记，插入 `opt_type = 5`, `operation_time = ...`, `employee_id = (张三ID)`。李四来登记，再插入一条 `opt_type = 5`, `operation_time = ...`, `employee_id = (李四ID)`。
+    *   **领用作业牌**：插入 `opt_type = 9`, `operation_time = ...`, `employee_id = (领卡人ID)`, `details = 'A001'` (卡号)。
+    *   **归还作业牌**：插入 `opt_type = 10`, `operation_time = ...`, `employee_id = (还卡人ID)`, `secondary_employee_id = (收卡人ID)`, `details = 'A001'`。
+
+**如何生成报表？**
+
+当您需要为某个 `work_order_id` 生成报表时：
+1.  从 `work_orders` 表中查出基础信息（股道、车组号等）。
+2.  根据 `work_order_id` 从 `operation_logs` 表中查出与之相关的所有日志记录。
+3.  在您的应用程序代码中，遍历这些日志记录，根据 `opt_type` 将数据填充到报表模板中对应的位置。这个过程就像是做数据“透视”，将行记录还原成您最终需要的列格式。
+
+这个设计完全符合您的要求，既保证了流程的完整性，又提供了极高的扩展性，同时通过 `work_orders` 表的 `status` 字段兼顾了常用查询的性能。
+
+
+
+
+
+# 位运算设计数据库
+
+~~~
+1(0x001) | 2 (0x002)是什么意思	
+~~~
+
+
+
+这是一个**位运算（Bitwise Operation）**的表达式，在编程中非常常见，尤其用于处理权限、状态标志等场景。
+
+我来为您分解说明：
+
+*   **`1 (0x001)`**: `1` 是十进制数字，括号里的 `0x001` 是它对应的**十六进制**表示法。`0x` 是十六进制的通用前缀。
+*   **`2 (0x002)`**: 同理，`2` 是十进制数字，`0x002` 是它的十六进制表示法。
+*   **`|`**: 这个符号是**“按位或”（Bitwise OR）**运算符。它会对两个数字的二进制表示形式，在每一个位上进行“或”逻辑运算。
+
+### 计算过程
+
+“按位或”的规则是：对于每一个二进制位，只要两个数字中有一个是 `1`，那么结果的对应位就是 `1`。
+
+1.  **将数字转换为二进制：**
+    *   十进制 `1` 的二进制是 `0001`。
+    *   十进制 `2` 的二进制是 `0010`。
+
+2.  **执行“按位或”运算：**
+    我们把两个二进制数对齐，然后逐位进行比较。
+
+    ```
+      0 0 0 1   (十进制 1)
+    | 0 0 1 0   (十进制 2)
+    -----------
+      0 0 1 1   (运算结果)
+    ```
+    *   第0位：`1 | 0 = 1`
+    *   第1位：`0 | 1 = 1`
+    *   第2位：`0 | 0 = 0`
+    *   第3位：`0 | 0 = 0`
+
+3.  **将结果转换回十进制：**
+    *   二进制 `0011` 转换成十进制就是 `2^1 + 2^0 = 2 + 1 = 3`。
+
+所以，`1 (0x001) | 2 (0x002)` 的最终结果是 **`3`** (十六进制为 `0x003`)。
+
+### 为什么这么用？（实际应用场景）
+
+这种操作的核心思想是**用一个整数来存储一组开关（是/否）的状态**。
+
+想象一下，你有很多权限，每个权限都用一个只有一位是 `1` 的数字来代表（这些数字都是2的N次方）：
+*   `1` (`0001`) 代表 “读”权限
+*   `2` (`0010`) 代表 “写”权限
+*   `4` (`0100`) 代表 “执行”权限
+*   `8` (`1000`) 代表 “删除”权限
+
+*   **赋予权限（合并）**：如果你想给一个用户同时赋予“读”和“写”的权限，你就可以用 `|` 运算：
+    `权限值 = 1 | 2 = 3` (`0011`)
+    这个 `3` 就同时包含了读和写的状态。
+
+*   **检查权限**：如果你想检查权限值为 `3` (`0011`) 的用户是否拥有“写”(`2` 或 `0010`)的权限，你可以用**“按位与”(`&`)**运算符：
+    `(3 & 2)`  即 `(0011 & 0010)`  结果是 `0010` (也就是 `2`)。
+    因为结果不为0，所以他**拥有**“写”权限。
+
+    如果你检查他是否有“执行”(`4` 或 `0100`)权限：
+    `(3 & 4)` 即 `(0011 & 0100)` 结果是 `0000` (也就是 `0`)。
+    因为结果是0，所以他**没有**“执行”权限。
+
+**总结：** `1 | 2` 是一种高效地将两种状态（由数字1和2分别代表）合并为一个新状态（数字3）的方法。
+
+
+
+
+
+~~~
+一个股道有两个列位，短编组只使用一个列位时，建一个作业就可以了（一列位 或者 二列位），长编组用两个列位时，之前是建两个作业（一列位 + 二列位），用上面的|方式可以实现更加好的效果吗
+~~~
+
+**User**
+
+一个股道有两个列位，短编组只使用一个列位时，建一个作业就可以了（一列位 或者 二列位），长编组用两个列位时，之前是建两个作业（一列位 + 二列位），用上面的|方式可以实现更加好的效果吗
+
+---
+
+**Cursor**
+
+
+
+您提的这个问题非常棒，而且用 `|` 位运算的方式来解决是**完全可行且非常优雅的方案**。
+
+这正是位运算大放异彩的典型场景。它能将多个离散的状态（一列位、二列位）合并到一个整数字段中，完美地解决了您提出的“长编组建两个作业”的冗余问题。
+
+### 为什么这是一个更好的方案？
+
+1.  **数据一致性**：对于一个长编组的作业，它在现实世界中是 **一个** 任务。用位运算的方式，它在数据库里也只对应 `work_orders` 表里的 **一条** 记录。这保证了数据模型和物理现实的统一。
+2.  **逻辑简化**：无论是更新作业状态，还是查询作业日志，您都只需要和一个 `work_order_id` 打交道，而不是处理两个独立的作业ID，这会大大简化您的后端业务逻辑。
+3.  **查询灵活**：您可以非常高效地查询出所有“涉及一列位”的作业，或者所有“涉及二列位”的作业，甚至是“只在一列位上”的作业。
+
+---
+
+### 如何用位运算实现
+
+#### 1. 定义列位的“位掩码” (Bitmask)
+
+首先，在您的应用程序代码中（比如作为一个枚举或常量类），定义好每个列位所代表的数字。关键是要用2的N次方来赋值。
+
+*   **一列位**: `POSITION_1 = 1` (二进制: `0001`)
+*   **二列位**: `POSITION_2 = 2` (二进制: `0010`)
+
+以后如果扩展到四列位，就可以增加 `POSITION_3 = 4` (`0100`) 和 `POSITION_4 = 8` (`1000`)。
+
+#### 2. 修改数据库表结构
+
+将 `work_orders` 表中的 `track_position` 字段从 `VARCHAR` 类型改为 `INT` 或 `TINYINT` 类型，并更新注释。
+
+#### 3. 应用逻辑
+
+* **创建作业时 (使用 `|` 或运算):**
+
+  *   **短编组 (只用一列位):** 新建一条作业记录，`track_position` 字段的值为 `1`。
+  *   **短编组 (只用二列位):** 新建一条作业记录，`track_position` 字段的值为 `2`。
+  *   **长编组 (同时用一、二列位):** 新建一条作业记录，`track_position` 字段的值为 `1 | 2`，结果就是 **`3`**。
+
+* **查询作业时 (使用 `&` 与运算):**
+
+  * **查询所有涉及“一列位”的作业** (包括长编组和只在一列位的短编组):
+
+    ```sql
+    SELECT * FROM work_orders WHERE (track_position & 1) > 0;
+    ```
+
+    *   当 `track_position` 是 `1` (`0001`)，`1 & 1` = `1`。
+    *   当 `track_position` 是 `3` (`0011`)，`3 & 1` = `1`。
+    *   当 `track_position` 是 `2` (`0010`)，`2 & 1` = `0` (不符合)。
+
+  * **查询所有涉及“二列位”的作业**:
+
+    ```sql
+    SELECT * FROM work_orders WHERE (track_position & 2) > 0;
+    ```
+
+  * **查询只在“一列位”的短编组作业**:
+
+    ```sql
+    SELECT * FROM work_orders WHERE track_position = 1;
+    ```
+
+  * **查询所有长编组作业**:
+
+    ```sql
+    SELECT * FROM work_orders WHERE track_position = 3;
+    ```
+
+---
+
+### 前后对比
+
+| 场景              | 之前的做法                                                   | 现在（位运算）的做法                                         |
+| :---------------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| 短编组，一列位    | `INSERT INTO work_orders (..., track_position) VALUES (..., '1列位');` | `INSERT INTO work_orders (..., track_position) VALUES (..., 1);` |
+| 长编组，一+二列位 | `INSERT ... VALUES (..., '1列位');` <br> `INSERT ... VALUES (..., '2列位');`  **(两条记录)** | `INSERT ... VALUES (..., 3);` <br> **(一条记录)**            |
+
+### 最终表结构更新
+
+这是结合了此项优化的最新 `work_orders` 表结构：
+
+```sql
+DROP TABLE IF EXISTS work_orders;
+CREATE TABLE work_orders (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '作业工单ID',
+    
+    track_no VARCHAR(50) NOT NULL COMMENT '股道号 (如: 27)',
+    
+    -- 使用整数类型存储列位状态掩码
+    track_position INT NOT NULL COMMENT '列位 (位掩码: 1代表一列位, 2代表二列位, 3代表一和二列位)',
+    
+    trainset_no VARCHAR(50) COMMENT '车组号',
+    operation_date DATE NOT NULL COMMENT '作业日期',
+    
+    is_safety_interlock_enabled BOOLEAN DEFAULT TRUE COMMENT '是否引入安全联锁信号',
+    
+    status INT NOT NULL DEFAULT 0 COMMENT '当前工单状态 (0: 准备作业, 1: 作业中, 2: 作业结束)',
+    
+    remarks TEXT COMMENT '备注',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT '作业工单主表';
+```
+
+毫无疑问，使用位运算是处理这类“多选状态组合”问题的最佳实践之一。您的想法非常正确。
+
+```sql
+        SELECT * FROM work_orders WHERE (track_position & 1) > 0;
+```
+
+```sql
+        SELECT * FROM work_orders WHERE (track_position & 2) > 0;
+```
+
+```sql
+        SELECT * FROM work_orders WHERE track_position = 1;
+```
+
+```sql
+        SELECT * FROM work_orders WHERE track_position = 3;
+```
+
+```sql
+DROP TABLE IF EXISTS work_orders;
+CREATE TABLE work_orders (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '作业工单ID',
+    
+    track_no VARCHAR(50) NOT NULL COMMENT '股道号 (如: 27)',
+    
+    -- 使用整数类型存储列位状态掩码
+    track_position INT NOT NULL COMMENT '列位 (位掩码: 1代表一列位, 2代表二列位, 3代表一和二列位)',
+    
+    trainset_no VARCHAR(50) COMMENT '车组号',
+    operation_date DATE NOT NULL COMMENT '作业日期',
+    
+    is_safety_interlock_enabled BOOLEAN DEFAULT TRUE COMMENT '是否引入安全联锁信号',
+    
+    status INT NOT NULL DEFAULT 0 COMMENT '当前工单状态 (0: 准备作业, 1: 作业中, 2: 作业结束)',
+    
+    remarks TEXT COMMENT '备注',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT '作业工单主表';
+```
 

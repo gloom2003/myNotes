@@ -71,7 +71,7 @@
 
 ##### 步骤
 
-访问阿里云搜索容器镜像服务>镜像工具>镜像加速器
+访问阿里云搜索容器镜像服务>镜像工具>镜像加速器（已失效）
 按照操作文档的要求配置。
 
 在centos中执行：
@@ -89,6 +89,116 @@ sudo systemctl restart docker
 
 
 
+### 配置镜像加速
+
+~~~sh
+vim /etc/docker/daemon.json
+~~~
+
+
+
+修改：
+
+25年6月3号可用：
+
+~~~json
+{
+  "registry-mirrors": [
+    "https://docker.m.daocloud.io",
+    "https://docker.1ms.run"
+  ]
+}
+~~~
+
+重启与验证：
+
+~~~sh
+sudo systemctl restart docker
+docker info | grep -C 8 'Registry Mirrors'
+~~~
+
+当配置的镜像地址不可用时，Docker仍会继续使用官方镜像地址，您可以尝试同时配置多个镜像地址来提高容错率。
+
+
+
+### 从第三方获取tar包后直接解压
+
+参考：Docker - 直接下载Docker Hub的镜像tar包教程：https://www.hangge.com/blog/cache/detail_3306.html
+
+docker镜像tar包在线下载：https://pull.7ii.win/
+
+下载后上传到系统中：
+
+~~~sh
+# 解压获取镜像
+docker load -i xxx.tar
+docker images
+~~~
+
+
+
+
+
+
+
+### 把docker容器打包为tar包,在其他机器上进行离线安装
+
+您可能是指将Docker容器打包成一个镜像文件，然后可以下载并在其他机器上进行离线安装。这个过程通常包括几个步骤：提交容器更改以创建新镜像、为该镜像打标签（tag）、保存镜像为tar文件，最后可以在需要的机器上加载这个tar文件。下面是具体步骤：
+
+1. **提交容器更改**：如果您对容器做了任何修改，并希望把这些更改保存下来，首先需要提交这些更改来创建一个新的镜像。使用以下命令：
+
+   ```
+   docker commit [容器ID或容器名] [新的镜像名]
+   ```
+
+   例如：
+
+   ```
+   docker commit my_container my_new_image
+   ```
+
+2. **为镜像打标签**：为了方便管理和分发，您可以给这个镜像打一个标签。标签通常包含镜像名和版本号。使用`docker tag`命令：
+
+   ```
+   docker tag [现有镜像名]:[可选标签] [新的镜像名]:[标签]
+   ```
+
+   例如：
+
+   ```
+   docker tag my_new_image:latest my_new_image:v1
+   ```
+
+3. **保存镜像为tar文件**：接下来，您可以将镜像保存为一个tar文件，这样就可以把这个文件传输到其他机器上了。使用`docker save`命令：
+
+   ```
+   docker save -o <path_for_image.tar> [镜像名]:[标签]
+   ```
+
+   例如：
+
+   ```
+   docker save -o /home/user/my_new_image_v1.tar my_new_image:v1
+   ```
+
+4. **在目标机器上加载镜像**：一旦您有了这个tar文件，在目标机器上可以通过`docker load`命令来加载它：
+
+   ```
+   docker load -i <path_to_image.tar>
+   ```
+
+   例如：
+
+   ```
+   docker load -i /home/user/my_new_image_v1.tar
+   ```
+
+完成上述步骤后，您的Docker镜像就已经成功地从一台机器迁移到了另一台机器，且可以在没有网络连接的情况下进行安装。
+
+**注意：**镜像的版本与可运行的系统架构要保持一致
+
+
+
 ## 基础知识
 
 ###### 容器继续运行的条件
@@ -96,6 +206,8 @@ sudo systemctl restart docker
 docker容器运行必须有一个前台进程， 如果没有前台进程执行（如hello-world容器只打印了一些信息），容器认为空闲，就会自行退出。
 
 docker容器内的命令并不完整，如vim命令可能找不到。
+
+
 
 ## 2常用命令
 
@@ -194,7 +306,32 @@ docker run -v 宿主机目录:容器目录[:读写权限] 镜像名
 - ​		DockerHub的介绍
 - ​		构建镜像的DockerFile（VOLUME /var/lib/mysql）
 
-​			
+**例子说明：**
+
+在您提供的 Docker 命令中：
+`docker run -d -p 6379:6379 --name blog_redis --restart always -v redis_data:/data redis:7.0 redis-server --appendonly yes`
+
+参数 **`-v redis_data:/data`** 用于设置 Docker 的**卷 (volume)** 挂载。它的具体含义如下：
+
+*   `-v`：这是 `--volume` 的简写，用于将宿主机的文件或目录、或者一个 Docker 管理的卷挂载到容器内部。
+*   `redis_data:/data`：这部分定义了挂载的源和目标。
+    *   `redis_data`：这是**命名卷 (named volume)** 的名称。
+        *   如果名为 `redis_data` 的卷已经存在，Docker 会使用它。
+        *   如果不存在，Docker 会自动创建一个新的名为 `redis_data` 的卷。命名卷是由 Docker 管理的，用于持久化容器数据。它们存储在 Docker 主机上的特定位置（通常在 Docker 的安装目录下，例如 Linux 上的 `/var/lib/docker/volumes/`），但您通常不需要直接操作这些文件。
+    *   `/data`：这是容器内部的路径。当容器启动后，`redis_data` 卷的内容（如果是已存在的卷并有数据）或卷本身（如果是新创建的空卷）会被映射到容器文件系统中的 `/data` 目录。
+
+**总结来说，`-v redis_data:/data` 的作用是：**
+
+将一个名为 `redis_data` 的 Docker 命名卷挂载到容器内的 `/data` 目录。这样做的主要目的是**数据持久化**。
+
+在这个特定的命令中，`redis-server --appendonly yes` 表明 Redis 服务器被配置为以 AOF (Append Only File) 方式持久化数据。Redis 会将其数据写入其工作目录（通常在容器内配置为 `/data` 或其子目录）。由于 `/data` 目录被挂载到了 `redis_data` 卷，所以 Redis 产生的所有数据都会被保存在这个卷中，而不是容器的临时文件系统里。
+
+**这样做的好处是：**
+
+*   **数据持久性**：即使 `blog_redis` 容器被停止、删除或重新创建，只要 `redis_data` 卷没有被显式删除，存储在其中的 Redis 数据就会保留下来。下次启动 Redis 容器并挂载同一个 `redis_data` 卷时，Redis 可以读取到之前保存的数据。
+*   **数据共享与迁移**：卷可以更容易地被备份、迁移或在多个容器间共享（尽管对于 Redis 这种单实例数据库，共享通常指在新实例中重用数据）。
+
+与直接将宿主机目录映射到容器（称为绑定挂载，例如 `-v /path/on/host:/data`）相比，命名卷通常是 Docker 推荐的持久化有状态应用（如数据库）数据的首选方式，因为它们由 Docker 管理，更易于跨平台和备份。
 
 
 
@@ -277,6 +414,14 @@ docker run --name=lbwnb --restart=always hello-world # 表示停止运行后总�
 docker run -it 容器id bash
 ~~~
 
+#### --rm stop容器后自动删除
+
+~~~sh
+docker run --rm 镜像名称  # 表示容器在停止(docker stop)后将自动删除
+~~~
+
+
+
 
 
 ### 2.4 docker pull把某个镜像从仓库下载到本地
@@ -289,6 +434,24 @@ docker pull hello-world 表示把hello-world镜像从仓库下载到本地，不
 
 先查看**本地**是否存在，查看**缓存**是否存在，都不存在时才去公共仓库进行下载
 
+
+
+**指定拉取不同CPU架构的镜像**：
+
+~~~sh
+docker pull library/adoptopenjdk:8u292-b10-jre-hotspot-focal --platform=linux/arm64
+~~~
+
+
+
+~~~
+docker pull eclipse-mosquitto:2.0.18 --platform=linux/arm64
+~~~
+
+
+
+
+
 **镜像分层的应用**：
 
 左边为仓库，右边为从仓库中拉取需要的每一层镜像来构建最终需要的镜像。
@@ -298,6 +461,8 @@ docker pull hello-world 表示把hello-world镜像从仓库下载到本地，不
 拉取镜像时是一层一层的镜像去拉取的，本地已经存在的某层镜像是不会拉取的。
 
 仓库中存储的镜像也是一层一层存储的，需要什么镜像就会基于仓库中的镜像来拉取构建这个镜像所需要的每一层。
+
+
 
 ### 2.5  docker images 查看下载的镜像信息
 
@@ -797,14 +962,16 @@ mysql:5.7
 ~~~sh
 docker run -d \
 -p 3306:3306 \
---name mysql5.7 \
+--name mysql_8.0_test \
 --restart always \
 -v mysql_data:/var/lib/mysql \
--e MYSQL_ROOT_PASSWORD=1 \
-mysql:5.7
+-e MYSQL_ROOT_PASSWORD=root \
+mysql:8.0
 ~~~
 
 #### 2 执行sql文件创建数据库
+
+
 
 #### 3 部署Redis
 
@@ -844,7 +1011,17 @@ get a
 
 删除redis容器后，再次运行一个Redis容器，进入容器内部看是否能够得到a这个key的值。
 
+
+
 #### 5 部署java环境 与 运行springboot程序
+
+测试jdk是否正常：
+
+~~~sh
+docker run --rm -it adoptopenjdk:8u292-b10-jre-hotspot-focal java -version
+~~~
+
+
 
 使用openjdk8u111版本，去运行springboot服务，保证该服务能正常使用java -jar sangeng-blog-1.0-SNAPSHOT jar
 
@@ -955,8 +1132,11 @@ docker run \
 --name sg_blog_vue \
 --restart always \
 -v /usr/blog/dist:/usr/share/nginx/html \
+--rm \
 nginx:1.21.5
 ~~~
+
+
 
 #### 8 成品的网络架构
 
@@ -1514,11 +1694,59 @@ volumes: # 在这里定义数据卷,然后services中的volumes才能够使用�
 
 #### 4级 注意事项
 
-1 不推荐指定容器名称（因为还是基于Docker的，给容器命名整个项目运行后面后如果其他项目有相同名字的容器是运行不了的），不指定的话，dockerCompose会直接使用服务名称来进行dns解析，实现根据服务名来相互访问。
+1 **不推荐指定容器名称**（因为还是基于Docker的，给容器命名整个项目运行后面后如果其他项目有相同名字的容器是运行不了的），不指定的话，dockerCompose会直接使用服务名称来进行dns解析，实现根据服务名来相互访问。
 
 不推荐指定容器名称的话，默认生成的容器名称的格式为：dockerCompose文件的名称-服务名称-id
 
-2 使用volumes、networks 时，应该多写一个与services同级的volumes、networks来指定别名
+2 使用volumes、networks 时，需要**多写一个与services同级的volumes、networks来指定别名**才能使用
+
+~~~yaml
+services:
+  sg_blog:
+    image: sg_blog:1.0
+    ports:
+     - 7777:7777
+    networks:
+     - blog_net
+    restart: always
+  blog_mysql:
+    image: mysql:5.7
+    ports:
+     - 3306:3306
+    networks:
+     - blog_net
+    restart: always
+    volumes:
+     - mysql_data:/var/lib/mysql
+    environment:
+     MYSQL_ROOT_PASSWORD: root
+  blog_redis:
+    image: redis:7.0
+    ports:
+     - 6379:6379
+    networks:
+     - blog_net
+    restart: always
+    volumes:
+     - redis_data:/data
+    command: ['redis-server','--appendonly','yes']
+  sg_blog_vue:
+    image: my_blog_vue:1.0
+    ports:
+      - 80:80
+    restart: always 
+
+volumes:
+  mysql_data:
+    external: true
+  redis_data:
+    external: true
+
+networks:
+  blog_net:
+~~~
+
+
 
 
 
@@ -1526,7 +1754,7 @@ volumes: # 在这里定义数据卷,然后services中的volumes才能够使用�
 
 ~~~sh
 # 启动类
-docker compose up # 按照当前目录下的docker-compose.yaml文件来部署环境，up指令会创建新的容器
+docker compose up # 默认使用当前目录下的docker-compose.yaml（docker-compose.yml）文件来部署环境，up指令会创建新的容器
 docker compose up -d # 后台运行
 docker compose -f xxx.yml up # 指定配置文件来运行
 docker compose -f standalone-derby.yaml start # 重新启动容器，如果服务器宕机后重启建议使用
@@ -1534,7 +1762,19 @@ docker compose -f standalone-derby.yaml start # 重新启动容器，如果服�
 docker compose top # 监控整套环境的状态
 # 停止类
 docker compose down # 先停止使用容器，然后删除所有容器，最后删除容器的网络
+
 ~~~
+
+指定文件时使用：
+
+~~~sh
+docker compose -f test.yml up -d
+docker compose -f test.yml down
+~~~
+
+
+
+
 
 
 
@@ -1812,6 +2052,79 @@ services:
       - /app/redis/redis.conf:/usr/local/etc/redis/redis.conf
       - /app/redis/logs:/logs
     command: redis-server /usr/local/etc/redis/redis.conf
+~~~
+
+
+
+#### 5 mqtt，mongo的部署
+
+~~~yaml
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_8.0_test_compose
+    ports:
+      - "3306:3306"
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  mosquitto:
+    image: eclipse-mosquitto:1.6.10
+    container_name: my_mosquitto_1_6_compose
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    restart: always
+    volumes:
+      - mosquitto_config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+
+  mongo:
+    image: mongo:3.6.12
+    container_name: my_mongo_3_6_compose
+    ports:
+      - "27017:27017"
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:alpine3.21
+    container_name: test_redis_compose
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  nginx:
+    image: nginx:1.14.0
+    container_name: test_nginx_compose
+    ports:
+      - "80:80"
+    restart: always
+    volumes:
+      - nginx_conf:/etc/nginx/conf.d
+      - nginx_html:/usr/share/nginx/html
+      - nginx_logs:/var/log/nginx
+
+# 添加所有引用的卷定义
+volumes:
+  mysql_data:
+  mosquitto_config:
+  mosquitto_data:
+  mosquitto_log:
+  mongo_data:
+  redis_data:
+  nginx_conf:
+  nginx_html:
+  nginx_logs: 
 ~~~
 
 

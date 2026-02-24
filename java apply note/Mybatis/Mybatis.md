@@ -1654,3 +1654,114 @@ pgsql中使用Mybatis进行模糊查询的sql写法：
 ```sql
 where r."name" LIKE CONCAT('%',#{residentName},'%');
 ```
+
+
+
+
+
+
+
+# 实际使用
+
+## 一、插入数据后获取自增的 ID
+
+~~~
+mybaties如何获取insert后自增的id
+~~~
+
+### MyBatis
+
+在使用 MyBatis 进行数据库操作时，如果你需要在插入数据后获取自增的 ID，可以通过以下几种方式实现：
+
+1. **XML 映射文件中配置 `useGeneratedKeys` 和 `keyProperty`**： 在你的 MyBatis 映射 XML 文件中，配置 `insert` 语句时使用 `useGeneratedKeys` 属性为 `true`，并指定 `keyProperty` 为实体类中对应的 ID 属性。这样，MyBatis 会在插入数据后自动将生成的 ID 设置到你的实体对象中。
+
+   例如，假设你的 `CheckRecord` 类有一个 `id` 属性，你可以这样配置：
+
+   ```xml
+   <insert id="insertCheckRecord" useGeneratedKeys="true" keyProperty="id">
+       INSERT INTO check_record (result, active_count, active_unprocessed_count, inactive_count, user_id)
+       VALUES (#{result}, #{activeCount}, #{activeUnprocessedCount}, #{inactiveCount}, #{userId})
+   </insert>
+   ```
+
+   
+
+2. **使用注解**： 如果你更喜欢使用注解的方式，可以在你的 Mapper 接口中直接使用 `@Options` 注解来指定 `useGeneratedKeys` 和 `keyProperty`。
+
+   例如：
+
+   ```java
+   @Insert("INSERT INTO check_record (result, active_count, active_unprocessed_count, inactive_count, user_id) " +
+           "VALUES (#{result}, #{activeCount}, #{activeUnprocessedCount}, #{inactiveCount}, #{userId})")
+   @Options(useGeneratedKeys = true, keyProperty = "id")
+   void insertCheckRecord(CheckRecord checkRecord);
+   ```
+
+   
+
+在这两种方式中，插入操作完成后，`checkRecord` 对象的 `id` 属性将会自动被赋值为数据库生成的自增 ID。
+
+请确保你的数据库表中的 ID 字段是自增的（例如在 MySQL 中使用 `AUTO_INCREMENT`）。如果数据库不支持自增 ID，你可能需要采用其他方式来获取新插入记录的 ID。
+
+### MyBatis-Plus
+
+~~~
+如果我使用的是mybatis-plus中BaseMapper的insert方法呢
+~~~
+
+如果你使用的是 MyBatis-Plus 中的 `BaseMapper` 接口的 `insert` 方法，并且希望在插入数据后获取自增的 ID，你可以直接利用 MyBatis-Plus 的特性来实现。MyBatis-Plus 的 `BaseMapper` 接口在插入数据时会自动处理自增 ID 的获取并设置到实体对象中。
+
+以下是具体步骤和示例代码：
+
+1. **确保实体类中的 ID 字段使用了 `@TableId` 注解并且类型正确**： 在你的实体类 `CheckRecord` 中，确保 ID 字段使用了 `@TableId` 注解，并且类型正确。例如：
+
+   ```java
+   import com.baomidou.mybatisplus.annotation.IdType;
+   import com.baomidou.mybatisplus.annotation.TableId;
+   
+   public class CheckRecord {
+       @TableId(type = IdType.AUTO) // 指定 ID 为自增类型
+       private Long id;
+       private String result;
+       private Integer activeCount;
+       private Integer activeUnprocessedCount;
+       private Integer inactiveCount;
+       private Long userId;
+   
+       // 省略 getter 和 setter 方法
+   }
+   ```
+
+   
+
+2. **使用 `BaseMapper` 的 `insert` 方法**： 在调用 `insert` 方法后，实体对象的 ID 字段会被自动赋值为数据库生成的自增 ID。
+
+   例如：
+
+   ```java
+   import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+   
+   public interface CheckRecordMapper extends BaseMapper<CheckRecord> {
+       // 无需额外配置，MyBatis-Plus 会自动处理自增 ID
+   }
+   
+   // 在你的服务或业务逻辑中
+   public void someMethod() {
+       CheckRecord checkRecord = new CheckRecord();
+       checkRecord.setResult(recheckResult);
+       checkRecord.setActiveCount(activeCount);
+       checkRecord.setActiveUnprocessedCount(activeUnprocessedCount);
+       checkRecord.setInactiveCount(inactiveCount);
+       checkRecord.setUserId(userId);
+   
+       checkRecordMapper.insert(checkRecord);
+   
+       // 此时 checkRecord.getId() 已经被赋值为数据库生成的自增 ID
+       Long generatedId = checkRecord.getId();
+       System.out.println("Generated ID: " + generatedId);
+   }
+   ```
+
+   
+
+通过以上步骤，你可以在使用 MyBatis-Plus 的 `BaseMapper` 接口的 `insert` 方法后，直接从实体对象中获取到自增的 ID。确保数据库表的 ID 字段是自增的（例如在 MySQL 中使用 `AUTO_INCREMENT`），这样才能正确获取到生成的 ID。

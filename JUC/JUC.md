@@ -2408,3 +2408,124 @@ public class AsyncConfiguration {
     }
 ~~~
 
+
+
+
+
+
+
+
+
+### 异步执行任务并获取结果 CompletableFuture
+
+参考：https://mp.weixin.qq.com/s/dhJ78uzAgIGchErw-5VL3A
+
+
+
+第一小节讲的 Future 是 JDK 1.5 时代的产物：
+
+![图片](https://mmbiz.qpic.cn/mmbiz_png/lnCqjsQ6QHfnlXFX9TezhrMNghKIz11SlRicQqc9LY1T8onzTNMCXOmmMAqzkhtrtTyrBIOslvG2bmYIJoPxgrQ/640?wx_fmt=png&tp=wxpic&wxfrom=5&wx_lazy=1)
+
+经过了这么多年的发展，Doug Lea 在 JDK 1.8 里面引入了新的 CompletableFuture ：
+
+![图片](https://mmbiz.qpic.cn/mmbiz_png/lnCqjsQ6QHfnlXFX9TezhrMNghKIz11SHfEHtXZHl7YR51kq3gDXpniau3WrWGCxU9vO0l4HHxWBXEJdqWPgj2w/640?wx_fmt=png&tp=wxpic&wxfrom=5&wx_lazy=1)
+
+到了 JDK 1.8 时代，这才是真正的异步编程。
+
+CompletableFuture 实现了两个接口，一个是我们熟悉的 Future ，一个是 CompletionStage。
+
+CompletionStage接口，你看这个接口的名称中有一个 Stage ：
+
+![图片](https://mmbiz.qpic.cn/mmbiz_png/lnCqjsQ6QHfnlXFX9TezhrMNghKIz11S7E1p0QV3OEVSKRcy9JZakOt71yOkujcV5mtSAGZurzwk8QXm87bXBA/640?wx_fmt=png&tp=wxpic&wxfrom=5&wx_lazy=1)
+
+可以把这个接口理解为一个任务的某个阶段。所以多个 CompletionStage 链接在一起就是一个任务链。前一个任务完成后，下一个任务就会自动触发。
+
+CompletableFuture 里面的方法非常的多。
+
+由于篇幅原因，我就只演示一个方法：
+
+```java
+public class JDKThreadPoolExecutorTest {
+
+    public static void main(String[] args) throws Exception {
+        CompletableFuture<String> completableFuture = CompletableFuture.supplyAsync(() -> {
+            System.out.println(Thread.currentThread().getName() + "-女神：我开始化妆了，好了我叫你。");
+            try {
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return "化妆完毕了。";
+        });
+
+        completableFuture.whenComplete((returnStr, exception) -> {
+            if (exception == null) {
+                System.out.println(Thread.currentThread().getName() + returnStr);
+            } else {
+                System.out.println(Thread.currentThread().getName() + "女神放你鸽子了。");
+                exception.printStackTrace();
+            }
+        });
+        System.out.println(Thread.currentThread().getName() + "-等女神化妆的时候可以干点自己的事情。");
+        Thread.currentThread().join();
+    }
+}
+```
+
+
+
+该方法的执行结果如下：
+
+![图片](https://mmbiz.qpic.cn/mmbiz_png/lnCqjsQ6QHfnlXFX9TezhrMNghKIz11SiahWDwq0vEn8Zd5Flf05sAFUSQM342EALB4CtbEXDZAMP00TqsZUMcw/640?wx_fmt=png&tp=wxpic&wxfrom=5&wx_lazy=1)
+
+我们执行的时候并没有指定用什么线程池，但是从结果可以看到也是异步的执行。
+
+从输出日志中是可以看出端倪的，ForkJoinPool.commonPool() 是其默认使用的线程池。
+
+![图片](https://mmbiz.qpic.cn/mmbiz_png/lnCqjsQ6QHfnlXFX9TezhrMNghKIz11SElVc7kURrzuJJibS3CFWZGHKUVbLy8Ks0fSAXDdFqGj2mOw8LeiauNOg/640?wx_fmt=png&tp=wxpic&wxfrom=5&wx_lazy=1)
+
+当然，我们也可以自己指定。
+
+![图片](https://mmbiz.qpic.cn/mmbiz_png/lnCqjsQ6QHfnlXFX9TezhrMNghKIz11SPqydv2icwcjia5ZK4kgQSEt5RYcda6MAt4twScMKwCJNLK2B63BUndfg/640?wx_fmt=png&tp=wxpic&wxfrom=5&wx_lazy=1)
+
+这个方法在很多开源框架里面使用的还是非常的多的。
+
+接下来主要看看 CompletableFuture 对于异常的处理。我觉得非常的优雅。
+
+不需要 try-catch 代码块包裹，也不需要调用 Future.get() 才知道异常了，它提供了一个 handle 方法，可以处理上游异步任务中出现的异常：
+
+```java
+public class JDKThreadPoolExecutorTest {
+
+    public static void main(String[] args) throws Exception {
+        CompletableFuture.supplyAsync(() -> {
+            System.out.println(Thread.currentThread().getName() + "-女神：我开始化妆了，好了我叫你。");
+            throw new RuntimeException("男神约我看电影了，我们下次再约吧，你是个好人。");
+        }).handleAsync((result, exception) -> {
+            if (exception != null) {
+                System.out.println(Thread.currentThread().getName() + "-女神放你鸽子了！");
+                return exception.getCause();
+            } else {
+                return result;
+            }
+        }).thenApplyAsync((returnStr) -> {
+            System.out.println(Thread.currentThread().getName() + "-" + returnStr);
+            return returnStr;
+        });
+        System.out.println(Thread.currentThread().getName() + "-等女神化妆的时候可以干点自己的事情。");
+        Thread.currentThread().join();
+    }
+}
+```
+
+
+
+由于女神在化妆的时候，接到男神的电话约她看电影，就只能放你鸽子了。
+
+所以，上面程序的输出结果如下：
+
+![图片](https://mmbiz.qpic.cn/mmbiz_png/lnCqjsQ6QHfnlXFX9TezhrMNghKIz11S0ZpmINlEgxhz0iaEooZzh5dUmcXBoyLIOP2Cco1ujTZ684qopUiagiaIw/640?wx_fmt=png&tp=wxpic&wxfrom=5&wx_lazy=1)
+
+如果，你顺利把女神约出来了，是这样的：
+
+![图片](https://mmbiz.qpic.cn/mmbiz_png/lnCqjsQ6QHfnlXFX9TezhrMNghKIz11STY29PCSia6ALxSiacMO0NHw43v2sF6smf8oBVxb6YQ27H5k45icsp5s6w/640?wx_fmt=png&tp=wxpic&wxfrom=5&wx_lazy=1)

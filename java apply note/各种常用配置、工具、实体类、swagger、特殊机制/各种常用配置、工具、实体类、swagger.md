@@ -3149,3 +3149,10 @@ System.out.println(l.compareTo(l)); //01.2.3.4.
     }
 ~~~
 
+
+
+
+
+### postman使用路径参数：
+
+![image-20251224101020566](C:\Users\Gloom\AppData\Roaming\Typora\typora-user-images\image-20251224101020566.png)

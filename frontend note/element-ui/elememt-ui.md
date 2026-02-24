@@ -147,7 +147,7 @@ mark1 p4 2:17
 		<!-- 设备故障表格 -->
 		    <el-table :data="afterServiceObjList" border height="800" style="width: 100%" @selection-change="handleSelectionChange" :header-cell-style="{ background: 'rgb(244, 249, 255)'}">
 			  
-<!-- 			  1:使用prop展示数据 -->
+<!-- 			  1:使用prop展示数据，这里会显示afterServiceObjList.serviceStation的男人 -->
 
 			  <el-table-column label="售后服务站" prop="serviceStation" width="120"></el-table-column>
 
@@ -164,18 +164,21 @@ mark1 p4 2:17
 <template>
 	<div>
 		<el-button @click="save()">保存</el-button>
-		<!-- 设备故障表格 -->
+		<!-- 表格 -->
 		    <el-table :data="afterServiceObjList" border height="800" style="width: 100%" @selection-change="handleSelectionChange" :header-cell-style="{ background: 'rgb(244, 249, 255)'}">
 			  
-<!-- 			 2: 通过自定义插槽来显示:使用slot-scope展示数据，可写js-->
-			  <el-table-column label="处理人员">
-				  <template slot-scope="scope">
-				  	<div>
-						{{ joinHandlerName(scope.row) }}
-					</div>
-				  	
-				  </template>
-			  </el-table-column>
+<!-- 			 2: 通过自定义插槽来显示:使用slot-scope展示数据-->
+            <el-table-column prop="taskObject" label="巡检对象" show-overflow-tooltip min-width="180px" align="center">
+                <template slot-scope="scope">
+                    <div v-if="scope.row.taskObject && scope.row.taskObject.includes('、')" class="multi-line-cell">
+                        <div>{{ dealInspectionObject(scope.row.taskObject.split('、')[0]) }}</div>
+                        <div>{{ dealInspectionObject(scope.row.taskObject.split('、')[1]) }}</div>
+                    </div>
+                    <span v-else>
+                        {{ dealInspectionObject(scope.row.taskObject) }}
+                    </span>
+                </template>
+            </el-table-column>
 
 		    </el-table>
 	</div>
@@ -659,6 +662,90 @@ methods: {
 
 
 
+实际使用：
+
+~~~vue
+				<div>
+					<div class="commonTrainLogo"></div>
+					<span v-if="!isShowLoginLocationSelect" class="locationLabel" @click="handleClickLocationLabel">
+					{{ locationObj.locationLabel }}
+					</span>
+					
+					<el-select ref="loginLocationSelect" v-else v-model="loginLocation" filterable class="locationLabel" @change="handleLocationChange">
+					    <el-option
+					        v-for="item in ['待巡检', '巡检中', '已完成', '测评完成']"
+					        :key="item"
+					        :label="item"
+					        :value="item"
+					    ></el-option>
+					</el-select>
+					
+				</div>
+~~~
+
+注意：
+
+~~~js
+handleClickLocationLabel(){
+    this.isShowLoginLocationSelect = true;
+
+    // 等待 Vue 完成 DOM 更新后再获取焦点
+    this.$nextTick(() => {
+        console.log('获取焦点, 展开下拉框');
+        this.$refs.loginLocationSelect.focus();
+    });
+},
+~~~
+
+
+
+## 使用例子
+
+~~~
+<el-select ref="loginLocationSelect" v-else v-model="loginLocation" filterable class="locationLabel" @change="handleLocationChange">
+					    <el-option
+					        v-for="item in ['待巡检', '巡检中', '已完成', '测评完成']"
+					        :key="item"
+					        :label="item"
+					        :value="item"
+					    ></el-option>
+					</el-select> 		handleClickLocationLabel(){
+			this.isShowLoginLocationSelect = true;
+			// 获取焦点,展开下拉框
+			console.log(获取焦点,展开下拉框);
+			this.$refs.loginLocationSelect.focus();
+		},  为什么报错：TypeError: Cannot read properties of undefined (reading 'focus')
+~~~
+
+
+
+报错的原因是在 `handleClickLocationLabel` 方法中，`this.$refs.loginLocationSelect` 还没有被正确赋值。通常，这是因为 `v-if` 会在条件满足时动态地渲染 `el-select` 组件，而在 `el-select` 被渲染之前，`this.$refs.loginLocationSelect` 是 `undefined`，所以你无法调用 `focus()` 方法。
+
+为了解决这个问题，可以使用 `this.$nextTick()` 来确保在 DOM 完全更新后再调用 `focus()` 方法。
+
+修改后的代码如下：
+
+```js
+handleClickLocationLabel() {
+  this.isShowLoginLocationSelect = true;
+
+  // 等待 Vue 完成 DOM 更新后再获取焦点
+  this.$nextTick(() => {
+    console.log('获取焦点, 展开下拉框');
+    this.$refs.loginLocationSelect.focus();
+  });
+}
+```
+
+### 例子解释：
+
+- `this.$nextTick()` 是 Vue 提供的一个方法，它会在下次 DOM 更新循环结束之后执行回调函数。这样可以确保在 DOM 更新后再执行获取焦点的操作，避免 `this.$refs.loginLocationSelect` 为 `undefined`。
+- 这样，当 `el-select` 被渲染并绑定到 `$refs` 后，`focus()` 调用就不会报错了。
+
+这种方法可以确保你的代码在正确的时机获取到 `el-select` 的引用，并且避免访问 `undefined` 的错误。
+
+
+
 
 
 ### 表格定义操作列
@@ -887,6 +974,25 @@ app.vue首页：
 
 ### 一、选择日期时间范围组件
 
+~~~vue
+<el-form-item prop="" label="实际结束时间" label-width="110px">
+    <template #label>
+<span class="label-add">实际结束时间:</span>
+    </template>
+    <el-date-picker
+                    style="width: 310px"
+                    v-model="actualFinishTime"
+                    align="right"
+                    type="datetime"
+                    placeholder="选择日期时间"
+                    @change=""
+                    >
+    </el-date-picker>
+</el-form-item>
+~~~
+
+
+
 
 
 ### 二、上传图片
@@ -985,7 +1091,7 @@ app.vue首页：
 
 
 
-### 三、自动补全输入框
+### 三、el-autocomplete下拉列表-自动补全
 
 
 
@@ -1182,9 +1288,44 @@ handleSelectUser(item) {
 
 
 
+### 四、el-select下拉列表，每个选项展示多个元素
+
+~~~vue
+<el-select ref="loginLocationSelect" v-model="loginLocationId" v-else filterable class="locationLabel" @change="handleLocationChange">
+    <el-option
+               v-for="item in loginLocationList"
+               :key="item.id"
+               <!-- filterable的搜索就是从label设置的内容中进行搜索的 -->
+    :label="item.name + item.dispName"
+    :value="item.id"
+    >
+    <!-- 利用 el-option 里的插槽 default 来实现。 -->
+    <span style="font-style:italic;margin-right: 7px;">{{ item.name }}</span>
+    <span style="font-weight:bold;">{{ item.dispName }}</span>
+    </el-option>
+</el-select>
+
+<script>
+    handleLocationChange(locationId){
+        console.log(`locationId = ${locationId}`);
+        let location = this.loginLocationList.find(e => e.id == locationId)
+        this.locationObj.locationLabel = location.dispName;
+        this.locationObj.location = location.name;
+        this.isShowLoginLocationSelect = false;
+    }
 
 
-### 四、 >>> 深度选择器修改Element UI编译后的代码
+</script>
+
+~~~
+
+
+
+
+
+
+
+### 五、 >>> 深度选择器修改Element UI编译后的代码
 
 
 
@@ -1251,5 +1392,96 @@ height: 55px;
     color: white; 
 	font-size: 18px;
 }
+~~~
+
+
+
+
+
+### 六、弹出框el-dialog的叠加问题
+
+
+
+`FaultPhotoAlbum`本身包在`el-dialog`里，再弹一个`el-dialog`，这种**嵌套Dialog**也是个潜在坑，建议：
+
+✅ 外层父`el-dialog`加`append-to-body`
+✅ 里层编辑器`el-dialog`也加`append-to-body`
+这样每个Dialog都能脱离嵌套影响。
+
+FaultPhotoAlbum组件中：
+
+~~~vue
+<el-dialog class="cyberpunk-dialog" id="EditImageDialog" title="图片编辑" :visible.sync="EditFaultImageDialogEditVisible" center
+           :close-on-click-modal="false " @opened="initImageEditor" :append-to-body="true"> <!-- 111 -->
+    <div class="SignImageContainer">
+        <div id="tui-image-editor" style="margin: 0; padding: 0;"></div>
+    </div>
+    <span slot="footer">
+        <el-button @click="uploadEditImage">确 定 上 传</el-button>
+        <el-button @click="EditFaultImageDialogEditVisible = false">取 消</el-button>
+    </span>
+</el-dialog>
+~~~
+
+FaultPhotoAlbum的父组件中：
+
+~~~vue
+<!-- 故障相册 -->
+<el-dialog title="提示" :visible.sync="isShowFaultAlbum" width="80%"  :append-to-body="true"> <!-- 111 -->
+    <div style="height: 600px;">
+        <FaultPhotoAlbum :inspectionTaskNumParam="inspectionTaskNumParam"></FaultPhotoAlbum>
+    </div>
+</el-dialog>
+~~~
+
+
+
+### 七、加载效果
+
+官方：
+
+https://element.eleme.cn/#/zh-CN/component/loading
+
+1）在element的相关组件中设置属性，基于v-loading的区域加载：
+
+![image-20250321112550203](elememt-ui.assets/image-20250321112550203.png)
+
+**注意：**
+
+![image-20250321112508377](elememt-ui.assets/image-20250321112508377.png)
+
+
+
+2）用在按钮上的整页加载
+
+![image-20250416104449824](elememt-ui.assets/image-20250416104449824.png)
+
+
+
+### 八、多选下拉框
+
+例子：
+
+~~~vue
+<el-form>
+    <el-form-item label="关联任务编号" label-width="110px">
+        <template #label>
+<span class="label-add">关联任务编号:</span>
+        </template>
+
+        <el-select
+                   clearable
+                   multiple
+                   v-model="form.relationTaskIdList"
+                   filterable
+                   placeholder="请选择"
+                   @change=""
+                   style="width: 310px"
+                   >
+            <el-option v-for="(relationTaskObj,index) in relationTaskObjList" :key="index" :label="relationTaskObj.number" :value="relationTaskObj.id"></el-option>
+        </el-select>
+    </el-form-item>
+
+</el-form>
 ~~~
 

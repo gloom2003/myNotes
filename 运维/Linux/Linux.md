@@ -217,6 +217,18 @@ find /etc -atime +10 -name t* -exec rm -rf {} \; # 表示查找10天前的t开�
 
 
 
+实际使用：
+
+查找全部.pro结尾的文件
+
+~~~sh
+sudo find / -name '*.pro'
+~~~
+
+
+
+
+
 ### top监控界面，类似任务管理器
 
 top 表示进入监控界面
@@ -247,7 +259,49 @@ sudo umount /etc/sda1 取消挂载
 
 ### df查看当前磁盘使用情况
 
-df -m
+**df -m 以MB为单位查看磁盘使用情况。**
+
+例子：
+
+~~~
+[root@ecs-beab ~]# df -m
+Filesystem     1M-blocks  Used Available Use% Mounted on
+devtmpfs               4     0         4   0% /dev
+tmpfs              62545     0     62545   0% /dev/shm
+tmpfs              62545  1241     61304   2% /run
+tmpfs                  4     0         4   0% /sys/fs/cgroup
+/dev/vda2         250852  8709    231836   4% /
+tmpfs              62545     0     62545   0% /tmp
+/dev/vda1           1022     6      1016   1% /boot/efi
+overlay           250852  8709    231836   4% /var/lib/docker/overlay2/302009e16ffe4e9e7a767577b8193915146a831e596ac6e25eb96ff0a67d08cc/merged
+overlay           250852  8709    231836   4% /var/lib/docker/overlay2/35b6a064fe1416a5c60fbed6ae781dc760f7ebe8c6d962401da82464c86b51dc/merged
+
+~~~
+
+分析：
+
+存储使用情况 (df -m 输出)
+根目录(/)
+总空间：250852 MB（约245 GB）
+已用：8709 MB（约8.5 GB）
+可用：231836 MB（约226 GB）
+使用率：4%
+
+EFI系统分区(/boot/efi)
+总空间：1022 MB（约1 GB）
+已用：6 MB
+可用：1016 MB（约1 GB）
+使用率：1%
+
+Docker相关挂载点
+您有两个Docker容器使用了overlay文件系统，它们都挂在相同的物理卷上（/dev/vda2），因此它们共享相同的总空间、已用空间和可用空间数据。
+其余列出的文件系统如tmpfs和devtmpfs是基于内存的临时文件系统，用于提高某些操作的速度或提供特殊的用途，比如/dev/shm用于进程间通信。
+
+
+
+**df -h 以GB为单位查看磁盘使用情况。**
+
+
 
 ### ps等命令 查看当前运行的一些进程、线程
 
@@ -321,7 +375,7 @@ tar -zcvf ${BASE_PATH}/${FILE_NAME}.tar.gz ${DB_NAME} # 如果把DB_NAME替换�
 
 解压命令：
 
-解压.gz文件的命令
+> **解压.gz文件的命令**
 
 ```sh
 tar -zxvf test.tar.gz # -zxfv(真幸福v)表示解压压缩文件test.tar.gz
@@ -344,11 +398,55 @@ tar -zxvf test.tar.gz -C /test # 表示解压test.tar.gz文件到/test目录下
 - -f指定压缩后的文件名
 - -C 指定解压到哪一个目录
 
-解压.xz文件的命令
+
+
+> **解压.tar.xz文件的命令**
+
+如果是 `.tar.xz`（最常见）
+
+- `x`：解压
+- `v`：显示过程（verbose）
+- `f`：指定文件
+
+👉 **示例：**
+
+```
+tar -xvf qt-everywhere-src-5.15.13.tar.xz
+```
+
+这个命令会把 Qt 源码包解压成一个文件夹。
 
 ~~~sh
-tar -xf f
+tar -xvf 压缩文件.tar.xz
 ~~~
+
+
+
+**如果是 `.xz` 纯压缩（没有 tar 打包）**
+
+可以用 `unxz` 或 `xz -d`：
+
+```
+bash复制编辑unxz yourfile.xz
+# 或者：
+xz -d yourfile.xz
+```
+
+这会将 `yourfile.xz` 解压成 `yourfile`。
+
+👉 **示例：**
+
+```
+unxz busybox-x86_64.xz
+```
+
+之后你就会得到：
+
+```
+busybox-x86_64  # 一个二进制可执行文件
+```
+
+
 
 
 
@@ -387,6 +485,8 @@ gunzip xxx.gz
 ~~~
 
 **注意**：gunzip解压后.gz压缩包会被删除
+
+
 
 ### zip压缩命令
 
@@ -527,7 +627,15 @@ ps aux | grep -n study # 表示搜索进程状态中含有study的文件并且�
 | -m                   |  设置返回的行数        |
 | -A n | 打印匹配的字符串后面相邻n行 |
 | -B n | 打印匹配的字符串前面相邻n行 |
-| -C n | 打印匹配的字符串前面相邻后n行 |
+| -C n | 打印匹配的字符串前后相邻n行 |
+
+实际使用：
+
+查看镜像：
+
+~~~sh
+ docker info | grep -C 4 'Registry Mirrors'
+~~~
 
 
 
@@ -615,6 +723,14 @@ ip addr
 history
 ~~~
 
+实际使用：
+
+~~~sh
+history | grep configure # 查看运行过的有configure的命令
+~~~
+
+
+
 history [选项] [历史命令保存文件]
 选项：
 
@@ -632,6 +748,8 @@ history [选项] [历史命令保存文件]
 - 使用“!n”重复执行第n条历史命令
 - 使用“!!"重复执行上一条命令
 - **使用“!字串”重复执行最后一条以该字串开头的命令(常用)**
+
+
 
 ### systemctl 命令 设置某个服务的状态
 
@@ -1086,6 +1204,106 @@ java Test # 运行
 
 
 
+### 3.12 查看系统架构是多少位
+
+```bash
+uname -m
+```
+
+#### 输出解释：
+
+- `x86_64` → 64 位系统（你要选 **Linux64**）
+- `i686`, `i386` 或 `i586` → 32 位系统（你要选 **Linux32**）
+- `aarch64` → 64 位 ARM（比如树莓派 64 位系统，SDK 不一定支持）
+- `armv7l` → 32 位 ARM
+
+
+
+
+
+当你执行完：
+
+```bash
+./configure 2>&1 | less
+```
+
+之后，屏幕上会进入 `less` 的查看界面，你可以在这个界面中使用非常方便的搜索功能。
+
+------
+
+
+
+## 3.13🔍**搜索模式操作说明（在 `less` 中）**
+
+当你执行完：
+
+```
+./configure 2>&1 | less
+```
+
+之后，屏幕上会进入 `less` 的查看界面，你可以在这个界面中使用非常方便的搜索功能。
+
+### ✅ `2>&1`
+
+这是 **Bash 的重定向语法**，含义如下：
+
+- `1`：表示标准输出（stdout）
+- `2`：表示标准错误（stderr）
+- `2>&1`：意思是“把标准错误（2）重定向到标准输出（1）”
+
+> 📌 最终的结果是：**错误信息和正常信息都会合并输出**
+
+### ✅ **进入搜索模式：**
+
+- **按下 `/` 键**（正斜杠）
+
+- 然后输入你要搜索的关键词（比如 `xcb`），再按 `Enter`
+
+  示例：
+
+  ```
+  /xcb
+  ```
+
+------
+
+### ✅ **浏览搜索结果：**
+
+- **n**：跳到**下一个**匹配项
+- **N**：跳到**上一个**匹配项
+
+------
+
+### ✅ **退出 less：**
+
+- 按下 `q`（英文小写字母 q），即可退出查看界面并回到命令行。
+
+------
+
+### 💡 补充技巧：
+
+- **↑/↓ 或 PgUp/PgDn**：翻页浏览内容
+- **g**：跳到最开始
+- **G**：跳到最结尾
+
+------
+
+### 🌰 示例流程：
+
+```bash
+./configure 2>&1 | less
+```
+
+运行后：
+
+1. 出现很多内容（自动分页显示）
+2. 你按下 `/`
+3. 输入 `xcb`，回车
+4. 匹配的行会高亮显示，按 `n` 继续查看下一个
+
+
+
+
 
 ## 4 理解创建虚拟机的过程、注意事项
 
@@ -1147,3 +1365,289 @@ NAT允许虚拟机通过主机的IP地址访问外部网络，同时隐藏了虚
 ctrl+alt+F2-F6(选一个) 从桌面进入真正的Linux Shell，而不是桌面的终端。
 
 ctrl+alt+F1 回到桌面
+
+
+
+
+
+# 五 实际操作经验 （安装配置qt版）
+
+
+
+查看当前系统上安装的 **Qt 版本**：
+
+------
+
+## 1 用 `qmake` 查看Qt 版本（最常用）
+
+```
+qmake -v
+```
+
+### 示例输出：
+
+```
+bash复制编辑QMake version 3.1
+Using Qt version 5.9.5 in /usr/lib/x86_64-linux-gnu
+```
+
+> ✅ 这里的 `Using Qt version 5.9.5` 就是你当前系统默认的 Qt 版本。
+
+
+
+## 2 查看 Ubuntu 系统版本的方法：
+
+在终端里运行以下命令之一：
+
+```
+lsb_release -a
+```
+
+### 🧾 输出示例（Ubuntu 22.04）：
+
+```
+$ lsb_release -a
+
+Distributor ID: Ubuntu
+Description:    Ubuntu 22.04.4 LTS
+Release:        22.04
+Codename:       jammy
+```
+
+
+
+要判断你的 Ubuntu 系统应该安装 **x86_64 (64-bit)** 版本的 Qt 还是 **arm64 (ARM 64-bit)**，只需要确认你当前操作系统的架构。下面是详细步骤和命令👇
+
+
+## 3 ✅ 查看系统架构
+
+```
+bash
+
+
+复制编辑
+uname -m
+```
+
+![image-20250422113108438](Linux.assets/image-20250422113108438.png)
+
+
+
+好问题！
+
+------
+
+## 4 🧠 什么是 `LD_LIBRARY_PATH`？
+
+`LD_LIBRARY_PATH` 是 Linux 系统中一个 **环境变量**，指定了运行程序时系统 **查找动态链接库（.so 文件）** 的额外路径。
+
+当你运行一个程序，它依赖某些 `.so` 文件（共享库）时，系统会按照以下顺序查找这些库：
+
+1. 程序通过 `rpath` 或 `runpath` 显式指定的路径（如果有）
+2. 环境变量 `LD_LIBRARY_PATH` 中的路径（手动指定）
+3. 系统默认路径（如 `/lib`、`/usr/lib`、`/usr/local/lib`）
+4. `/etc/ld.so.conf` 中配置的路径 + `ldconfig` 的缓存
+
+------
+
+## 👀 如何查看当前的 `LD_LIBRARY_PATH`？
+
+### 方法一：用 `echo` 查看变量内容
+
+```bash
+echo $LD_LIBRARY_PATH
+```
+
+如果输出是空的，说明当前这个变量没被设置。
+
+------
+
+## 🛠 如何设置 `LD_LIBRARY_PATH`？
+
+你可以临时或永久设置这个变量。
+
+### ✅ 临时设置（当前终端有效）
+
+```bash
+export LD_LIBRARY_PATH=/your/path/to/libs:$LD_LIBRARY_PATH
+```
+
+例如：
+
+```bash
+export LD_LIBRARY_PATH=/home/user/HikSDK/lib:$LD_LIBRARY_PATH
+./Hikvision
+```
+
+这样设置只对当前 shell 会话有效，关掉终端就失效了。
+
+------
+
+### ✅ 永久设置（对所有终端有效）
+
+编辑你的 shell 配置文件，比如：
+
+- 如果你用的是 bash：
+
+  ```bash
+  nano ~/.bashrc
+  ```
+
+- 或者 zsh 用户：
+
+  ```bash
+  nano ~/.zshrc
+  ```
+
+在文件末尾加上：
+
+```bash
+export LD_LIBRARY_PATH=/home/user/HikSDK/lib:$LD_LIBRARY_PATH
+```
+
+保存后执行：
+
+```bash
+source ~/.bashrc  # 或 ~/.zshrc
+```
+
+------
+
+## ✅ 小总结
+
+| 操作               | 命令或说明                                           |
+| ------------------ | ---------------------------------------------------- |
+| 查看变量值         | `echo $LD_LIBRARY_PATH`                              |
+| 临时设置路径       | `export LD_LIBRARY_PATH=/your/path:$LD_LIBRARY_PATH` |
+| 永久设置路径       | 修改 `~/.bashrc` 或 `~/.zshrc` 添加 `export ...`     |
+| 查看系统默认库路径 | `ldconfig -v` 或 `ldconfig -p`                       |
+
+------
+
+有需要我帮你写一条具体适配你目录的 `export` 命令吗？只要告诉我你 `.so` 文件在哪个路径就行~
+
+
+
+## 5 环境变量配置文件
+
+这段内容是在讲：**你用 Qt 官方的安装器在线安装 Qt 5.15.2 后，默认是不会自动把 `qmake` 和 `Qt Creator` 添加到环境变量（PATH）中的，所以你要手动配置一下环境变量，才能在终端中直接使用 `qmake`、`qtcreator` 等命令。**
+
+下面我们一行一行解释这段内容的意思：
+
+------
+
+### 🔧 编辑 `/etc/profile`
+
+```bash
+sudo vim /etc/profile
+```
+
+- `/etc/profile` 是系统级的环境变量配置文件，**所有用户登录后都会执行它**（适用于 bash shell）。
+- 用 `sudo` 打开它是为了拥有写权限（因为是系统文件）。
+
+------
+
+### ✍️ 在文件末尾添加如下两行
+
+```bash
+export PATH="/home/brainiac/Qt/Tools/QtCreator/bin:$PATH"
+export PATH="/home/brainiac/Qt/5.15.0/gcc_64/bin:$PATH"
+```
+
+- 这两行是设置环境变量 `PATH`，让系统知道你安装的 Qt 工具在哪里。
+
+#### ✅ 第一行：
+
+```bash
+export PATH="/home/brainiac/Qt/Tools/QtCreator/bin:$PATH"
+```
+
+这表示把 `Qt Creator` 的安装路径加入 PATH，这样你可以在终端直接运行 `qtcreator`。
+
+#### ✅ 第二行：
+
+```bash
+export PATH="/home/brainiac/Qt/5.15.0/gcc_64/bin:$PATH"
+```
+
+这表示把 Qt 工具（如 `qmake`, `designer`, `linguist`）的路径加进 PATH，这样就能直接使用 `qmake` 等工具了。
+
+💡 注意：这里的路径 `/home/brainiac/Qt/...` 只是**示例路径**，你需要改成你自己实际安装的 Qt 路径。
+
+------
+
+### 🔄 让修改立即生效
+
+```bash
+source /etc/profile
+```
+
+- `source` 命令会立即执行 `/etc/profile` 文件，让新的 PATH 设置在当前终端中生效。
+- 但它**只在当前 shell 中生效**，如果你开启一个新的终端窗口，它不会自动继承之前改的 PATH。
+
+------
+
+### 🖥️ 想让它“全局生效”怎么办？
+
+> 若想全局生效，需要重启系统。
+
+- 因为 `/etc/profile` 是在用户登录时才加载的。
+- 所以你可以选择：
+  - 重启系统，或者
+  - 登出再登录，或者
+  - 打开一个新的终端（登录 shell）
+
+------
+
+### ✅设置只想对当前用户生效：
+
+如果你**只想对当前用户生效**，不影响其他人，可以只改你的个人配置文件：
+
+```bash
+vim ~/.bashrc
+```
+
+然后也添加：
+
+```bash
+export PATH="/your/qt/path/bin:$PATH"
+```
+
+保存后：
+
+```bash
+source ~/.bashrc
+```
+
+就不需要改 `/etc/profile`。
+
+
+
+
+
+## 六：实际操作
+
+### 查看程序的进程id，看看监听了什么端口
+
+1 top命令查看pid:
+
+2 看该进程监听了哪些端口
+
+假设你得到了 PID 为 `12345`，使用下面的命令：
+
+```
+sudo lsof -nP -p 12345 -i
+```
+
+或者：
+
+```
+sudo ss -tulnp | grep 12345
+```
+
+这会显示出进程监听的所有网络端口（如 TCP/UDP），例如：
+
+```
+COMMAND     PID     USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
+Hikvision  12345    sy     10u  IPv4  422535      0t0  TCP *:8090 (LISTEN)
+```

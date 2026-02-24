@@ -267,11 +267,17 @@ java -jar jar包名称 --server.port=7777 --sever.name=app
 
 ### 2.4 直接创建springBoot项目
 
+
+
 创建一个空项目，在idea左上角File中选择Project Structure,点击+号创建一个新的模块，选择Spring Initializr填写相关的信息。
 
 url:`start.aliyun.com`
 
 选择springBoot的版本，选择相关的依赖。
+
+优点：快速
+
+缺点：只能现在jdk17以上的项目，后面再修改为jdk8的项目
 
 ### 2.5 yaml多环境配置
 

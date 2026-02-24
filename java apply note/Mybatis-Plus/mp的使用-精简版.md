@@ -240,8 +240,8 @@ MP写法如下：s**elect()方法操作的是sql语句中select语句的字段**
     @Test
     public void testUpdateWrapper(){
         UpdateWrapper<User> updateWrapper = new UpdateWrapper<>(); // update user set {} = {}
-        updateWrapper.gt("id",1);// where id > 1
         updateWrapper.set("age",99);// set age = 99
+               updateWrapper.gt("id",1);// where id > 1
         userMapper.update(null,updateWrapper);// update user set age = 99 where id > 1
     }
 ~~~~
